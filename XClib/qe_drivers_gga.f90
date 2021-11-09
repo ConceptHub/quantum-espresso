@@ -39,7 +39,7 @@ SUBROUTINE gcxc( length, rho_in, grho_in, sx_out, sc_out, v1x_out, &
 #endif
   USE dft_setting_params,   ONLY: igcx, igcc, rho_threshold_gga,     &
                                   grho_threshold_gga, exx_started,   &
-                                  exx_fraction, screening_parameter, &
+                                  exx_fraction, exx_lr_fraction, screening_parameter, &
                                   gau_parameter
   USE exch_gga
   USE corr_gga
@@ -100,7 +100,8 @@ SUBROUTINE gcxc( length, rho_in, grho_in, sx_out, sc_out, v1x_out, &
 !$omp          v2x, v2x_, v2xsr, sc, v1c, v2c, iflag, in_err ) &
 !$omp shared( rho_in, grho_in, length, igcx, exx_started, &
 !$omp         grho_threshold_gga, rho_threshold_gga, gau_parameter, &
-!$omp         screening_parameter, exx_fraction, igcc, v1x_out, v2x_out, &
+!$omp         screening_parameter, exx_fraction, exx_lr_fraction, igcc, &
+!$omp         v1x_out, v2x_out, &
 !$omp         v1c_out, v2c_out, sx_out, sc_out, err_out )
 !$omp do
 #endif
@@ -371,6 +372,16 @@ SUBROUTINE gcxc( length, rho_in, grho_in, sx_out, sc_out, v1x_out, &
         !
         CALL W3MX( rho, grho, sx, v1x, v2x )
         !
+     CASE( 52 ) ! 'CAM'
+        !
+        CALL pbex (rho, grho, 1, sx, v1x, v2x)
+        IF (exx_started) THEN
+           CALL pbexsr (rho, grho, sxsr, v1xsr, v2xsr, screening_parameter)
+           sx  = (1.0_DP - exx_fraction - exx_lr_fraction) * sx  + exx_lr_fraction * sxsr
+           v1x = (1.0_DP - exx_fraction - exx_lr_fraction) * v1x + exx_lr_fraction * v1xsr
+           v2x = (1.0_DP - exx_fraction - exx_lr_fraction) * v2x + exx_lr_fraction * v2xsr
+        ENDIF
+        !
      CASE DEFAULT
         !
         sx  = 0.0_DP
@@ -479,7 +490,7 @@ SUBROUTINE gcx_spin( length, rho_in, grho2_in, sx_tot, v1x_out, v2x_out, err_out
   USE omp_lib
 #endif
   USE dft_setting_params,   ONLY: igcx, igcc, exx_started,   &
-                                  exx_fraction, screening_parameter, &
+                                  exx_fraction, exx_lr_fraction, screening_parameter, &
                                   gau_parameter
   USE exch_gga
   USE beef_interface, ONLY: beefx
@@ -537,7 +548,8 @@ SUBROUTINE gcx_spin( length, rho_in, grho2_in, sx_tot, v1x_out, v2x_out, err_out
 !$omp          v1x_up, v1x_dw, v2x_up, v2x_dw, v2xsr_up, v2xsr_dw, &
 !$omp          iflag, in_err ) &
 !$omp  shared( rho_in, length, grho2_in, sx_tot, v1x_out, v2x_out,  &
-!$omp          igcx, exx_started, exx_fraction, screening_parameter,&
+!$omp          igcx, exx_started, exx_fraction, exx_lr_fraction, &
+!$omp          screening_parameter,&
 !$omp          gau_parameter, err_out )
 !$omp do
 #endif
@@ -598,7 +610,7 @@ SUBROUTINE gcx_spin( length, rho_in, grho2_in, sx_tot, v1x_out, v2x_out, err_out
         ! igcx=3:  PBE,  igcx=4:  revised PBE, igcx=8:  PBE0, igcx=10: PBEsol
         ! igcx=12: HSE,  igcx=20: gau-pbe,     igcx=23: obk8, igcx=24: ob86,
         ! igcx=25: ev93, igcx=34: PBE-AH, igcx=35: PBESOL-AH,
-        ! igcx=44: RPBE, igcx=45: W31X
+        ! igcx=44: RPBE, igcx=45: W31X, igcx=52: CAM
         !
         iflag = 1
         IF ( igcx== 4 ) iflag = 2
@@ -670,6 +682,19 @@ SUBROUTINE gcx_spin( length, rho_in, grho2_in, sx_tot, v1x_out, v2x_out, err_out
            v1x_dw = v1x_dw - exx_fraction * v1xsr_dw
            v2x_up = v2x_up - exx_fraction * v2xsr_up * 2.0_DP
            v2x_dw = v2x_dw - exx_fraction * v2xsr_dw * 2.0_DP
+           !
+        ELSEIF (igcx == 52 .AND. exx_started ) THEN
+           !
+           CALL pbexsr( rho_up, grho2_up, sxsr_up, v1xsr_up, &
+                                          v2xsr_up, screening_parameter, in_err )
+           CALL pbexsr( rho_dw, grho2_dw, sxsr_dw, v1xsr_dw, &
+                                          v2xsr_dw, screening_parameter, in_err )
+           sx_tot(ir) = (1.0_DP - exx_fraction - exx_lr_fraction) * sx_tot(ir) + &
+                     exx_lr_fraction * 0.5_DP * (sxsr_up*rnull_up + sxsr_dw*rnull_dw)
+           v1x_up = (1.0_DP - exx_fraction)*v1x_up - exx_lr_fraction*(v1x_up - v1xsr_up)
+           v2x_up = (1.0_DP - exx_fraction)*v2x_up - exx_lr_fraction*(v2x_up - v2xsr_up * 2.0_DP)
+           v1x_dw = (1.0_DP - exx_fraction)*v1x_dw - exx_lr_fraction*(v1x_dw - v1xsr_dw)
+           v2x_dw = (1.0_DP - exx_fraction)*v2x_dw - exx_lr_fraction*(v2x_dw - v2xsr_dw * 2.0_DP)
            !
         ELSEIF ( igcx == 20 .AND. exx_started ) THEN
            ! gau-pbe

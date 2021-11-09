@@ -265,7 +265,8 @@ MODULE exx
     USE wvfct,                ONLY : nbnd, npwx, wg
     USE klist,                ONLY : nks, nkstot, wk
     USE symm_base,            ONLY : nsym, sr
-    USE xc_lib,               ONLY : xclib_get_exx_fraction, start_exx,          &
+    USE xc_lib,               ONLY : xclib_get_exx_fraction,                &
+                                     xclib_get_exx_lr_fraction, start_exx,  &
                                      get_screening_parameter, get_gau_parameter, &
                                      exx_is_active
     USE uspp,                 ONLY : okvan
@@ -298,6 +299,7 @@ MODULE exx
        gau_scrlen = get_gau_parameter()
        exxdiv  = exx_divergence()
        exxalfa = xclib_get_exx_fraction()
+       exxbeta = xclib_get_exx_lr_fraction()
        !
        CALL start_exx()
     ENDIF

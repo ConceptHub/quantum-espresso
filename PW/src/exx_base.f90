@@ -22,6 +22,9 @@ MODULE exx_base
   !
   USE io_global,            ONLY : stdout
   !
+  USE xc_lib,               ONLY : xclib_get_exx_fraction,                &
+                                   xclib_get_exx_lr_fraction
+  !
   IMPLICIT NONE
   !
   SAVE
@@ -100,6 +103,10 @@ MODULE exx_base
   !! erf screening
   !
   REAL(DP) :: gau_scrlen = 0.d0
+  !! CAM screening
+  !
+  REAL(DP) :: exxalfa = 0._dp
+  REAL(DP) :: exxbeta = 0._dp
   !! gau-pbe screening
   !
   ! ... cutoff techniques
@@ -754,6 +761,7 @@ MODULE exx_base
     USE kinds,      ONLY : DP
     USE cell_base,  ONLY : tpiba, at, tpiba2
     USE constants,  ONLY : fpi, e2, pi
+    USE xc_lib,     ONLY : xclib_get_id
     !
     IMPLICIT NONE
     !
@@ -775,6 +783,12 @@ MODULE exx_base
     REAL(DP) :: grid_factor_track(ngm), qq_track(ngm)
     REAL(DP) :: nqhalf_dble(3)
     LOGICAL :: odg(3)
+    !
+    INTEGER :: igcx
+    igcx = xclib_get_id('GGA','EXCH')
+    !
+    exxalfa = xclib_get_exx_fraction()
+    exxbeta = xclib_get_exx_lr_fraction()
     !
     ! ... First the types of Coulomb potential that need q(3) and an external call
     IF( use_coulomb_vcut_ws ) THEN
@@ -840,7 +854,12 @@ MODULE exx_base
       ELSEIF (qq > eps_qdiv) THEN
          !
          IF ( erfc_scrlen > 0  ) THEN
-            fac(ig) = e2*fpi/qq*(1._DP-EXP(-qq/4._DP/erfc_scrlen**2)) * grid_factor_track(ig)
+            IF ( igcx == 47 ) THEN
+               IF ( exxalfa == 0._DP) exxalfa = 0.0001_DP
+               fac(ig)=e2*fpi/qq*(1._DP+EXP(-qq/4._DP/erfc_scrlen**2)*exxbeta/exxalfa)*grid_factor_track(ig)
+            ELSE    
+               fac(ig) = e2*fpi/qq*(1._DP-EXP(-qq/4._DP/erfc_scrlen**2)) * grid_factor_track(ig)
+            ENDIF
          ELSEIF( erf_scrlen > 0 ) THEN
             fac(ig) = e2*fpi/qq*(EXP(-qq/4._DP/erf_scrlen**2)) * grid_factor_track(ig)
          ELSE
@@ -875,6 +894,7 @@ MODULE exx_base
      USE gvecw,          ONLY : gcutw
      USE mp_exx,         ONLY : intra_egrp_comm
      USE mp,             ONLY : mp_sum
+     USE xc_lib,         ONLY : xclib_get_id
      !
      IMPLICIT NONE
      !
@@ -887,6 +907,12 @@ MODULE exx_base
                  tpiba2, alpha, x, q(3)
      INTEGER :: nqq, iq
      REAL(DP) :: aa, dq
+     !
+     INTEGER :: igcx
+     igcx = xclib_get_id('GGA','EXCH')
+     !
+     exxalfa = xclib_get_exx_fraction()
+     exxbeta = xclib_get_exx_lr_fraction()
      !
      CALL start_clock( 'exx_div' )
      !
@@ -932,8 +958,15 @@ MODULE exx_base
                  IF (.NOT.on_double_grid) THEN
                     IF ( qq > 1.d-8 ) THEN
                        IF ( erfc_scrlen > 0 ) THEN
-                          div = div + EXP( -alpha * qq) / qq * &
+                          IF ( igcx == 47 ) THEN
+                             IF ( exxalfa == 0._DP) exxalfa = 0.0001_DP
+                             div = div + EXP( -alpha * qq) / qq * &
+                                (1._dp+EXP(-qq*tpiba2/4.d0/erfc_scrlen**2) * exxbeta / exxalfa) * &
+                                grid_factor
+                          ELSE
+                             div = div + EXP( -alpha * qq) / qq * &
                                 (1._dp-EXP(-qq*tpiba2/4.d0/erfc_scrlen**2)) * grid_factor
+                          ENDIF
                        ELSEIF ( erf_scrlen >0 ) THEN
                           div = div + EXP( -alpha * qq) / qq * &
                                 (EXP(-qq*tpiba2/4.d0/erf_scrlen**2)) * grid_factor
@@ -979,7 +1012,12 @@ MODULE exx_base
         q_ = dq * (iq+0.5d0)
         qq = q_ * q_
         IF ( erfc_scrlen > 0 ) THEN
-           aa = aa  -EXP( -alpha * qq) * EXP(-qq/4.d0/erfc_scrlen**2)*dq
+             IF (igcx == 47) THEN 
+                IF (exxalfa == 0) exxalfa = 0.0001_DP
+                aa = aa + EXP( -alpha * qq) * EXP(-qq/4.d0/erfc_scrlen**2)*exxbeta/exxalfa*dq
+             ELSE
+                aa = aa  -EXP( -alpha * qq) * EXP(-qq/4.d0/erfc_scrlen**2)*dq
+             ENDIF
         ELSEIF ( erf_scrlen > 0 ) THEN
            aa = 0._dp
         ELSE
