@@ -451,6 +451,8 @@ SUBROUTINE control_iosys()
   LOGICAL  :: domag, sm_wasnt_set
   REAL(DP) :: theta, phi, V
   !
+  INTEGER :: igcx
+  !
   ! MAIN CONTROL VARIABLES, MD AND RELAX
   !
   title_      = title

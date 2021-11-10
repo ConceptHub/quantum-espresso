@@ -479,8 +479,8 @@ MODULE input_parameters
         !
         REAL(DP) :: exx_fraction = -1.0_DP
         !! exact exchange fraction. If negative, use defaults
-        REAL(DP) :: exx_lr_fraction = -1.0_DP
-        !! exact exchange fraction (lr). If negative, use defaults
+        REAL(DP) :: exx_lr_fraction = 0.0_DP
+        !! exact exchange fraction (lr). 
         REAL(DP) :: screening_parameter = -1.0_DP
         INTEGER  :: nqx1 = 0
         !! use the same values as \(\text{nk1, nk2, nk3}\)

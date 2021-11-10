@@ -3176,6 +3176,34 @@ MODULE qes_read_module
        obj%exx_fraction_ispresent = .FALSE.
     END IF
     !
+    tmp_node_list => getElementsByTagname(xml_node, "exx_lr_fraction")
+    tmp_node_list_size = getLength(tmp_node_list)
+    !
+    IF (tmp_node_list_size > 1) THEN
+        IF (PRESENT(ierr) ) THEN 
+           CALL infomsg("qes_read:hybridType","exx_lr_fraction: too many occurrences")
+           ierr = ierr + 1 
+        ELSE 
+           CALL errore("qes_read:hybridType","exx_lr_fraction: too many occurrences",10)
+        END IF
+    END IF
+    !
+    IF (tmp_node_list_size>0) THEN
+      obj%exx_lr_fraction_ispresent = .TRUE.
+      tmp_node => item(tmp_node_list, 0)
+      CALL extractDataContent(tmp_node, obj%exx_lr_fraction , IOSTAT = iostat_)
+      IF ( iostat_ /= 0 ) THEN
+         IF ( PRESENT (ierr ) ) THEN 
+            CALL infomsg("qes_read:hybridType","error reading exx_lr_fraction")
+            ierr = ierr + 1
+         ELSE
+            CALL errore ("qes_read:hybridType","error reading exx_lr_fraction",10)
+         END IF
+      END IF
+    ELSE
+       obj%exx_lr_fraction_ispresent = .FALSE.
+    END IF
+    !
     tmp_node_list => getElementsByTagname(xml_node, "screening_parameter")
     tmp_node_list_size = getLength(tmp_node_list)
     !

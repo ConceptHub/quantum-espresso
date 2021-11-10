@@ -563,7 +563,7 @@ CONTAINS
     ! CAM
     IF ( igcx == 52) THEN
        exx_fraction = 1.0_DP
-       exx_lr_fraction = -0.5_DP
+       exx_lr_fraction = -0.8_DP
        screening_parameter = 0.7_DP
     END IF
     ! gau-pbe
@@ -785,7 +785,7 @@ CONTAINS
     lxc_cond4 = (igcx==0 .AND.is_libxc(4) .AND. fkind==XC_EXCHANGE_CORRELATION)
 #endif
     IF ((ABS(scrparm_)>0.d0.AND.(igcx/=0.AND.igcx/=12.AND.(igcx<32.OR.igcx>35) &
-        .AND.igcx/=47).AND..NOT.is_libxc(3))) THEN
+        .AND.igcx/=47.AND.igcx/=52).AND..NOT.is_libxc(3))) THEN
       IF (.NOT.lxc_cond4) THEN
         CALL xclib_infomsg( 'set_screening_parameter', 'WARNING: the screening &
                              &parameter seems inconsistent with the chosen inpu&

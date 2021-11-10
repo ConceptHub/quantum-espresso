@@ -128,7 +128,8 @@ MODULE pw_restart_new
       USE mp,                   ONLY : mp_sum
       USE mp_bands,             ONLY : intra_bgrp_comm
       USE xc_lib,               ONLY : xclib_dft_is, get_gau_parameter, &
-                                       get_screening_parameter, xclib_get_exx_fraction, exx_is_active
+                                       get_screening_parameter, xclib_get_exx_fraction, &
+                                       xclib_get_exx_lr_fraction,exx_is_active
       USE exx_base,             ONLY : x_gamma_extrapolation, nq1, nq2, nq3, &
                                        exxdiv_treatment, yukawa, ecutvcut
       USE exx,                  ONLY : ecutfock, local_thr, nbndproj, use_ace 
@@ -441,7 +442,8 @@ MODULE pw_restart_new
             END IF 
             CALL qexsd_init_hybrid(hybrid_obj_opt, DFT_IS_HYBRID = .TRUE., NQ1 = nq1 , NQ2 = nq2, NQ3 =nq3, & 
                                    ECUTFOCK = ecutfock/e2, &
-                                   EXX_FRACTION = xclib_get_exx_fraction(), SCREENING_PARAMETER = scr_par_pt, &
+                                   EXX_FRACTION = xclib_get_exx_fraction(), EXX_LR_FRACTION = xclib_get_exx_lr_fraction(), &
+                                   SCREENING_PARAMETER = scr_par_pt, &
                                    EXXDIV_TREATMENT = exxdiv_treatment, X_GAMMA_EXTRAPOLATION = x_gamma_extrapolation,&
                                    ECUTVCUT = ecutvcut_pt, LOCAL_THR = loc_thr_pt, &
                                    USE_ACE = use_ace, NBNDPROJ = nbndproj )
@@ -1230,7 +1232,8 @@ MODULE pw_restart_new
       USE funct,           ONLY : enforce_input_dft, get_dft_short
       USE xc_lib,          ONLY : start_exx, exx_is_active,xclib_dft_is,      &
                                   set_screening_parameter, set_gau_parameter, &
-                                  xclib_set_exx_fraction, stop_exx, start_exx  
+                                  xclib_set_exx_fraction, xclib_set_exx_lr_fraction, &
+                                  stop_exx, start_exx
       USE london_module,   ONLY : scal6, lon_rcut, in_C6
       USE tsvdw_module,    ONLY : vdw_isolated
       USE exx_base,        ONLY : x_gamma_extrapolation, nq1, nq2, nq3, &
@@ -1276,7 +1279,7 @@ MODULE pw_restart_new
       CHARACTER(LEN=256) ::dft_
       INTEGER           :: npwx_g, llmax, ntmax
       CHARACTER(LEN=320):: filename
-      REAL(dp) :: exx_fraction, screening_parameter
+      REAL(dp) :: exx_fraction, exx_lr_fraction, screening_parameter
       TYPE (output_type)        :: output_obj 
       TYPE (parallel_info_type) :: parinfo_obj
       TYPE (general_info_type ) :: geninfo_obj
@@ -1343,7 +1346,7 @@ MODULE pw_restart_new
       !!
       !! DFT section
       CALL qexsd_copy_dft ( output_obj%dft, nsp, atm, &
-           dft_name, nq1, nq2, nq3, ecutfock, exx_fraction, screening_parameter, &
+           dft_name, nq1, nq2, nq3, ecutfock, exx_fraction, exx_lr_fraction, screening_parameter, &
            exxdiv_treatment, x_gamma_extrapolation, ecutvcut, local_thr, use_ace, nbndproj, &
            lda_plus_u, apply_u,lda_plus_u_kind, Hubbard_projectors, Hubbard_n, Hubbard_l, Hubbard_lmax, Hubbard_occ,&
            Hubbard_n2, Hubbard_l2, Hubbard_n3, Hubbard_l3, backall, Hubbard_lmax_back, Hubbard_alpha_back, &
@@ -1382,6 +1385,7 @@ MODULE pw_restart_new
          ecutvcut = ecutvcut*e2
          ecutfock = ecutfock*e2
          CALL xclib_set_exx_fraction( exx_fraction ) 
+         CALL xclib_set_exx_lr_fraction( exx_lr_fraction )
          CALL set_screening_parameter( screening_parameter )
          CALL start_exx ()
       END IF

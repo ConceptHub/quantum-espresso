@@ -694,6 +694,8 @@ MODULE qes_types_module
     REAL(DP) :: ecutfock
     LOGICAL  :: exx_fraction_ispresent = .FALSE.
     REAL(DP) :: exx_fraction
+    LOGICAL  :: exx_lr_fraction_ispresent = .FALSE.
+    REAL(DP) :: exx_lr_fraction
     LOGICAL  :: screening_parameter_ispresent = .FALSE.
     REAL(DP) :: screening_parameter
     LOGICAL  :: exxdiv_treatment_ispresent = .FALSE.

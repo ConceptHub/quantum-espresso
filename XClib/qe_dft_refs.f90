@@ -64,6 +64,9 @@ MODULE qe_dft_refs
   ! xxxx [KLI]
   DATA dft_LDAx(10)%ref / 'KLI approximation for exx - no ref. available' /
   DATA dft_LDAx(10)%wrn / 'Currently not implemented' /
+  ! CAM
+  DATA dft_LDAx(11)%ref / 'CAM range-separation' /
+  DATA dft_LDAx(11)%wrn / 'none' /
   !
   !
   !  ---- LDA correlation ----
@@ -286,6 +289,9 @@ MODULE qe_dft_refs
   ! W3MC  vdW-DF3-MC exchange
   DATA dft_GGAx(51)%ref / 'T. Jenkins, K. Berland, and T. Thonhauser, PRB 112, 235121 (2025)' /
   DATA dft_GGAx(51)%wrn / 'none' /
+  ! CAM
+  DATA dft_GGAx(52)%ref / 'Chen, Miceli, Rignanese, and Pasquarello, PRMaterials 2, 073803 (2018)' /
+  DATA dft_GGAx(52)%wrn / 'none' /
   !
   !
   ! ---- GGA correlation ----
@@ -457,6 +463,7 @@ MODULE qe_dft_refs
   DATA dft_full_descr(42) / 'RSCAN Meta-GGA - needs Libxc.' /
   ! BEEF_LXC
   DATA dft_full_descr(43) / 'BEEF-vdW GGA XC via Libxc (XC_GGA_XC_BEEFVDW, ID 286) - needs Libxc.' /
+  ! CAM / CAMPBE
+  DATA dft_full_descr(44) / 'CAM-PBE hybrid' /
   !
 END MODULE qe_dft_refs
-

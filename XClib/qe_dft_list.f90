@@ -252,7 +252,7 @@ MODULE qe_dft_list
   DATA dft_full(43)%IDs(1:6) / 0,0,0,15,0,0 /  ! placeholder; converted to LibXC ID 286
   !
   DATA dft_full(44)%name     / 'CAM' /
-  DATA dft_full(44)%name2    / 'none'  /
+  DATA dft_full(44)%name2    / 'CAMPBE'  /
   DATA dft_full(44)%IDs(1:6) / 11,4,52,4,0,0 /
   !
 CONTAINS
