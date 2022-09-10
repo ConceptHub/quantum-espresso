@@ -376,7 +376,7 @@ SUBROUTINE gcxc( length, rho_in, grho_in, sx_out, sc_out, v1x_out, &
         !
         CALL pbex (rho, grho, 1, sx, v1x, v2x)
         IF (exx_started) THEN
-           CALL pbexsr (rho, grho, sxsr, v1xsr, v2xsr, screening_parameter)
+           CALL pbexsr (rho, grho, sxsr, v1xsr, v2xsr, screening_parameter, in_err)
            sx  = (1.0_DP - exx_fraction - exx_lr_fraction) * sx  + exx_lr_fraction * sxsr
            v1x = (1.0_DP - exx_fraction - exx_lr_fraction) * v1x + exx_lr_fraction * v1xsr
            v2x = (1.0_DP - exx_fraction - exx_lr_fraction) * v2x + exx_lr_fraction * v2xsr
