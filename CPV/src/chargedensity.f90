@@ -44,7 +44,7 @@
 !     e_v = sum_i,ij rho_i,ij d^ion_is,ji
 !
       USE kinds,              ONLY: DP
-      USE control_flags,      ONLY: iprint, iverbosity
+      USE control_flags,      ONLY: iprint, iverbosity, gamma_only
       USE cp_control,         ONLY: trhor, thdyn, ndr, tpre
       USE ions_base,          ONLY: nat
       USE gvect,              ONLY: gstart, ig_l2g
