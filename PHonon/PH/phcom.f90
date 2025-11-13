@@ -230,12 +230,6 @@ MODULE control_ph
   !
   SAVE
   !
-  INTEGER, PARAMETER :: maxter = 150
-  !! maximum number of iterations
-  INTEGER :: niter_ph
-  !! maximum number of iterations (read from input)
-  INTEGER :: nmix_ph
-  !! mixing type
   INTEGER :: start_irr
   !! initial representation
   INTEGER :: last_irr
@@ -247,22 +241,8 @@ MODULE control_ph
   INTEGER :: last_q
   !! last_q in the list
   !
-  REAL(DP) :: tr2_ph
-  !! threshold for phonon calculation
-  REAL(DP) :: alpha_mix(maxter)
-  !! the mixing parameter
-  CHARACTER(LEN=10) :: where_rec='no_recover'
-  !! where the ph run recovered
   CHARACTER(LEN=12) :: electron_phonon
-  CHARACTER(LEN=256) :: flmixdpot, tmp_dir_ph, tmp_dir_phq
-  INTEGER :: rec_code=-1000
-  !! code for recover
-  INTEGER :: rec_code_read=-1000
-  !! code for recover. Not changed during the run
-  LOGICAL :: lgamma_gamma
-  !! if TRUE this is a q=0 computation with k=0 only
-  LOGICAL :: convt
-  !! if TRUE the phonon has converged
+  CHARACTER(LEN=256) :: tmp_dir_ph, tmp_dir_phq
   LOGICAL :: epsil
   !! if TRUE computes dielec. const and eff. charges
   LOGICAL :: done_epsil=.FALSE.
@@ -297,8 +277,6 @@ MODULE control_ph
   !! if TRUE there is a restart file
   LOGICAL :: ext_recover
   !! if TRUE there is a recover file
-  LOGICAL :: lnoloc
-  !! if TRUE calculates the dielectric constant neglecting local field effects
   LOGICAL :: search_sym=.TRUE.
   !! if TRUE search the mode symmetry
   LOGICAL :: search_sym_save=.TRUE.
@@ -307,8 +285,6 @@ MODULE control_ph
   !! if TRUE the run makes first a nscf calculation
   LOGICAL :: ldisp
   !! if TRUE the run calculates full phonon dispersion
-  LOGICAL :: reduce_io
-  !! if TRUE reduces needed I/O
   LOGICAL :: done_bands
   !! if TRUE the bands have been calculated
   LOGICAL :: bands_computed=.FALSE.
@@ -329,6 +305,8 @@ MODULE control_ph
   !! if TRUE the dynamical matrix is in xml form
   LOGICAL :: all_done
   !! if TRUE all representations have been done
+  LOGICAL :: lmultipole = .FALSE.
+  !! if TRUE macroscopic density response to q-potential perturbation is written as output
   !
   LOGICAL :: newgrid=.FALSE.
   !! if TRUE use new k-point grid nk1,nk2,nk3
@@ -423,6 +401,10 @@ MODULE units_ph
   !! length of DV_SCF * psi
   INTEGER :: iugauge
   !! Unit for reading and writing gauge information in ahc.f90
+  INTEGER :: iudumpdrho
+  !! Unit to print the macroscopic density at q
+  INTEGER :: iurhoun
+  !! Unit to print the epsilon at q
   !
   LOGICAL, ALLOCATABLE :: this_dvkb3_is_on_file(:), &
                           this_pcxpsi_is_on_file(:,:)
@@ -533,9 +515,7 @@ MODULE ldaU_ph
   COMPLEX(DP), ALLOCATABLE :: dnsorth_cart(:,:,:,:,:,:)
   !! same as above, but in cart. coordinates
   !
-  COMPLEX (DP), ALLOCATABLE :: proj1(:,:),    &
-                               proj2(:,:),    &
-                               projpb(:,:),   &
+  COMPLEX (DP), ALLOCATABLE :: projpb(:,:),   &
                                projpdb(:,:,:)
   ! Arrays to store scalar products between vectors
   ! projpb  = <psi|beta>
@@ -549,29 +529,6 @@ MODULE ldaU_ph
   !! of atomic occupation matrix ns
   !
 END MODULE ldaU_ph
-
-MODULE nc_mag_aux
-  USE kinds,      ONLY : DP
-  SAVE
-  
-  COMPLEX (DP), ALLOCATABLE ::  &
-                               deeq_nc_save(:,:,:,:,:), &
-                               int1_nc_save(:,:,:,:,:,:), &
-                               int3_save(:, :, :, :, :, :)
-END MODULE nc_mag_aux
-
-!MODULE qpoint_aux
-!  USE kinds,      ONLY : DP
-!  USE becmod,     ONLY : bec_type
-!  SAVE
-  
-!  INTEGER, ALLOCATABLE :: ikmks(:)    ! index of -k for magnetic calculations
-
-!  INTEGER, ALLOCATABLE :: ikmkmqs(:)  ! index of -k-q for magnetic calculations
-
-!  TYPE(bec_type), ALLOCATABLE :: becpt(:), alphapt(:,:)
-
-!END MODULE qpoint_aux
 
 MODULE phcom
   USE dynmat
@@ -588,6 +545,4 @@ MODULE phcom
   USE disp
   USE grid_irr_iq
   USE ldaU_ph
-  USE nc_mag_aux
-!  USE qpoint_aux
 END MODULE phcom

@@ -26,7 +26,6 @@ contains
                                 & if_dft_spectrum, reference
     use lr_variables, only : nbnd_total
     use io_global,    only : stdout
-    use lr_dav_debug
  
     implicit none
     integer :: ib,ic,iv
@@ -186,14 +185,13 @@ contains
     use kinds,         only : dp
     use wvfct,         only : nbnd, npwx, et
     use lr_dav_variables
-    use lr_variables,         only : evc0, sevc0 ,revc0, evc0_virt,&
+    use lr_variables,         only : evc0, sevc0 , evc0_virt,&
                                    & sevc0_virt, nbnd_total, davidson, restart
     use io_global,    only : stdout
     use wvfct,       only : npwx,nbnd,et
     use gvect,                only : gstart
     use uspp,           only : okvan
     use lr_us
-    use lr_dav_debug
 
     implicit none
     integer :: ib,ia,ipw,ibnd
@@ -231,7 +229,6 @@ contains
     dav_iter=0
 101 continue
     dav_conv=.false.
-    ! call check_orth()
     write(stdout,'(5x,"Finished initiating.")')
     !
     RETURN
@@ -437,7 +434,6 @@ contains
     use lr_us
     use uspp,           only : okvan
     use lr_dav_variables
-    use lr_dav_debug
     use lr_us
 
     implicit none
@@ -605,7 +601,6 @@ contains
     use lr_us
     use uspp,           only : okvan
     use lr_dav_variables
-    use lr_dav_debug
     use lr_us
 
     implicit none
@@ -629,9 +624,6 @@ contains
     call start_clock("matrix")
     call ZGEMM('N', 'N', num_basis,num_basis,num_basis,(1.0D0,0.0D0),M_D,&
                num_basis_max,M_C,num_basis_max,(0.0D0,0.0D0), M,num_basis_max)
-    call check("M_C")
-    call check("M_D")
-    call check("M")
 
     ! Solve M_DC
     ! It is dangerous to be "solved", use its shadow avatar in order to protect the original one
@@ -672,8 +664,8 @@ contains
 #endif
 
     ! Recover eigenvectors in the whole space
-    left_full(:,:,:,:)=0.0d0
-    right_full(:,:,:,:)=0.0d0
+    left_full(:,:,:,:)=(0.0d0, 0.0d0)
+    right_full(:,:,:,:)=(0.0d0, 0.0d0)
     do ieign = 1, num_eign
       do ibr = 1, num_basis
         left_full(:,:,1,ieign)=left_full(:,:,1,ieign)+left_M(ibr,eign_value_order(ieign))*vec_b(:,:,1,ibr)
@@ -733,7 +725,6 @@ contains
     use io_global, only : stdout
     use wvfct,                only : nbnd, npwx
     use uspp,           only : okvan
-    use lr_dav_debug
     use lr_us
     
     implicit none
@@ -842,7 +833,6 @@ contains
     use io_global,       only : stdout
     use uspp,           only : okvan
     use lr_us
-    use lr_dav_debug
     use wvfct,                only : npwx
     
     implicit none
@@ -1181,7 +1171,6 @@ contains
     use klist,       only : ngk
     use lr_dav_variables, only : reference, diag_of_h, tr_energy,eign_value_order,&
                      &turn2planb
-    use g_psi_mod
     
     implicit none
     complex(dp)  :: vect(npwx,nbnd)
@@ -1208,6 +1197,7 @@ contains
     !-------------------------------------------------------------------------------
     ! This routine try to interpret physical information from the solution of
     ! casider's equation
+    use constants,            only : RYTOEV, EVTONM
     use kinds,                only : dp
     use lr_variables,         only : evc0, sevc0,R, nbnd_total,evc0_virt
     use lr_dav_variables
@@ -1267,7 +1257,8 @@ contains
           ia = eign_value_order(ieign)
           if (message=="END")&
           write(stdout,'(/7x,"! The",I5,1x,"-th eigen state. The transition&
-          & energy is: ", 5x, F12.8)') ieign, tr_energy(ia)
+          & energy is: ", 5x, F12.8, " Ry (", F6.4, " eV, ", F6.2, " nm)")') &
+                  ieign, tr_energy(ia), tr_energy(ia)* RYTOEV, EVTONM / (tr_energy(ia)* RYTOEV) 
           ! Please see Documentation for the explaination of the next four steps
           ! In short it gets the right components of X and Y
           ! Apply C to the right eigen state in order to calculate the right omega
@@ -1543,7 +1534,7 @@ contains
     use kinds,         only : DP
     use wvfct,         only : nbnd,et
     use lr_dav_variables
-    use lr_variables,         only : evc0, sevc0 ,revc0, evc0_virt
+    use lr_variables,         only : evc0, sevc0 , evc0_virt
     use wvfct,                only : npwx,wg
     use fft_base,             only : dffts,dfftp
     use uspp,           only : okvan
@@ -1587,7 +1578,7 @@ contains
       dvrss(ir) = w1 * dvrss(ir) * psic(ir)         ! drho = 2*v1*c1 -> dvrss
     enddo
 
-    call dv_of_drho(dvrss,.false.)       ! calc the potential change 
+    call dv_of_drho(dvrss)       ! calc the potential change
 
     wfck(:,1) = evc0(:,v2,1)
     call invfft_orbital_gamma(wfck(:,:),1,1)  ! FFT: v2 -> psic
@@ -1734,6 +1725,7 @@ contains
     use io_files,      only : prefix
     use kinds,         only : dp
     use io_global,     only : stdout
+    use constants,     only : RYTOEV, EVTONM
 
     implicit none
     character(len=*) :: message
@@ -1745,10 +1737,13 @@ contains
     if(message=="END") filename = trim(prefix)  // ".eigen"
     if(message=="10") filename = trim(prefix)  // ".eigen-quasi-conv"
     OPEN(18,file=filename,status="unknown")
-    write(18,'("#",7x,"Energy(Ry)",12x,"Total",17x,"X",18x,"Y",19x,"Z")')
+    write(18,'("#",5x,"Energy(Ry)",10x,"Energy(eV)",10x,"Wavelengh(nm)",7x,"Total",15x,"X",19x,"Y",19x,"Z")')
  
     do ieign=1, num_eign
-      write(18,'(5E20.8)') tr_energy(eign_value_order(ieign)),total_chi(ieign),&
+      write(18,'(7E20.8)') tr_energy(eign_value_order(ieign)),&
+                           tr_energy(eign_value_order(ieign)) * RYTOEV, &
+                           EVTONM / (tr_energy(eign_value_order(ieign)) * RYTOEV), &
+                           total_chi(ieign),&
                            chi_dav(1,ieign),chi_dav(2,ieign),chi_dav(3,ieign)
     enddo
 
@@ -1984,7 +1979,6 @@ contains
     use charg_resp,           only : lr_calc_R
     use io_global,    only : stdout,ionode
     use io_files,      only : prefix
-    use lr_dav_debug
 
     implicit none
     integer :: ib,ic,iv,i

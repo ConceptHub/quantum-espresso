@@ -257,7 +257,7 @@ CONTAINS
     CALL get_attr ( 'mesh', mesh )
     if ( mesh == 0 ) THEN
 #if defined (__debug)
-       WRITE(stdout,'("read_pp_mesh: mesh size missing, using the one in header")'
+       WRITE(stdout,'("read_pp_mesh: mesh size missing, using the one in header")')
 #else
        continue
 #endif
@@ -287,7 +287,7 @@ CONTAINS
     INTEGER, INTENT(INOUT) :: ierr
     !
     INTEGER :: nb, ind, l, j
-    CHARACTER(LEN=8) :: tag
+    CHARACTER(LEN=9) :: tag
     real(dp), allocatable :: vnl(:)
     !
     IF ( upf%typ == "SL" ) THEN
@@ -320,7 +320,7 @@ CONTAINS
              IF ( l > 0 .AND. ABS(j-l-0.5_dp) < 0.001_dp ) ind = 2
              ! FIXME: what about spin-orbit case for v.2 upf?
              if ( v2 ) then
-                WRITE(stdout,'("read_pp_semiloca: check spinorbit case")')
+                WRITE(stdout,'("read_pp_semilocal: check spinorbit case")')
                 ierr = 1
                 return
              end if
@@ -545,7 +545,7 @@ CONTAINS
     INTEGER, INTENT(INOUT) :: ierr
     !
     INTEGER :: nw, ind, l
-    CHARACTER(LEN=8) :: tag
+    CHARACTER(LEN=9) :: tag
     !
     allocate ( upf%chi(1:upf%mesh,upf%nwfc) )
     allocate ( upf%els(upf%nwfc), &

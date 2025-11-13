@@ -33,9 +33,8 @@ SUBROUTINE dnsq_orth()
   USE ions_base,     ONLY : nat, ityp, ntyp => nsp
   USE ldaU,          ONLY : Hubbard_lmax, Hubbard_l, is_hubbard, offsetU, nwfcU
   USE ldaU_ph,       ONLY : dvkb, vkbkpq, dvkbkpq, &
-                            proj1, proj2, dnsorth_cart, &
-                            read_dns_bare, dnsorth
-  USE ldaU_lr,       ONLY : swfcatomk, swfcatomkpq
+                            dnsorth_cart, read_dns_bare, dnsorth
+  USE ldaU_lr,       ONLY : swfcatomk, swfcatomkpq, proj1, proj2
   USE klist,         ONLY : xk, wk,  ngk, igk_k
   USE wvfct,         ONLY : npwx, wg, nbnd 
   USE qpoint,        ONLY : nksq, ikks, ikqs
@@ -48,7 +47,8 @@ SUBROUTINE dnsq_orth()
   USE uspp,          ONLY : okvan, nkb, vkb, ofsbeta
   USE control_flags, ONLY : iverbosity
   USE mp,            ONLY : mp_sum, mp_bcast 
-  USE mp_pools,      ONLY : intra_pool_comm, inter_pool_comm
+  USE mp_pools,      ONLY : inter_pool_comm
+  USE mp_bands,      ONLY : intra_bgrp_comm
   USE mp_world,      ONLY : world_comm
   USE io_files,      ONLY : seqopn 
   USE buffers,       ONLY : get_buffer
@@ -66,7 +66,6 @@ SUBROUTINE dnsq_orth()
   COMPLEX(DP), ALLOCATABLE :: dpqq(:), dpqq1(:), sum_dpqq(:,:)
   REAL(DP), ALLOCATABLE :: wgg(:,:,:)
   LOGICAL :: exst 
-  COMPLEX(DP), EXTERNAL :: ZDOTC
   !
   CALL start_clock( 'dnsq_orth' )
   !
@@ -165,15 +164,15 @@ SUBROUTINE dnsq_orth()
               DO m = 1, 2*Hubbard_l(nt)+1
                  ihubst = offsetU(nah) + m   ! I m index
                  DO ibnd = 1, nbnd
-                    proj1(ibnd,ihubst) = ZDOTC (npw,  swfcatomk(:,ihubst),   1, evc(:,ibnd), 1)
-                    proj2(ibnd,ihubst) = ZDOTC (npwq, swfcatomkpq(:,ihubst), 1, evq(:,ibnd), 1)
+                 proj1(ibnd,ihubst) = dot_product(swfcatomk(1:npw,ihubst),  evc(1:npw,ibnd))
+                 proj2(ibnd,ihubst) = dot_product(swfcatomkpq(1:npwq,ihubst), evq(1:npwq,ibnd))
                  ENDDO
               ENDDO
            ENDIF 
         ENDDO  
         !
-        CALL mp_sum (proj1, intra_pool_comm)  
-        CALL mp_sum (proj2, intra_pool_comm)
+        CALL mp_sum (proj1, intra_bgrp_comm)
+        CALL mp_sum (proj2, intra_bgrp_comm)
         ! 
         DO na = 1, nat
            !

@@ -1,8 +1,8 @@
 PROGRAM spectral_fn_broadening
 !-------------------------------------------------------------------------
 !! authors: Marios Zacharias, Feliciano Giustino 
-!! acknowledgement: Hyungjun Lee for help packaging this release
-!! version: v0.1
+!! acknowledgement: Sabyasachi Tiwari for help packaging this release
+!! version: v1.2
 !! license: GNU
 !
 ! This routine is used to calculate the spectral function, or momentum resolved
@@ -121,7 +121,7 @@ ENDIF
 !
 DEALLOCATE(k, e, k0, e0, w0, spctrlfn)
 !
-CALL environment_end('SPFN_BROAD')
+CALL environment_end( )
 !
 CALL mp_global_end()
 !

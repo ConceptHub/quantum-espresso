@@ -88,7 +88,7 @@ subroutine writemodes (nat,q,w2,z,iout)
   !  write frequencies and normalised displacements
   !
   write(iout,'(5x,''diagonalizing the dynamical matrix ...''/)')
-  write(iout,'(1x,''q = '',3f12.4)') q
+  write(iout,'(1x,''q = '',3f15.8)') q
   write(iout,'(1x,74(''*''))')
   do i = 1,nat3
      !
@@ -128,7 +128,7 @@ subroutine writemolden (flmol, gamma, nat, atm, a0, tau, ityp, w2, z)
   real(DP), intent(in) :: a0, tau(3,nat), w2(3*nat)
   complex(DP), intent(in) :: z(3*nat,3*nat)
   character(len=50), intent(in) :: flmol
-  character(len=3), intent(in) :: atm(*)
+  character(len=6), intent(in) :: atm(*)
   logical, intent(in) :: gamma
   !
   ! ... local variables
@@ -199,7 +199,7 @@ subroutine writexsf (xsffile, gamma, nat, atm, a0, at, tau, ityp, z)
   real(DP) :: a0, tau(3,nat), at(3,3)
   complex(DP) :: z(3*nat,3*nat)
   character(len=50) :: xsffile
-  character(len=3) :: atm(*)
+  character(len=6) :: atm(*)
   logical :: gamma
   !
   ! ... local variables

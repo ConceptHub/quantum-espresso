@@ -2,20 +2,23 @@
 
 include	../../make.inc
 
+VPATH = @srcdir@
+
 # location of needed modules and included files (if any)
 MODFLAGS= $(BASEMOD_FLAGS) 
 
 FOBJS = \
 berryion.o \
 bforceion.o \
-cell_nose.o \
 cg.o \
 cg_sub.o \
 chargedensity.o \
 cp_autopilot.o \
+cp_control.o \
 cp_emass.o \
 cp_interfaces.o \
 cp_restart_new.o \
+cp_wavefunctions.o \
 cplib.o \
 cpr_mod.o \
 cpr.o \
@@ -45,7 +48,6 @@ init.o \
 init_run.o \
 inner_loop_cold.o \
 input.o \
-ions_nose.o \
 ions_positions.o \
 ksstates.o \
 ldaU_cp.o \
@@ -150,4 +152,7 @@ clean :
 		*.cpp *.d *.L *.a *.s cp.x manycp.x wfdd.x
 	-/bin/rm -rf ../../bin/manycp.x ../../bin/cppp.x ../../bin/cp.x ../../bin/wfdd.x
 
+
 include make.depend
+
+

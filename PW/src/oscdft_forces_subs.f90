@@ -22,7 +22,12 @@ MODULE oscdft_forces_subs
 
          IMPLICIT NONE
 
-         TYPE(oscdft_context_type), INTENT(INOUT) :: ctx
+         TYPE(oscdft_context_type), INTENT(INOUT), TARGET :: ctx
+         TYPE(oscdft_input_type),   POINTER       :: inp
+
+         inp => ctx%inp
+
+         IF (.NOT.(inp%oscdft_type==1)) RETURN
 
          IF (.NOT.ctx%inp%skip_forces .AND. ctx%idx%nconstr > 0) THEN
             IF (.NOT. ALLOCATED(ctx%force_oscdft)) ALLOCATE(ctx%force_oscdft(3,nat))
@@ -37,8 +42,13 @@ MODULE oscdft_forces_subs
          USE ions_base, ONLY : nat, ityp
          IMPLICIT NONE
 
-         TYPE(oscdft_context_type), INTENT(INOUT) :: ctx
+         TYPE(oscdft_context_type), INTENT(INOUT), TARGET :: ctx
+         TYPE(oscdft_input_type),   POINTER       :: inp
          INTEGER                                  :: na
+
+         inp => ctx%inp
+
+         IF (.NOT.(inp%oscdft_type==1)) RETURN
 
          IF (.NOT.ctx%inp%skip_forces .AND. ctx%idx%nconstr > 0) THEN
             WRITE(stdout, '(/,5x, "OS-CDFT contribution to forces:")')
@@ -144,13 +154,7 @@ MODULE oscdft_forces_subs
             CALL init_us_2(npw, igk_k(1,ik), xk(1,ik), vkb)
             ! proj = <wfcF|S|psi>
             CALL calbec(offload_type, npw, vkb, evc, becp)
-            IF (use_gpu) THEN
-               !$acc host_data use_device(evc, spsi)
-               CALL s_psi_acc(npwx, npw, nbnd, evc, spsi)
-               !$acc end host_data
-            ELSE
-               CALL s_psi(npwx, npw, nbnd, evc, spsi)
-            END IF
+            CALL s_psi(npwx, npw, nbnd, evc, spsi)
             CALL calbec(offload_type, npw, wfcF_wfc, spsi, proj)
 
             ! calculate <beta|psi>

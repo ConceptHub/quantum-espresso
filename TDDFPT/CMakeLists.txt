@@ -43,14 +43,12 @@ set(src_tddfpt
     src/lr_dav_routines.f90
     src/lr_us.f90
     src/lr_test_restart.f90
-    src/lr_dav_debug.f90
     src/plugin_tddfpt_potential.f90
     src/lr_sternheimer.f90
     src/linear_solvers.f90
     src/paw_add_symmetry.f90
     src/dveqpsi_us.f90
     src/dveqpsi_us_only.f90
-    src/orthogonalize_omega.f90
     src/lr_mix_pot.f90
     src/lr_magnons_routines.f90
     src/lr_apply_liouvillian_magnons.f90

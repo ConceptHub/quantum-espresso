@@ -57,11 +57,11 @@ MODULE cp_restart_new
                              iupdwn_tot, nupdwn_tot, wfc, dt )
       !------------------------------------------------------------------------
       !
-      USE control_flags,            ONLY : gamma_only, force_pairing, trhow, &
-                                           tksw, do_makov_payne, smallmem,   &
-                                           mbd_vdw,                           &
-                                           llondon, lxdm, ts_vdw, tfor, tpre
-      USE control_flags,            ONLY : lwfpbe0nscf, lwfnscf, lwf ! Lingzhu Kong
+      USE control_flags,            ONLY : gamma_only, &
+                                           do_makov_payne, smallmem, mbd_vdw, &
+                                           llondon, lxdm, ts_vdw
+      USE cp_control,               ONLY : tpre, tfor, trhow, tksw, lwfnscf, &
+                                           lwfpbe0nscf, force_pairing, lwf ! Lingzhu Kong
       USE constants,                ONLY : e2
       USE parameters,               ONLY : ntypx
       USE dener,                    ONLY : detot
@@ -568,8 +568,9 @@ MODULE cp_restart_new
       !------------------------------------------------------------------------
       !! Read XML file.
       !
-      USE control_flags,            ONLY : gamma_only, force_pairing, llondon,&
-                                           ts_vdw, mbd_vdw, lxdm, iverbosity, lwf
+      USE control_flags,            ONLY : gamma_only, llondon, ts_vdw, &
+                                           mbd_vdw, lxdm, iverbosity
+      USE cp_control,               ONLY : force_pairing, lwf
       USE run_info,                 ONLY : title
       USE gvect,                    ONLY : ngm
       USE gvecw,                    ONLY : ngw, ngw_g
@@ -651,7 +652,7 @@ MODULE cp_restart_new
       ! ... variables read for testing purposes
       !
       INTEGER               :: ibrav_
-      CHARACTER(LEN=3)      :: atm_(ntypx)
+      CHARACTER(LEN=6)      :: atm_(ntypx)
       INTEGER               :: nat_, nsp_, na_
       INTEGER               :: nk_, isk_(2), nt_, natomwfc
       LOGICAL               :: gamma_only_ , lsda_
@@ -787,9 +788,9 @@ MODULE cp_restart_new
       CALL qexsd_copy_dft ( output_obj%dft, nsp, atm, dft_name, &
            nq1, nq2, nq3, ecutfock, exx_fraction, screening_parameter, &
            exxdiv_treatment, x_gamma_extrapolation, ecutvcut, local_thr, &
-           lda_plus_U, lda_plus_U_kind, Hubbard_projectors, Hubbard_n, Hubbard_l, Hubbard_lmax,Hubbard_dum, &
+           lda_plus_U, bool_dum,lda_plus_U_kind, Hubbard_projectors, Hubbard_n, Hubbard_l, Hubbard_lmax,Hubbard_dum, &
            hub_l2_dum, hub_l2_dum, hub_l2_dum, hub_l2_dum, backall_dum, hub_lmax_back_dum, hubba_dum, & 
-           Hubbard_U, hubba_dum, Hubbard_dum(1,:), Hubbard_dum(2,:), Hubbard_dum(3,:), &
+           Hubbard_U, hubba_dum_dum,hubba_dum, Hubbard_dum(1,:), Hubbard_dum(2,:), hubba_dum_dum, Hubbard_dum(3,:), &
            HUBBARD_J = Hubbard_dum, HUBBARD_V = hubba_dum_dum, VDW_CORR = vdw_corr, dftd3_version = int_dum, & 
            dftd3_3body = bool_dum, SCAL6 = scal6,    & 
            LON_RCUT =lon_rcut, VDW_ISOLATED = vdw_isolated )

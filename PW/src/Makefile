@@ -2,6 +2,8 @@
 
 include ../../make.inc
 
+VPATH = @srcdir@
+
 # location of needed modules and included files (if any)
 MODFLAGS= $(BASEMOD_FLAGS) \
           $(MOD_FLAG)../../dft-d3/
@@ -15,22 +17,24 @@ add_bfield.o \
 add_efield.o \
 add_dmft_occ.o \
 add_vuspsi.o \
+add_vuspsi_acc.o \
 add_gatefield.o \
 add_paw_to_deeq.o \
+add_paw_to_deeq_acc.o \
 add_vhub_to_deeq.o \
+add_vhub_to_deeq_acc.o \
 addusdens.o \
 addusforce.o \
 addusstress.o \
 allocate_fft.o \
 allocate_locpot.o \
-allocate_nlpot.o \
 allocate_wfc.o \
 atomic_rho.o \
 atomic_wfc.o \
 atomic_wfc_mod.o \
 average_pp.o \
 acfdt_in_pw.o \
-newd.o \
+newd_acc.o \
 beef.o \
 bp_mod.o \
 bp_c_phase.o \
@@ -51,7 +55,6 @@ compute_rho.o \
 compute_qdipol.o \
 compute_qdipol_so.o \
 compute_ux.o \
-coset.o \
 Coul_cut_2D.o \
 d_matrix.o \
 data_structure.o \
@@ -123,7 +126,7 @@ init_us_2.o \
 init_vloc.o \
 input.o \
 io_rho_xml.o \
-irrek.o \
+irreducible_BZ.o \
 iweights.o \
 intersite_V.o \
 init_nsg.o \
@@ -149,6 +152,7 @@ non_scf.o \
 offset_atom_wfc.o \
 openfil.o \
 orthoatwfc.o \
+orthoUwfc.o \
 output_tau.o \
 para.o \
 paw_exx.o \
@@ -195,7 +199,6 @@ ruotaijk.o \
 run_pwscf.o \
 s_1psi.o \
 s_psi.o \
-s_psi_acc.o \
 save_in_cbands.o \
 save_in_electrons.o \
 scale_h.o \
@@ -212,6 +215,7 @@ setlocal.o \
 setup.o \
 scissor.o \
 sic.o \
+starting_scf_mod.o \
 stop_run.o \
 stres_cc.o \
 stres_ewa.o \
@@ -244,7 +248,9 @@ v_of_rho.o \
 vcsmd.o \
 vcsubs.o \
 vhpsi.o \
-vloc_psi.o \
+vhpsi_U.o \
+vloc_psi_tg.o \
+vloc_psi_acc.o \
 utils.o \
 xdm_dispersion.o \
 wfcinit.o \
@@ -268,27 +274,12 @@ oscdft_occupations.o \
 oscdft_wfcO.o \
 oscdft_forces.o \
 oscdft_forces_subs.o \
+oscdft_extended.o \
 d3hess_mod.o
 
 
-# GPU versions of routines
+# CUDA Fortran versions of routines
 PWLIBS += \
-  g_psi_mod_gpu.o \
-  g_psi_gpu.o \
-  h_psi_gpu.o \
-  vhpsi_gpu.o \
-  vloc_psi_gpu.o \
-  scf_mod_gpu.o \
-  usnldiag_gpu.o \
-  add_vuspsi_gpu.o \
-  sum_band_gpu.o \
-  newd_gpu.o \
-  add_paw_to_deeq_gpu.o \
-  add_vhub_to_deeq_gpu.o \
-  rotate_wfc_gpu.o \
-  hs_1psi_gpu.o \
-  hs_psi_gpu.o \
-  s_1psi_gpu.o \
   utils_gpu.o \
   oscdft_functions_gpu.o
 
@@ -319,5 +310,3 @@ clean :
 	- /bin/rm -f *.x *.o *.a *~ *_tmp.f90 *.d *.mod *.i *.L
 
 include make.depend
-
-# DO NOT DELETE

@@ -39,7 +39,7 @@ SUBROUTINE forces()
   USE extfield,          ONLY : tefield, forcefield, gate, forcegate, relaxz
   USE control_flags,     ONLY : gamma_only, remove_rigid_rot, textfor, &
                                 iverbosity, llondon, ldftd3, lxdm, ts_vdw, &
-                                mbd_vdw, lforce => tprnfor, istep
+                                mbd_vdw, lforce, istep
   USE bp,                ONLY : lelfield, gdir, l3dstring, efield_cart, &
                                 efield_cry,efield
   USE uspp,              ONLY : okvan
@@ -233,7 +233,7 @@ SUBROUTINE forces()
   IF (use_environ) CALL calc_environ_force(force)
 #endif
 #if defined (__OSCDFT)
-  IF (use_oscdft) CALL oscdft_apply_forces(oscdft_ctx)
+  IF (use_oscdft .AND. (oscdft_ctx%inp%oscdft_type==1)) CALL oscdft_apply_forces(oscdft_ctx)
 #endif
   !
   ! ... Berry's phase electric field terms
@@ -443,7 +443,7 @@ SUBROUTINE forces()
      !
   END IF
 #if defined (__OSCDFT)
-  IF (use_oscdft) CALL oscdft_print_forces(oscdft_ctx)
+  IF (use_oscdft .AND. (oscdft_ctx%inp%oscdft_type==1)) CALL oscdft_print_forces(oscdft_ctx)
 #endif
   !
   sumfor = 0.D0

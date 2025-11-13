@@ -29,7 +29,8 @@ SUBROUTINE memory_report()
   USE kinds,     ONLY : dp 
   USE constants, ONLY : tpi, fpi, pi, eps16
   USE wvfct,     ONLY : nbnd, nbndx
-  USE basis,     ONLY : natomwfc, starting_wfc
+  USE basis,     ONLY : natomwfc
+  USE starting_scf, ONLY : starting_wfc
   USE cell_base, ONLY : omega, bg, alat
   USE exx,       ONLY : ecutfock, use_ace
   USE exx_base,  ONLY : nkqs
@@ -49,7 +50,7 @@ SUBROUTINE memory_report()
   USE uspp_param,ONLY : lmaxkb, upf, nh, nbetam
   USE noncollin_module, ONLY : npol, nspin_mag
   USE control_flags,    ONLY: isolve, nmix, imix, gamma_only, lscf, io_level, &
-       lxdm, smallmem, tqr, iverbosity, rmm_ndim, lforce=>tprnfor, tstress
+       lxdm, smallmem, tqr, iverbosity, rmm_ndim, lforce, tstress
   USE ions_base, ONLY : nat, ntyp => nsp, ityp
   USE rism3d_facade, ONLY : lrism3d, rism3t, rism3d_is_laue
   USE mp_bands,  ONLY : nproc_bgrp, nbgrp

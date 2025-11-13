@@ -2,6 +2,8 @@
 
 include ../../make.inc
 
+VPATH = @srcdir@
+
 # location of needed modules and included files (if any)
 MODFLAGS= $(BASEMOD_FLAGS) \
           $(MOD_FLAG)../../PW/src \
@@ -14,6 +16,7 @@ addusdens1d.o \
 add_shift_cc.o \
 add_shift_lc.o \
 add_shift_us.o \
+wannier_mod.o \
 chdens_module.o \
 chdens_bspline.o \
 chdens_bspline_sphere.o \
@@ -57,6 +60,7 @@ write_hamiltonians.o \
 globalmod.o \
 fouriermod.o \
 idwmod.o \
+hubbard_projectors.o \
 oscdft_pp_mod.o \
 oscdft_et_mod.o \
 xc_vdW_scale_mod.o \
@@ -74,7 +78,7 @@ all : tldeps open_grid.x average.x bands.x band_interpolation.x dos.x epsilon.x 
       pawplot.x sumpdos.x pw2wannier90.x pw2critic.x pw2gw.x pw2gt.x \
       wannier_ham.x wannier_plot.x molecularpdos.x \
       pw2bgw.x wfck2r.x fermi_velocity.x fermi_proj.x ppacf.x pprism.x \
-      d3hess.x \
+      d3hess.x wannier2pw.x \
       oscdft_pp.x oscdft_et.x
 
 
@@ -160,6 +164,11 @@ projwfc.x : projwfc.o libpp.a $(MODULES)
 pw2wannier90.x : pw2wannier90.o libpp.a $(MODULES) 
 	$(LD) $(LDFLAGS) -o $@ \
 		pw2wannier90.o libpp.a $(MODULES) $(QELIBS)
+	- ( cd ../../bin ; ln -fs ../PP/src/$@ . )
+
+wannier2pw.x : wannier2pw.o libpp.a $(MODULES)
+	$(LD) $(LDFLAGS) -o $@ \
+		wannier2pw.o libpp.a $(MODULES) $(QELIBS)
 	- ( cd ../../bin ; ln -fs ../PP/src/$@ . )
 
 pw2critic.x : pw2critic.o libpp.a $(MODULES) 
@@ -265,4 +274,7 @@ oscdft_et.x : oscdft_et.o libpp.a $(MODULES) $(LIBOBJS)
 clean :
 	- /bin/rm -f *.x *.o *~ *_tmp.f90 *.d *.mod *.i *.L libpp.a
 
+
 include make.depend
+
+

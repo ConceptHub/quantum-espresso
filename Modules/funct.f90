@@ -95,8 +95,9 @@ MODULE funct
   !              "vdw-df-c090"  ="sla+pw+c09x+vdw1+HF/4" = vdW-DF-C09-0
   !              "vdw-df3-opt1" ="sla+pw+w31x+w31c"      = vdW-DF3-opt1
   !              "vdw-df3-opt2" ="sla+pw+w32x+w32c"      = vdW-DF3-opt2
+  !              "vdw-df3-mc"   ="sla+pw+w3mx+w3mc"      = vdW-DF3-mc
   !              "vdw-df-C6"    ="sla+pw+b86r+wc6"       = vdW-DF-C6
-  !              "rvv10" = "sla+pw+rw86+pbc+vv10"        = rVV10
+  !              "rvv10"        ="sla+pw+rw86+pbc+vv10"  = rVV10
   !
   ! Any nonconflicting combination of the following keywords is acceptable:
   !
@@ -179,6 +180,7 @@ MODULE funct
   !              "ehpb"   HSE variant                    igcx =48 ! Reserved PH
   !              "hjpb"   HJS-type PBE cross check       igcx =49 ! Reserved PH
   !              "hjps"   HJS-type PBEsol crosscheck     igcx =50 ! Reserved PH
+  !              "w3mx"   vdW-DF3-mc exchange            igcx =51
   !
   ! Gradient Correction on Correlation:
   !              "nogc"   none                           igcc =0 (default)
@@ -211,6 +213,7 @@ MODULE funct
   !              "w31c"   vdW-DF3-opt1                   inlc =3
   !              "w32c"   vdW-DF3-opt2                   inlc =4
   !              "wc6"    vdW-DF-C6                      inlc =5
+  !              "w3mc"   vdW-DF3-mc                     inlc =6
   !---------------------------------------------------------------------
   !              "vv10"   rVV10                          inlc =26
   !
@@ -268,6 +271,7 @@ MODULE funct
   !              vdW-DF-ob86  Klimes et al, Phys. Rev. B, 83, 195131 (2011)
   !              vdW-DF3-opt1 D. Chakraborty, K. Berland, and T. Thonhauser, JCTC 16, 5893 (2020)
   !              vdW-DF3-opt2 D. Chakraborty, K. Berland, and T. Thonhauser, JCTC 16, 5893 (2020)
+  !              vdW-DF3-mc   T. Jenkins, K. Berland, and T. Thonhauser, DOI: 10.48550/arXiv.2509.02358 (2025)
   !              vdW-DF-C6    K. Berland, D. Chakraborty, and T. Thonhauser, PRB 99, 195418 (2019)
   !              c09x    V. R. Cooper, Phys. Rev. B 81, 161104(R) (2010)
   !              tpss    J.Tao, J.P.Perdew, V.N.Staroverov, G.E. Scuseria,
@@ -327,7 +331,7 @@ MODULE funct
   CHARACTER(LEN=4) :: nonlocc
   DIMENSION :: nonlocc(0:ncnl)
   !
-  DATA nonlocc/ 'NONE', 'VDW1', 'VDW2', 'W31C', 'W32C', 'WC6', 20*'NONE', 'VV10' /
+  DATA nonlocc/ 'NONE', 'VDW1', 'VDW2', 'W31C', 'W32C', 'WC6', 'W3MC', 19*'NONE', 'VV10' /
   !
   !
 CONTAINS
@@ -354,7 +358,7 @@ CONTAINS
     CHARACTER(LEN=4) :: lda_exch, lda_corr, gga_exch, gga_corr
     !
     INTEGER :: save_inlc, lnt, ln_nlc
-    INTEGER :: iexch, icorr, igcx, igcc, imeta
+    INTEGER :: iexch, icorr, igcx, igcc, imeta, imetac
     !
     ! Exit if set to discard further input dft
     !
@@ -425,6 +429,10 @@ CONTAINS
     CASE( 'VDW-DF-C6' )
        dft_defined = xclib_set_dft_IDs(1,4,26,0,0,0)
        inlc = 5
+    ! Special case vdW-DF3-mc
+    CASE( 'VDW-DF3-MC' )
+       dft_defined = xclib_set_dft_IDs(1,4,51,0,0,0)
+       inlc = 6
     ! Special case vdW-DF with C09 exchange
     CASE( 'VDW-DF-C09' )
        dft_defined = xclib_set_dft_IDs(1,4,16,0,0,0)
@@ -550,13 +558,14 @@ CONTAINS
     igcx  = xclib_get_id('GGA','EXCH')
     igcc  = xclib_get_id('GGA','CORR')
     imeta = xclib_get_id('MGGA','EXCH')
+    imetac = xclib_get_id('MGGA','CORR')
     !
     IF (igcx == 6 .AND. .NOT.xclib_dft_is_libxc('GGA','EXCH') ) &
                 CALL infomsg( 'set_dft_from_name', 'OPTX untested! please test' )
     !
     ! check for unrecognized labels
     !
-    IF ( iexch<=0 .AND. icorr<=0 .AND. igcx<=0 .AND. igcc<=0 .AND. imeta<=0 ) THEN
+    IF ( iexch<=0 .AND. icorr<=0 .AND. igcx<=0 .AND. igcc<=0 .AND. imeta<=0 .AND. imetac<=0) THEN
        IF ( inlc <= 0 .AND. TRIM(dftout) /= 'NOX-NOC') THEN
           CALL errore( 'set_dft_from_name', TRIM(dftout)//': unrecognized dft', 1 )
        ELSE
@@ -833,6 +842,11 @@ CONTAINS
       !
       ELSEIF (iexch==1 .AND. icorr==4 .AND. igcx==26 .AND. igcc==0 .AND. inlc==5) THEN
         shortname = 'VDW-DF-C6'
+      !
+      ! ... inlc==6
+      !
+      ELSEIF (iexch==1 .AND. icorr==4 .AND. igcx==51 .AND. igcc==0 .AND. inlc==6) THEN
+        shortname = 'VDW-DF3-MC'
       !
       ! ... inlc==26
       !

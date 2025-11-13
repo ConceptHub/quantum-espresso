@@ -2,6 +2,8 @@
 
 include ../make.inc
 
+VPATH = @srcdir@
+
 MODFLAGS= $(MOD_FLAG)../UtilXlib $(MOD_FLAG).
 
 # list of modules:
@@ -64,7 +66,7 @@ write_upf_new.o \
 xmltools.o \
 ylmr2.o
 
-# GPU versions of routines
+# CUDA Fortran routines
 OBJS_GPU= \
   ylmr2_gpu.o
 
@@ -91,5 +93,8 @@ upfconv.x : upfconv.o casino_pp.o $(OBJS_NODEP)
 clean :
 	- /bin/rm -f *.o *.a *.d *.i *~ *_tmp.f90 *.mod *.L
 
+
+
 include make.depend
+
 

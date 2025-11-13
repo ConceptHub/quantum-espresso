@@ -34,7 +34,8 @@ SUBROUTINE lr_Opsi_magnons (ik, ip, dOpsi)
   use klist,                 only : xk, igk_k, ngk
   use gvect,                 only : ngm, g
   USE control_lr,            ONLY : nbnd_occ, nbnd_occx
-  USE io_files,              ONLY : iunwfc, nwordwfc
+  USE units_lr,              ONLY : iuwfc, lrwfc
+  USE io_files,              ONLY : nwordwfc
   use uspp,                  only : vkb, okvan
   USE mp_bands,              ONLY : ntask_groups
   USE buffers,               ONLY : get_buffer
@@ -102,8 +103,9 @@ SUBROUTINE lr_Opsi_magnons (ik, ip, dOpsi)
   !
   ! Resonant Batch
   !
-  CALL get_buffer (evc, nwordwfc, iunwfc, ikk)
-  CALL get_buffer (evq, nwordwfc, iunwfc, ikq)
+  CALL get_buffer (evc, lrwfc, iuwfc, ikk)
+  !$acc update device(evc)
+  CALL get_buffer (evq, lrwfc, iuwfc, ikq)
   !
   ! Re-ordering of the G vectors.
   !
@@ -122,7 +124,7 @@ SUBROUTINE lr_Opsi_magnons (ik, ip, dOpsi)
      ELSE
         !
         ! FFT to R-space
-!$acc data copyin(evc(1:npwx*npol,ibnd)) copy(revc, dOpsi(1:npwx*npol,ibnd,1))        
+!$acc data copy(revc, dOpsi(1:npwx*npol,ibnd,1))        
         CALL cft_wave(ik, evc(1,ibnd), revc, +1)
         !
         ! back-FFT to G-space

@@ -2,6 +2,8 @@
 
 include ../../make.inc
 
+VPATH = @srcdir@
+
 # location of needed modules
 MODFLAGS= $(BASEMOD_FLAGS) \
           $(MOD_FLAG)../../PW/src \
@@ -62,10 +64,8 @@ lr_dav_variables.o\
 lr_dav_routines.o\
 lr_us.o\
 lr_test_restart.o\
-lr_dav_debug.o\
 plugin_tddfpt_potential.o\
 linear_solvers.o\
-orthogonalize_omega.o\
 lr_sternheimer.o\
 lr_apply_liouvillian_magnons.o\
 lr_dvpsi_magnons.o\
@@ -119,5 +119,3 @@ clean :
 		../bin/turbo_magnons.x ../bin/turbo_spectrum.x *.x *.o *~ *.d *.mod *.i work.pc *.a *_tmp.f90
 
 include make.depend
-
-# DO NOT DELETE

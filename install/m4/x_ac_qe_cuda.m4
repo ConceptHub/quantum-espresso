@@ -1,4 +1,4 @@
-# Copyright (C) 2001-2024 Quantum ESPRESSO Foundation
+# Copyright (C) 2001-2025 Quantum ESPRESSO Foundation
 #####
 #
 # SYNOPSIS
@@ -40,14 +40,14 @@ AC_ARG_WITH([cuda],
    [with_cuda=no])
    
 AC_ARG_WITH([cuda-cc],
-   [AS_HELP_STRING([--with-cuda-cc=VAL],[GPU architecture (Kepler: 35, Pascal: 60, Volta: 70) @<:@default=35@:>@])],
+   [AS_HELP_STRING([--with-cuda-cc=VAL],[GPU compute capabilities @<:@default=70@:>@])],
    [],
-   [with_cuda_cc=35])
+   [with_cuda_cc=70])
    
 AC_ARG_WITH([cuda-runtime],
-   [AS_HELP_STRING([--with-cuda-runtime=VAL],[CUDA runtime (Pascal: 8+, Volta: 9+) @<:@default=10.1@:>@])],
+   [AS_HELP_STRING([--with-cuda-runtime=VAL],[CUDA runtime @<:@default=10.2@:>@])],
    [],
-   [with_cuda_runtime=10.1])
+   [with_cuda_runtime=10.2])
    
 AC_ARG_WITH([cuda-mpi],
    [AS_HELP_STRING([--with-cuda-mpi=VAL],[CUDA-aware MPI (yes|no) @<:@default=no@:>@])],
@@ -92,11 +92,11 @@ then
       try_dflags="$try_dflags -D__GPU_MPI"
    fi
    cuda_extlibs="devxlib"
-   cuda_libs="-cudalib=cufft,cublas,cusolver,curand \$(TOPDIR)/external/devxlib/src/libdevXlib.a"
+   cuda_libs="-cudalib=cufft,cublas,cusolver,curand \$(BUILDDIR)/external/devxlib/src/libdevXlib.a"
    
    cuda_fflags="-cuda -gpu=cc$with_cuda_cc,cuda$with_cuda_runtime"
-   cuda_fflags="$cuda_fflags \$(MOD_FLAG)\$(TOPDIR)/external/devxlib/src"
-   cuda_fflags="$cuda_fflags \$(MOD_FLAG)\$(TOPDIR)/external/devxlib/include"
+   cuda_fflags="$cuda_fflags \$(MOD_FLAG)\$(BUILDDIR)/external/devxlib/src"
+   cuda_fflags="$cuda_fflags \$(MOD_FLAG)\$(BUILDDIR)/external/devxlib/include"
    #
    if test "$enable_nvtx" == "yes"; then
       try_dflags="$try_dflags -D__PROFILE_NVTX"

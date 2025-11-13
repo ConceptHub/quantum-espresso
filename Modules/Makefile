@@ -2,6 +2,8 @@
 
 include ../make.inc
 
+VPATH = @srcdir@
+
 # location of needed modules
 MODFLAGS=$(BASEMOD_FLAGS)
 
@@ -11,6 +13,8 @@ MODULES = \
 additional_kpoints.o \
 atomic_wfc_mod.o \
 autopilot.o \
+ions_nose.o \
+cell_nose.o \
 basic_algebra_routines.o \
 becmod.o \
 bfgs_module.o \
@@ -77,6 +81,7 @@ space_group.o \
 set_para_diag.o \
 set_signal.o \
 set_vdw_corr.o \
+copy_order_um_from_xml.o \
 setqf.o \
 timestep.o\
 tsvdw.o\
@@ -221,8 +226,6 @@ sockets.o
 
 # GPU versions of modules
 MODULES += \
-  wavefunctions_gpu.o \
-  cuda_subroutines.o \
   random_numbers_gpu.o
 
 TLDEPS= libfox libla libfft libutil libmbd librxc libupf
@@ -241,4 +244,7 @@ tldeps :
 clean :
 	- /bin/rm -f *.o *.a *.d *.i *~ *_tmp.f90 *.mod *.L
 
+
 include make.depend
+
+

@@ -18,10 +18,10 @@ SUBROUTINE phqscf
   USE ions_base,        ONLY : nat
   USE lsda_mod,         ONLY : nspin
   USE io_global,        ONLY : stdout, ionode
-  USE fft_base,         ONLY : dfftp
+  USE fft_base,         ONLY : dffts, dfftp
   USE uspp,             ONLY : okvan
   USE efield_mod,       ONLY : zstarue0, zstarue0_rec
-  USE control_ph,       ONLY : zue, convt, rec_code
+  USE control_ph,       ONLY : zue
   USE partial,          ONLY : done_irr, comp_irr
   USE modes,            ONLY : nirr, npert
   USE uspp_param,       ONLY : nhm
@@ -32,13 +32,14 @@ SUBROUTINE phqscf
   USE mp_bands,         ONLY : intra_bgrp_comm
   USE mp,               ONLY : mp_sum
   USE lrus,             ONLY : int3, int3_nc, int3_paw
-  USE eqv,              ONLY : drhoscfs
   USE dynmat,           ONLY : dyn_hub_scf
   USE ldaU,             ONLY : lda_plus_u, Hubbard_lmax
   USE ldaU_lr,          ONLY : dnsscf
   USE ldaU_ph,          ONLY : dnsscf_all_modes
   USE units_ph,         ONLY : iundnsscf
   USE control_flags,    ONLY : iverbosity
+  USE control_lr,       ONLY : convt, rec_code
+  USE dfpt_type,        ONLY : dfpt_data_type, allocate_dfpt_data, deallocate_dfpt_data
   USE write_hub
 
   IMPLICIT NONE
@@ -48,10 +49,11 @@ SUBROUTINE phqscf
   ! counter on the representations
   ! counter on the modes
   ! npert(irr)
-
   REAL(DP) :: tcpu, get_clock
   ! timing variables
-
+  TYPE(dfpt_data_type) :: dfpt_data
+  !! Data that describes linear response quantities
+  !
   EXTERNAL get_clock
   ! the change of density due to perturbations
 
@@ -72,7 +74,8 @@ SUBROUTINE phqscf
   DO irr = 1, nirr
      IF ( (comp_irr (irr)) .AND. (.NOT.done_irr (irr)) ) THEN
         npe=npert(irr)
-        ALLOCATE (drhoscfs( dfftp%nnr , nspin_mag, npe))
+        !
+        CALL allocate_dfpt_data(dfpt_data, npe)
         imode0 = 0
         DO irr1 = 1, irr - 1
            imode0 = imode0 + npert (irr1)
@@ -84,6 +87,11 @@ SUBROUTINE phqscf
            WRITE( stdout, '(//,5x,"Representation #",i4," modes #",8i4)') &
                               irr, (imode0+irr1, irr1=1,npe)
         ENDIF
+        !
+        ! Initialize LR_Modules variables
+        !
+        CALL ph_set_upert_phonon(irr)
+        IF (okvan) CALL dnsq_orth_set_irr(irr, imode0)
         !
         !    then for this irreducible representation we solve the linear system
         !
@@ -103,13 +111,13 @@ SUBROUTINE phqscf
         ENDIF
         !
         WRITE( stdout, '(/,5x,"Self-consistent Calculation")')
-        CALL solve_linter (irr, imode0, npe, drhoscfs)
+        CALL solve_linter (irr, imode0, dfpt_data)
         WRITE( stdout, '(/,5x,"End of self-consistent calculation")')
         !
         !   Add the contribution of this mode to the dynamical matrix
         !
         IF (convt) THEN
-           CALL drhodv (imode0, npe, drhoscfs)
+           CALL drhodv (imode0, npe, dfpt_data%drhos)
            !
            !   add the contribution of the modes imode0+1 -> imode+npe
            !   to the effective charges Z(Us,E) (Us=scf,E=bare)
@@ -136,17 +144,19 @@ SUBROUTINE phqscf
            CALL stop_smoothly_ph (.FALSE.)
         ENDIF
         rec_code=20
-        CALL write_rec('done_drhod',irr,0.0_DP,-1000,.false.,npe,&
-                        drhoscfs)
+        CALL write_rec('done_drhod',irr,0.0_DP,-1000,.false., dfpt_data)
         !
         IF (okvan) THEN
            DEALLOCATE (int3)
            IF (okpaw) DEALLOCATE (int3_paw)
            IF (noncolin) DEALLOCATE(int3_nc)
         ENDIF
+        CALL deallocate_dnsorth()
+        CALL ph_deallocate_upert()
+        CALL deallocate_dfpt_data(dfpt_data)
+        !
         tcpu = get_clock ('PHONON')
         !
-        DEALLOCATE (drhoscfs)
      ENDIF
 
   ENDDO

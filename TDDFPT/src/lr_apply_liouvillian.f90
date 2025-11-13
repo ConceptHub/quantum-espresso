@@ -38,7 +38,7 @@ SUBROUTINE lr_apply_liouvillian( evc1, evc1_new, interaction )
   USE gvect,                ONLY : ngm, gstart, g, gg
   USE io_global,            ONLY : stdout
   USE klist,                ONLY : nks, xk, ngk, igk_k
-  USE lr_variables,         ONLY : evc0, sevc0, revc0, rho_1, rho_1c, &
+  USE lr_variables,         ONLY : evc0, sevc0, rho_1, rho_1c, &
                                  & ltammd, size_evc, no_hxc, lr_exx, &
                                  & scissor, davidson, lr_verbosity
   USE lsda_mod,             ONLY : nspin
@@ -54,7 +54,7 @@ SUBROUTINE lr_apply_liouvillian( evc1, evc1_new, interaction )
                                    & add_vuspsir_gamma, v_loc_psir,   &
                                    & s_psir_gamma, &
                                    & betasave, box_beta, box0, maxbox_beta
-  USE dfunct,               ONLY : newq
+  USE dfunct,               ONLY : newq_acc
   USE control_flags,        ONLY : tqr
   USE mp,                   ONLY : mp_sum, mp_barrier
   USE mp_global,            ONLY : intra_bgrp_comm
@@ -102,7 +102,7 @@ SUBROUTINE lr_apply_liouvillian( evc1, evc1_new, interaction )
   ALLOCATE( sevc1_new(npwx*npol,nbnd,nks))
   !
   nnr_siz= dffts%nnr
-!$acc data present_or_copyin(evc1(1:npwx*npol,1:nbnd,1:nks)) present_or_copyout(evc1_new(1:npwx*npol,1:nbnd,1:nks)) create(sevc1_new(1:npwx*npol,1:nbnd,1:nks), spsi1(1:npwx, 1:nbnd)) present_or_copyin(revc0(1:nnr_siz,1:nbnd,1))
+!$acc data present_or_copyin(evc1(1:npwx*npol,1:nbnd,1:nks), evc0(1:npwx*npol,1:nbnd,1:nks)) present_or_copyout(evc1_new(1:npwx*npol,1:nbnd,1:nks)) create(sevc1_new(1:npwx*npol,1:nbnd,1:nks), spsi1(1:npwx, 1:nbnd)) 
   !
   d_deeq(:,:,:,:)=0.0d0
   !$acc kernels
@@ -163,7 +163,7 @@ SUBROUTINE lr_apply_liouvillian( evc1, evc1_new, interaction )
            !
            DEALLOCATE ( dvrs )  ! to save memory
            !
-           CALL dv_of_drho(dvrs_temp,.FALSE.)
+           CALL dv_of_drho(dvrs_temp)
            !
            ALLOCATE ( dvrs(dfftp%nnr, nspin) )
            !
@@ -179,7 +179,7 @@ SUBROUTINE lr_apply_liouvillian( evc1, evc1_new, interaction )
            !
            dvrsc(:,1) = rho_1c(:,1)
            !
-           CALL dv_of_drho(dvrsc,.FALSE.)
+           CALL dv_of_drho(dvrsc)
            !
         ENDIF
         !
@@ -193,7 +193,7 @@ SUBROUTINE lr_apply_liouvillian( evc1, evc1_new, interaction )
               ELSE
                  ALLOCATE( psic(dfftp%nnr) )
                  psic(:) = (0.0d0,0.0d0)
-                 CALL newq(dvrs,d_deeq,.TRUE.)
+                 CALL newq_acc(dvrs,d_deeq,.TRUE.)
                  DEALLOCATE( psic )
               ENDIF
            ELSE
@@ -305,6 +305,7 @@ SUBROUTINE lr_apply_liouvillian( evc1, evc1_new, interaction )
   !
   DO ik = 1, nks
      !
+
      CALL orthogonalize(sevc1_new(:,:,ik), evc0(:,:,ik), ik, ik, &
                                   & sevc0(:,:,ik), ngk(ik), .true.)
      !$acc kernels                     
@@ -346,7 +347,7 @@ CONTAINS
     !
     ! Gamma only case 
     !
-    USE lr_variables,             ONLY : becp_1, tg_revc0
+    USE lr_variables,             ONLY : becp_1
     USE realus,                   ONLY : tg_psic
     USE mp_global,                ONLY : me_bgrp
     USE mp_global,                ONLY : ibnd_start, ibnd_end, inter_bgrp_comm
@@ -455,21 +456,22 @@ CONTAINS
           ! Product with the potential vrs = (vltot+vr)
           ! revc0 is on smooth grid. psic is used up to smooth grid
           !
+          CALL invfft_orbital_gamma(evc0(:,:,1),ibnd,nbnd)
+          !
           IF (dffts%has_task_groups) THEN
              !
              DO ir=1, dffts%nr1x*dffts%nr2x*dffts%my_nr3p
                 !
-                tg_psic(ir) = tg_revc0(ir,ibnd,1)*CMPLX(tg_dvrss(ir),0.0d0,DP)
+                tg_psic(ir) = tg_psic(ir)*CMPLX(tg_dvrss(ir),0.0d0,DP)
                 !
              ENDDO
              !
           ELSE
              !
-             !DO ir = 1,dffts%nnr
              !$acc parallel loop
              DO ir = 1, nnr_siz
                 !
-                psic(ir) = revc0(ir,ibnd,1)*CMPLX(dvrss(ir),0.0d0,DP)
+                psic(ir) = psic(ir)*CMPLX(dvrss(ir),0.0d0,DP)
                 !
              ENDDO
              !
@@ -572,21 +574,9 @@ CONTAINS
     ! The kinetic energy g2kin was already computed when
     ! calling the routine lr_solve_e.
     !
-    ! vexx is already computed in lr_exx_kernel
-    !
-    IF (lr_exx) CALL stop_exx()
-    !
     ! Compute sevc1_new = H*evc1
     !
-#if defined(__CUDA)
-    !$acc host_data use_device(evc1, sevc1_new)
-    CALL h_psi_gpu (npwx,ngk(1),nbnd,evc1(1,1,1),sevc1_new(1,1,1))
-    !$acc end host_data
-#else
     CALL h_psi(npwx,ngk(1),nbnd,evc1(1,1,1),sevc1_new(1,1,1))
-#endif
-    !
-    IF (lr_exx) CALL start_exx()
     !
     ! Compute spsi1 = S*evc1 
     !
@@ -597,13 +587,7 @@ CONTAINS
            CALL fwfft_orbital_gamma(spsi1,ibnd,nbnd)
         ENDDO
     ELSE
-#if defined(__CUDA)
-       !$acc host_data use_device(evc1, spsi1)
-       CALL s_psi_acc (npwx,ngk(1),nbnd,evc1(1,1,1),spsi1)
-       !$acc end host_data
-#else            
-       CALL s_psi(npwx,ngk(1),nbnd,evc1(1,1,1),spsi1)
-#endif
+    CALL s_psi(npwx,ngk(1),nbnd,evc1(1,1,1),spsi1)
     ENDIF
     !
     !   Subtract the eigenvalues
@@ -662,9 +646,16 @@ SUBROUTINE lr_apply_liouvillian_k()
              !
              !   Product with the potential vrs = (vltot+vr)
              !
+             psic(:) = (0.0d0,0.0d0)
+             !
+             DO ig = 1, ngk(ik)
+                psic(dffts%nl(igk_k(ig,ik)))=evc0(ig,ibnd,ik)
+             ENDDO
+             CALL invfft ('Wave', psic, dffts)
+             !
              DO ir = 1,dffts%nnr
                 !
-                psic(ir) = revc0(ir,ibnd,ik)*dvrssc(ir)
+                psic(ir) = psic(ir)*dvrssc(ir)
                 !
              ENDDO
              !

@@ -40,7 +40,7 @@ MODULE io_dyn_mat
 
     INTEGER, INTENT(IN) :: ntyp, nat, ibrav, nspin_mag, nqs
     CHARACTER(LEN=256), INTENT(IN) :: fildyn
-    CHARACTER(LEN=3), INTENT(IN) :: atm(ntyp)
+    CHARACTER(LEN=6), INTENT(IN) :: atm(ntyp)
     REAL(DP), INTENT(IN) :: celldm(6)
     REAL(DP), INTENT(IN) :: at(3,3)
     REAL(DP), INTENT(IN) :: bg(3,3)
@@ -276,6 +276,7 @@ MODULE io_dyn_mat
          CALL errore('read_dyn_mat_param', 'error opening the dyn mat file ',1)
     !
     IF (ionode) THEN
+      CALL xmlr_opentag( "Root")
       CALL xmlr_opentag( "GEOMETRY_INFO")
       CALL xmlr_readtag( "NUMBER_OF_TYPES", ntyp)
       CALL xmlr_readtag( "NUMBER_OF_ATOMS", nat)
@@ -304,7 +305,7 @@ MODULE io_dyn_mat
     !
     IMPLICIT NONE
     !
-    CHARACTER(LEN = 3), INTENT(out) :: atm(ntyp)
+    CHARACTER(LEN = 6), INTENT(out) :: atm(ntyp)
     !! Atom
     LOGICAL, INTENT(out), OPTIONAL :: lrigid
     !!
@@ -532,6 +533,7 @@ MODULE io_dyn_mat
         END DO
         CALL xmlr_closetag() ! FREQUENCIES_THZ_CMM1
       ENDIF
+      CALL xmlr_closetag() ! Root
       CALL xml_closefile()
     ENDIF
     IF (PRESENT(omega)) CALL mp_bcast(omega, ionode_id, intra_image_comm)
@@ -630,7 +632,6 @@ MODULE io_dyn_mat
           ENDDO ! m3
         ENDDO ! nb
       ENDDO ! na
-      CALL xmlr_closetag( )
       CALL xmlr_closetag( ) ! Root
       CALL xml_closefile( )
     ENDIF

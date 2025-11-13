@@ -36,12 +36,13 @@ SUBROUTINE lr_calc_dens_magnons (drhoscf, dpsi, L_dag)
   USE lsda_mod,              ONLY : nspin
   USE mp_global,             ONLY : inter_pool_comm, intra_bgrp_comm
   USE mp,                    ONLY : mp_sum
-  USE io_files,              ONLY : iunwfc, nwordwfc
+  USE io_files,              ONLY : nwordwfc
   USE buffers,               ONLY : get_buffer
   USE fft_interfaces,        ONLY : fft_interpolate
   USE lr_variables,          ONLY : iunTwfc
   USE cell_base,             ONLY : omega
   USE control_lr,            ONLY : nbnd_occ, nbnd_occx
+  USE units_lr,              ONLY : lrwfc, iuwfc
   USE fft_interfaces,        ONLY : invfft
   !
   IMPLICIT NONE
@@ -94,7 +95,7 @@ SUBROUTINE lr_calc_dens_magnons (drhoscf, dpsi, L_dag)
   !
   v_siz = dffts%nnr
   !
-  !$acc data copyin(dpsi(1:npwx*npol,1:nbnd_occx,1:nksq,1:2), evc(1:npol*npwx,1:nbnd), Tevc(1:npol*npwx,1:nbnd)) copyout(drhoscfh(1:v_siz,1:nspin_mag)) create(dpsic(1:v_siz,1:npol), psi(1:v_siz,1:npol)) present(igk_k) deviceptr(nl_d)
+  !$acc data copyin(dpsi(1:npwx*npol,1:nbnd_occx,1:nksq,1:2), Tevc(1:npol*npwx,1:nbnd)) copyout(drhoscfh(1:v_siz,1:nspin_mag)) create(dpsic(1:v_siz,1:npol), psi(1:v_siz,1:npol)) present(igk_k) deviceptr(nl_d)
   !
   !$acc kernels
   drhoscfh(:,:) = (0.0d0, 0.0d0)
@@ -117,7 +118,7 @@ SUBROUTINE lr_calc_dens_magnons (drhoscf, dpsi, L_dag)
      ! Read the unperturbed wavefuctions evc(k)
      !
      !IF (nksq > 1) 
-     CALL get_buffer (evc, nwordwfc, iunwfc, ikk)
+     CALL get_buffer (evc, lrwfc, iuwfc, ikk)
      !
      !$acc update device(evc)
      ! Calculation of the response charge density

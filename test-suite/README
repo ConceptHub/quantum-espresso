@@ -90,6 +90,12 @@ The following features of the code are tested:
 - HSE hybrid functional, nq=2
 - HSE hybrid functional, nq=4
 
+###############
+# pw_irrbz : MoS2 monolayer #
+###############
+The following features of the code are tested:
+- Proper treatment of k points when a user-provided full k points are given (see GitLab merge request 2690)
+
 ####################
 # pw_langevin : H2 #
 ####################
@@ -123,6 +129,16 @@ The following features of the code are tested:
 - constrained occupancies: tot_magnetization, nelup+neldw
 - LSDA stress
 - non-scf calculation
+
+###########################
+# pw_libxc : O, Si and CH #
+###########################
+The following features of the code are tested:
+- Libxc initialization in PW
+- Libxc LDA (pz)
+- Libxc GGA (pbe)
+- Libxc hyb-GGA (hse)
+- Libxc metaGGA (tpss)
 
 ###############
 # pw_md : Si  #
@@ -449,6 +465,10 @@ The following features of the code are tested:
 - Test anisotropic Eliashberg superconductivity (epw2.in)
 - Test anisotropic Eliashberg superconductivity restart from interrupted q-point while writing ephmat using 'restart.fmt' (epw3.in)
 - Test anisotropic Eliashberg superconductivity restart by reading ephmat files (after writing ephmat files) (epw4.in)
+- Test isotropic Eliashberg superconductivity with linearized Eliashberg equation (epw5.in)
+- Test anisotropic Eliashberg superconductivity (FBW) (epw6.in)
+- Test anisotropic Eliashberg superconductivity (FBW) using sparse-ir sampling (epw7.in)
+- Test anisotropic Eliashberg superconductivity (FBW) with outer bands using sparse-ir sampling (epw8.in)
 
 #################
 # epw_trev: SiC #
@@ -488,15 +508,40 @@ in presence of phonons.
 # KCW tests
 #################################################################
 ############################
-# kcw-nc-ks : H2O molecule #
+# kcw-ks : H2O molecule #
 ############################
 The following features of the code are tested:
 - Calculation of screening coefficients for KS orbitals
 - Calculation of KI@KS eigenvalues
 
 ############################
-# kcw-nc-wann : Si FCC #
+# kcw-wann : Si FCC #
 ############################
 The following features of the code are tested:
 - Calculation of screening coefficients for MLWF
 - Calculation of KI@Wann eigenvalues
+
+##################################
+# kcw-wann-nc : Si FCC NC SOC #
+##################################
+The following features of the code are tested:
+- Calculation of non-collinear screening coefficients for MLWF
+- Calculation of non-collinear KI@Wann eigenvalues
+
+############################
+# kcw-wann_sym : Si FCC #
+############################
+The following features of the code are tested:
+- Calculation of screening coefficients for MLWF using crystal symmetries
+- Calculation of KI@Wann eigenvalues
+
+#################################################################
+# PIOUD tests
+#################################################################
+############################
+# pioud_diamond : C Diamond #
+############################
+The following features of the code are tested:
+- Single bead using "verlet" method
+- Single and multiple beads "ceriotti" method. (In the case of single bead it uses bussi method)
+- Single bead using "pioud" method

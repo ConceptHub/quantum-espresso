@@ -34,14 +34,14 @@ SUBROUTINE lr_dvpsi_magnons (ik, ip, dvpsi)
   use klist,                 only : xk, igk_k, ngk
   use gvect,                 only : ngm, g
   USE control_lr,            ONLY : nbnd_occ, nbnd_occx
-  USE io_files,              ONLY : iunwfc, nwordwfc
+  USE io_files,              ONLY : nwordwfc
   use uspp,                  only : vkb, okvan
   USE mp_bands,              ONLY : ntask_groups
   USE buffers,               ONLY : get_buffer
   USE fft_helper_subroutines
   USE lr_variables,          ONLY : iunTwfc
   USE lr_magnons_routines,   ONLY : pauli
-
+  USE units_lr,              ONLY : lrwfc, iuwfc
   USE io_global,             ONLY : stdout
  
   IMPLICIT NONE
@@ -103,8 +103,10 @@ SUBROUTINE lr_dvpsi_magnons (ik, ip, dvpsi)
   ! Resonant Batch
   !
 
-  CALL get_buffer (evc, nwordwfc, iunwfc, ikk)
-  CALL get_buffer (evq, nwordwfc, iunwfc, ikq)
+  CALL get_buffer (evc, lrwfc, iuwfc, ikk)
+  !$acc update device(evc)
+  CALL get_buffer (evq, lrwfc, iuwfc, ikq)
+  !$acc update device(evq)
   ! 
 
   ! Re-ordering of the G vectors.
@@ -124,7 +126,7 @@ SUBROUTINE lr_dvpsi_magnons (ik, ip, dvpsi)
      ELSE
         !
         ! FFT to R-space
-!$acc data copyin(evc(1:npwx*npol,ibnd)) copy(revc(1:dffts%nnr, 1:npol), dvpsi(1:npwx*npol,ibnd,1))
+!$acc data copy(revc(1:dffts%nnr, 1:npol), dvpsi(1:npwx*npol,ibnd,1))
         CALL cft_wave(ik, evc(1,ibnd), revc, +1)
         !
         ! back-FFT to G-space
@@ -198,7 +200,9 @@ SUBROUTINE lr_dvpsi_magnons (ik, ip, dvpsi)
   ! Ortogonalize dvpsi(:,:,1) to valence states.
   ! Apply -P_c^+
   !
+  !$acc data copyin(Tevq)
   CALL orthogonalize(dvpsi(:,:,2), Tevq, imk, imkq, dpsi, npwq, .false.) 
+  !$acc end data
   !
   DEALLOCATE (revc)
   !

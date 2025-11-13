@@ -26,8 +26,6 @@ MODULE lr_variables
   INTEGER :: iunTwfc = 31          ! unit where time-reversed wfc are stored
                                    ! (magnetic GS only)
   INTEGER :: nwordd0psi, nwordrestart, n_ipol
-  CHARACTER (len=12), PARAMETER :: code1 = 'turboTDDFT', code2 = 'turboEELS', &
-                                   code3 = 'turboMAGNON'
   INTEGER :: size_evc
   CHARACTER (len=24) :: bgz_suffix
   !
@@ -61,12 +59,9 @@ MODULE lr_variables
                               chizr(:), &  ! mag_z-charge \chi
                               chizz(:), &  ! mag_z-mag_z \chi
                               epsm1(:)     ! epsm1
-  INTEGER :: lr1dwf
   LOGICAL, ALLOCATABLE :: comp_f(:)
   REAL(kind=dp) :: deltaf
-  INTEGER :: iudwf = 24
   INTEGER :: iudrho = 23
-  INTEGER :: iu1dwf = 25
   REAL(kind=dp) :: increment
   INTEGER :: units
   REAL(kind=dp) :: end
@@ -89,9 +84,7 @@ MODULE lr_variables
        sevc1(:,:,:),      &    ! S * "    "
        sevc1_new(:,:,:),  &    ! S * "    "
        d0psi(:,:,:,:),    &    ! for saving the original starting vectors
-       d0psi2(:,:,:,:),   &    ! for saving the original starting vectors (without P^+_c)
-       revc0(:,:,:),      &    ! ground state wavefunctions in real space
-       tg_revc0(:,:,:)         ! ground state wavefunctions in real space
+       d0psi2(:,:,:,:)         ! for saving the original starting vectors (without P^+_c)
   REAL(kind=dp), ALLOCATABLE ::    &
        rho_1(:,:)              ! response charge density in real space
   COMPLEX(kind=dp), ALLOCATABLE :: &

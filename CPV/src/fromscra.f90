@@ -9,16 +9,15 @@
 SUBROUTINE from_scratch( )
     !
     USE kinds,                ONLY : DP
-    USE control_flags,        ONLY : tranp, trane, iverbosity, tpre, tv0rd, &
-                                     tfor, thdyn, &
-                                     lwf, tprnfor, tortho, amprp, ampre,  &
-                                     tsde, force_pairing, tcap
+    USE control_flags,        ONLY : iverbosity, tv0rd
+    USE cp_control,           ONLY : tfor, tpre, thdyn, tranp, amprp, tortho, &
+                                     tsde, tcap, force_pairing
     USE input_parameters,     ONLY : startingwfc
     USE ions_positions,       ONLY : taus, tau0, tausm, vels, velsm, fion, fionm, &
                                      taum 
     USE ions_base,            ONLY : na, nsp, randpos, zv, ions_vel, vel, ityp, &
                                      amass, randvel
-    USE ions_base,            ONLY : cdmi, nat, iforce
+    USE ions_base,            ONLY : nat, iforce
     USE ions_nose,            ONLY : xnhp0, xnhpm, vnhp, tempw
     USE cell_base,            ONLY : ainv, h, s_to_r, ibrav, omega, press, &
                                      hold, r_to_s, deth, wmass, iforceh,   &
@@ -49,7 +48,7 @@ SUBROUTINE from_scratch( )
     USE printout_base,        ONLY : printout_pos
     USE orthogonalize_base,   ONLY : updatc, calphi_bgrp
     USE wave_base,            ONLY : wave_steepest
-    USE wavefunctions,        ONLY : c0_bgrp, cm_bgrp, c0_d, phi, cm_d
+    USE cp_wavefunctions,     ONLY : c0_bgrp, cm_bgrp, c0_d, phi, cm_d
     USE fft_base,             ONLY : dfftp, dffts
     USE time_step,            ONLY : delt
     USE cp_main_variables,    ONLY : idesc, bephi, becp_bgrp, nfi, iabox, nabox, &
@@ -79,7 +78,6 @@ SUBROUTINE from_scratch( )
     LOGICAL                  :: tlast = .FALSE.
     REAL(DP)                 :: gam(1,1,1)
     REAL(DP)                 :: fcell(3,3), ccc, enb, enbi, fccc
-    LOGICAL                  :: ttforce
     LOGICAL                  :: tstress
     LOGICAL, PARAMETER       :: ttprint = .TRUE.
     REAL(DP)                 :: ei_unp  
@@ -96,7 +94,6 @@ SUBROUTINE from_scratch( )
     !
     nfi = 0
     !
-    ttforce = tfor  .or. tprnfor
     tstress = thdyn .or. tpre
     !
     stress = 0.0d0
@@ -281,7 +278,7 @@ SUBROUTINE from_scratch( )
       !
       !     nlfq needs deeq bec
       !
-      IF( ttforce ) THEN
+      IF( tfor ) THEN
 #if defined (__CUDA)
          !$acc data present(vkb)
          !$acc host_data use_device(vkb)
@@ -325,7 +322,7 @@ SUBROUTINE from_scratch( )
          CALL gram_bgrp( vkb, bec_bgrp, nkb, c0_bgrp, ngw )
       endif
       !
-      IF ( ttforce ) THEN
+      IF ( tfor ) THEN
          CALL nlfl_bgrp( bec_bgrp, becdr_bgrp, lambda, idesc, fion )
       END IF
 
@@ -409,8 +406,8 @@ SUBROUTINE atomic_wfc_cp(omega, nat, nsp, ityp, tau, nupdwn, iupdwn, nspin, &
          USE mp_global,    ONLY : intra_bgrp_comm
          USE gvecw,        ONLY : ecutwfc
          USE upf_ions,     ONLY : n_atom_wfc
-         USE atwfc_mod,    ONLY : allocate_tab_atwfc, init_tab_atwfc, &
-                                  deallocate_tab_atwfc, nqx, dq
+         USE atwfc_mod,    ONLY : init_tab_atwfc, deallocate_tab_atwfc
+         USE atomic_wfc_mod,   ONLY : atomic_wfc_acc
 
          IMPLICIT NONE
          !
@@ -428,20 +425,19 @@ SUBROUTINE atomic_wfc_cp(omega, nat, nsp, ityp, tau, nupdwn, iupdwn, nspin, &
          ! The layout of the wfc is different:
          ! in cp it is the equivalent of (npw, nbnd, nspin ), 
          ! while in pw is (npwx, nspin, nbnd)
-         real(dp) :: xk(3), angle1(nsp), angle2(nsp)
-         integer  :: i, ipol, sh(2)
+         real(dp) :: xk(3), angle1(nsp), angle2(nsp), qmax
+         integer  :: i, ipol, sh(2), ierr
          integer, allocatable :: igk(:)
    
          ! gamma point only
          xk=0.d0
-         nqx = INT( (SQRT(ecutwfc) / dq + 4) * 1.d0 )
-         call allocate_tab_atwfc(nqx,nwfcm,nsp)
+         qmax = SQRT(ecutwfc)
+         call init_tab_atwfc(qmax, omega, intra_bgrp_comm, ierr)
          natomwfc = n_atom_wfc ( nat, ityp )
          allocate ( wfcatom(npw, 1, natomwfc) )
          allocate (igk (npw) )
          !$acc data create(wfcatom, igk)
          !
-         call init_tab_atwfc(omega, intra_bgrp_comm)
          !$acc parallel loop
          do i=1,npw
             igk(i)=i

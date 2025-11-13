@@ -1,8 +1,8 @@
 PROGRAM disca_broadening
 !-------------------------------------------------------------------------
 !! authors: Marios Zacharias, Feliciano Giustino 
-!! acknowledgement: Hyungjun Lee for help packaging this release
-!! version: v0.1
+!! acknowledgement: Sabyasachi Tiwari for help packaging this release
+!! version: v1.2
 !! license: GNU
 !
 USE kinds,       ONLY : dp
@@ -133,7 +133,7 @@ ENDIF
 !
 !
 DEALLOCATE(structure_fact, structure_fact_out, kgridx, kgridy)
-CALL environment_end('DISCA_BROADENING')
+CALL environment_end( )
 !
 CALL mp_global_end()
 !

@@ -19,7 +19,8 @@ contains
 !! and        https://journals.aps.org/rmp/abstract/10.1103/RevModPhys.64.1045 (conjugate gradient)
 
       use kinds, only: dp
-      use control_flags, only: tpre, iverbosity, tfor, tprnfor
+      use control_flags, only: iverbosity
+      use cp_control, only: tfor, tpre
 
 !---ensemble-DFT
       use energies, only: eht, epseu, exc, etot, eself, enl, ekin,          &
@@ -95,8 +96,7 @@ contains
       complex(dp) :: c0_d(:, :)
       complex(dp) :: cm(ngw, nbspx)
       complex(dp) :: phi(ngw, nbspx)
-      complex(dp) :: phi_tmp(ngw, nbspx)
-      real(dp) :: dbec(nkb, nbspx, 3, 3)
+      real(dp) :: dbec(:,:,:,:)
 !
       include 'laxlib.fh'
 !
@@ -151,9 +151,9 @@ contains
          call errore(' runcg_uspp ', ' parallelization over bands not yet implemented ', 1)
 #if defined(__CUDA)
       if (nkbus > 0 ) &
-         call errore(' runcg_uspp ', ' Ultrasoft case not ported to GPU ', 1)
+         call errore('runcg_uspp','USPP for GPU not present in this version', 1)
       if (tens) &
-         call errore(' runcg_uspp ', ' Ensemble DFT case not ported to GPU ', 1)
+         call errore('runcg_uspp','Ensemble DFT for GPU not present in this version', 1)
 #endif
       if (pre_state .and. nkbus > 0) &
          call errore(' runcg_uspp ', ' preconditioning with kinetic energy not implemented for ultrasoft pseudopotentials')
@@ -285,9 +285,8 @@ contains
                          c0, c0_d, hpsi, hpsi_d, .false., .false., .true.)
          if (pre_state) call ave_kin(c0, SIZE(c0, 1), nbsp, ave_ene)
 
-         phi_tmp = phi ! cannot use device array as input for openacc according to the compiler
-!$acc data copy(c0,hpsi) copyin(phi_tmp) 
-         call pcdaga2(c0, phi_tmp, hpsi)
+!$acc data copy(c0,hpsi)
+         call pcdaga2(c0, phi, hpsi)
 !$acc end data
          hpsi0 = hpsi
          gi = hpsi
@@ -713,16 +712,16 @@ contains
 #if defined (__CUDA)
       if (.not. tens) then
          c0_d = c0
-         if (tfor .or. tprnfor) call nlfq_bgrp(c0_d, betae, bec, becdr, fion)
+         if (tfor) call nlfq_bgrp(c0_d, betae, bec, becdr, fion)
       else
          c0_d = c0diag
-         if (tfor .or. tprnfor) call nlfq_bgrp(c0_d, betae, becdiag, becdrdiag, fion)
+         if (tfor) call nlfq_bgrp(c0_d, betae, becdiag, becdrdiag, fion)
       endif
 #else
       if (.not. tens) then
-         if (tfor .or. tprnfor) call nlfq_bgrp(c0, betae, bec, becdr, fion)
+         if (tfor) call nlfq_bgrp(c0, betae, bec, becdr, fion)
       else
-         if (tfor .or. tprnfor) call nlfq_bgrp(c0diag, betae, becdiag, becdrdiag, fion)
+         if (tfor) call nlfq_bgrp(c0diag, betae, becdiag, becdrdiag, fion)
       endif
 #endif
 !$acc end data
@@ -823,11 +822,11 @@ contains
       ! only in US-case
 
       if (tefield .and. (evalue .ne. 0.d0)) then
-         call bforceion(fion, tfor .or. tprnfor, ipolp, qmat, bec, becdr, gqq, evalue)
+         call bforceion(fion, tfor, ipolp, qmat, bec, becdr, gqq, evalue)
 
       endif
       if (tefield2 .and. (evalue2 .ne. 0.d0)) then
-         call bforceion(fion, tfor .or. tprnfor, ipolp2, qmat2, bec, becdr, gqq2, evalue2)
+         call bforceion(fion, tfor, ipolp2, qmat2, bec, becdr, gqq2, evalue2)
       endif
       deallocate (hpsi0, hpsi, gi, hi)
       deallocate (s_minus1, k_minus1)
@@ -1253,7 +1252,10 @@ contains
       implicit none
 
       complex(dp) a(ngw, n), b(ngw, n), as(ngw, n)
-      !$acc declare present(a,b,as)
+      !$acc declare present(a,b)
+#if defined(__CUDA)
+      attributes(device) :: as
+#endif
       ! local variables
       integer is, iv, jv, ia, inl, jnl, i, j, ig
       real(dp) sca
@@ -1376,7 +1378,7 @@ contains
                            do ig = 1, ngw           !loop on g vectors
                               sca = sca + ema0bg(ig)*DBLE(CONJG(betae(ig, inl))*betae(ig, jnl))
                            enddo
-                           sca = sca*2.0d0  !2. for real weavefunctions
+                           sca = sca*2.0d0  !2. for real wavefunctions
                            if (gstart == 2) sca = sca - ema0bg(1)*DBLE(CONJG(betae(1, inl))*betae(1, jnl))
                         else
                            ! s_minus case
