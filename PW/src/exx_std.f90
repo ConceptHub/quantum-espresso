@@ -730,10 +730,16 @@ MODULE exx_std
           !
        ENDIF
        !
+       !$acc data copyout(result, result_nc) create(rhoc, vc, fac) copyin(temppsic, temppsic_nc, exxbuff, x_occupation)
+       !
        IF (noncolin) THEN
+          !$acc kernels
           result_nc = 0.0_DP
+          !$acc end kernels
        ELSE
+          !$acc kernels
           RESULT    = 0.0_DP
+          !$acc end kernels
        ENDIF
        !
        INTERNAL_LOOP_ON_Q : &
@@ -745,6 +751,7 @@ MODULE exx_std
           !
           ! calculate the 1/|r-r'| (actually, k+q+g) factor and place it in fac
           CALL g2_convolution(ngmt, gt, xkp, xkq, fac)
+          !$acc update device(fac)
           IF ( okvan .and..not.tqr ) CALL qvan_init (ngmt, xkq, xkp)
           !
           IBND_LOOP_K : &
@@ -756,55 +763,95 @@ MODULE exx_std
              !
              !   >>>> calculate rho in real space
              IF (noncolin) THEN
-!$omp parallel do default(shared), private(ir)
+#if defined(__CUDA)
+                !$acc kernels 
+#else
+                !$omp parallel do default(shared), private(ir)
+#endif
                 DO ir = 1, nrxxs
                    rhoc(ir) = ( conjg(exxbuff(ir,ibnd,ikq))*temppsic_nc(ir,1) + &
                                 conjg(exxbuff(nrxxs+ir,ibnd,ikq))*temppsic_nc(ir,2) )/omega
                 ENDDO
-!$omp end parallel do
+#if defined(__CUDA)
+                !$acc end kernels
+#else
+                !$omp end parallel do
+#endif
              ELSE
-!$omp parallel do default(shared), private(ir)
+#if defined(__CUDA)
+                !$acc kernels 
+#else
+                !$omp parallel do default(shared), private(ir)
+#endif
                 DO ir = 1, nrxxs
                    rhoc(ir)=conjg(exxbuff(ir,ibnd,ikq))*temppsic(ir) / omega
                 ENDDO
-!$omp end parallel do
+#if defined(__CUDA)
+                !$acc end kernels
+#else
+                !$omp end parallel do
+#endif
              ENDIF
              !   >>>> add augmentation in REAL space HERE
              IF(okvan .and. tqr) THEN ! augment the "charge" in real space
+                !$acc update host(rhoc)
                 CALL addusxx_r( rhoc, becxx(ikq)%k(:,ibnd), becpsi%k(:,im))
+                !$acc update device(rhoc)
              ENDIF
              !
              !   >>>> brings it to G-space
+             !$acc host_data use_device(rhoc)
              CALL fwfft('Rho', rhoc, dfftt)
+             !$acc end host_data
              !
              !   >>>> add augmentation in G space HERE
              IF(okvan .and. .not. tqr) THEN
+                !$acc update host(rhoc)
                 CALL addusxx_g(dfftt, rhoc, xkq, xkp, 'c', &
                    becphi_c=becxx(ikq)%k(:,ibnd),becpsi_c=becpsi%k(:,im))
+                !$acc update device(rhoc)
              ENDIF
              !   >>>> charge done
              !
+             !$acc kernels
              vc = 0._DP
+             !$acc end kernels
              !
-!$omp parallel do default(shared), private(ig)
+#if defined(__CUDA)
+             !$acc kernels
+#else
+             !$omp parallel do default(shared), private(ig)
+#endif
              DO ig = 1, ngmt
                 vc(dfftt%nl(ig)) = fac(ig) * rhoc(dfftt%nl(ig)) * &
                                              x_occupation(ibnd,ik) / nqs
              ENDDO
-!$omp end parallel do
+#if defined(__CUDA)
+             !$acc end kernels
+#else
+             !$omp end parallel do
+#endif
              !
              ! Add ultrasoft contribution (RECIPROCAL SPACE)
              ! compute alpha_I,j,k+q = \sum_J \int <beta_J|phi_j,k+q> V_i,j,k,q Q_I,J(r) d3r
              IF(okvan .and. .not. tqr) THEN
+                !$acc update host(vc)
                 CALL newdxx_g(dfftt, vc, xkq, xkp, 'c', deexx, &
                               becphi_c=becxx(ikq)%k(:,ibnd))
+                !$acc update device(vc)
              ENDIF
              !
              !brings back v in real space
+             !$acc host_data use_device(vc)
              CALL invfft ('Rho', vc, dfftt)
+             !$acc end host_data
              !
              ! Add ultrasoft contribution (REAL SPACE)
-             IF(okvan .and. tqr) CALL newdxx_r(dfftt,vc, becxx(ikq)%k(:,ibnd), deexx)
+             IF(okvan .and. tqr) THEN
+               !$acc update host(vc)
+               CALL newdxx_r(dfftt,vc, becxx(ikq)%k(:,ibnd), deexx)
+               !$acc update device(vc)
+             END IF
              !
              ! Add PAW one-center contribution
              IF(okpaw) THEN
@@ -814,22 +861,46 @@ MODULE exx_std
              !accumulates over bands and k points
              !
              IF (noncolin) THEN
-!$omp parallel do default(shared), private(ir)
+#if defined(__CUDA)
+                !$acc kernels
+#else
+                !$omp parallel do default(shared), private(ir)
+#endif
                 DO ir = 1, nrxxs
                    result_nc(ir,1)= result_nc(ir,1) + vc(ir) * exxbuff(ir,ibnd,ikq)
                 ENDDO
-!$omp end parallel do
-!$omp parallel do default(shared), private(ir)
+#if defined(__CUDA)
+                !$acc end kernels
+#else
+                !$omp end parallel do
+#endif
+#if defined(__CUDA)
+                !$acc kernels
+#else
+                !$omp parallel do default(shared), private(ir)
+#endif
                 DO ir = 1, nrxxs
                    result_nc(ir,2)= result_nc(ir,2) + vc(ir) * exxbuff(ir+nrxxs,ibnd,ikq)
                 ENDDO
-!$omp end parallel do
+#if defined(__CUDA)
+                !$acc end kernels
+#else
+                !$omp end parallel do
+#endif
              ELSE
-!$omp parallel do default(shared), private(ir)
+#if defined(__CUDA)
+                !$acc kernels
+#else
+                !$omp parallel do default(shared), private(ir)
+#endif
                 DO ir = 1, nrxxs
                    RESULT(ir) = RESULT(ir) + vc(ir)*exxbuff(ir,ibnd,ikq)
                 ENDDO
-!$omp end parallel do
+#if defined(__CUDA)
+                !$acc end kernels
+#else
+                !$omp end parallel do
+#endif
              ENDIF
              !
           ENDDO &
@@ -838,6 +909,8 @@ MODULE exx_std
           !
        ENDDO &
        INTERNAL_LOOP_ON_Q
+       !
+       !$acc end data 
        !
        IF(okvan) THEN
          CALL mp_sum(deexx,intra_bgrp_comm)
