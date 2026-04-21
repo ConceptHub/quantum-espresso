@@ -693,6 +693,8 @@ MODULE exx_std
        CALL mp_bcast(psi,0,inter_bgrp_comm)
     ENDIF
     !
+    !$acc data create(rhoc, vc, fac)  copyin(exxbuff, x_occupation)  
+    !
     LOOP_ON_PSI_BANDS : &
     DO im = 1,m !for each band of psi (the k cycle is outside band)
        IF(okvan) deexx = 0._DP
@@ -730,7 +732,7 @@ MODULE exx_std
           !
        ENDIF
        !
-       !$acc data copyout(result, result_nc) create(rhoc, vc, fac) copyin(temppsic, temppsic_nc, exxbuff, x_occupation)
+       !$acc data copyout(result, result_nc)  copyin(temppsic, temppsic_nc) 
        !
        IF (noncolin) THEN
           !$acc kernels
@@ -966,6 +968,8 @@ MODULE exx_std
        !
     ENDDO &
     LOOP_ON_PSI_BANDS
+    !
+    !$acc end data
     !
     IF (noncolin) THEN
        DEALLOCATE(temppsic_nc, result_nc, result_nc_g )
