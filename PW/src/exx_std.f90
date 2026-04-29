@@ -820,7 +820,7 @@ MODULE exx_std
              !$acc end kernels
              !
 #if defined(__CUDA)
-             !$acc kernels
+             !$acc parallel loop present(dfftt, dfftt%nl)
 #else
              !$omp parallel do default(shared), private(ig)
 #endif
@@ -828,9 +828,7 @@ MODULE exx_std
                 vc(dfftt%nl(ig)) = fac(ig) * rhoc(dfftt%nl(ig)) * &
                                              x_occupation(ibnd,ik) / nqs
              ENDDO
-#if defined(__CUDA)
-             !$acc end kernels
-#else
+#if !defined(__CUDA)
              !$omp end parallel do
 #endif
              !
