@@ -33,6 +33,22 @@ SUBROUTINE alloc_neighborhood()
   INTEGER :: i, j, k, l, ii, jj, nx, ny, nz, dimn, &
              viz, atom, nb1, nb2, isym, l1, l2, l3, na, nb
   !
+  ! Pre-filtered "source" lists of nonzero Hubbard_V couples
+  ! For each interaction component (1=stan-stan, 2=stan-bac, 3=bac-bac) we keep
+  ! only the (l,k) couples with |V| >= eps1 (the few input-specified ones).
+  ! The "find missing Hubbard_V" loops below then scan these short lists instead
+  ! of rescanning the whole nat*dimn reference space for every target couple,
+  ! reducing the cost from O(nat^2 * dimn^2) to O(nat * dimn * n_src).
+  ! The (l,k) ordering of the lists (l outer, k inner) reproduces the original
+  ! "first match wins" behaviour exactly.
+  !
+  INTEGER :: n_src1, n_src2, n_src3
+  INTEGER,  ALLOCATABLE :: styp_l1(:), styp_k1(:), styp_l2(:), styp_k2(:), &
+                           styp_l3(:), styp_k3(:)
+  REAL(DP), ALLOCATABLE :: sdist1(:), sval1(:), sdist2(:), sval2(:), &
+                           sdist3(:), sval3(:)
+  LOGICAL :: have2, have3
+  !
   CALL start_clock( 'alloc_neigh' )
   !
   ! Number of atoms in the supercell
@@ -188,122 +204,71 @@ SUBROUTINE alloc_neighborhood()
      IF (.NOT.dfpt_hub) WRITE(stdout,'(5x,"shell:",2x,i2,2x,f10.6)') l, distm(l)
   ENDDO
   !
-  ! Find the missing Hubbard_V(i,j,2) i.e. standard-background interactions. 
-  ! This loop is needed only when the background is included.
+  ! Find the missing Hubbard_V couples by matching atom types and distances
+  ! against the input-specified (nonzero) couples.
   !
-  IF ( ANY(V(:,:,2).GE.eps1) ) THEN 
-     !
+  ! Build the pre-filtered source lists from the current V (V is rebuilt from
+  ! Hubbard_V at label 13 on every pass, so these must be rebuilt here too).
+  ! The gating below reproduces the original behaviour: the stan-bac (2) and
+  ! bac-bac (3) lists are only needed when the background is included, while
+  ! the stan-stan (1) list is always used.
+  !
+  have2 = ANY( V(:,:,2).GE.eps1 )
+  have3 = ANY( V(:,:,3).GE.eps1 )
+  !
+  CALL build_src( 1, n_src1, styp_l1, styp_k1, sdist1, sval1 )
+  IF (have2) CALL build_src( 2, n_src2, styp_l2, styp_k2, sdist2, sval2 )
+  IF (have3) CALL build_src( 3, n_src3, styp_l3, styp_k3, sdist3, sval3 )
+  !
+  ! Find the missing Hubbard_V(i,j,2)/(i,j,4) i.e. standard-background interactions.
+  ! This is needed only when the background is included.
+  !
+  IF (have2) THEN
      DO i = 1, nat
-        DO j = 1, dimn
-           DO l = 1, nat
-              DO k = 1, dimn
-                 !
-                 IF ( ityp_s(k).EQ.ityp_s(j)                   .AND. &
-                      ityp(l).EQ.ityp(i)                       .AND. &
-                      ABS(dist_s(l,k)-dist_s(i,j)).LE.eps_dist .AND. &
-                      ABS(V(l,k,2)).GE.eps1 )                  THEN 
-                      !
-                      IF (Hubbard_V(i,j,2).EQ.0.d0) Hubbard_V(i,j,2) = V(l,k,2)
-                      GO TO 22
-                      !
-                 ENDIF
-                 !
-              ENDDO ! k
-           ENDDO ! l    
-22         CONTINUE
-        ENDDO ! j
-     ENDDO ! i
-     !
+        DO j = 1, dimn      ! <-- neighbor-list hook (see note below)
+           CALL match_single( i, j, n_src2, styp_l2, styp_k2, sdist2, sval2, 2, .FALSE. )
+        ENDDO
+     ENDDO
      DO i = 1, nat
-        DO j = 1, dimn
-           DO l = 1, nat
-              DO k = 1, dimn
-                 !
-                 IF ( ityp_s(k).EQ.ityp(i)                      .AND. &
-                      ityp(l).EQ.ityp_s(j)                      .AND. &
-                      ABS(dist_s(l,k)-dist_s(i,j)).LE.eps_dist  .AND. &
-                      ABS(V(l,k,2)).GE.eps1 )                   THEN 
-                      !
-                      IF (Hubbard_V(i,j,4).EQ.0.d0) Hubbard_V(i,j,4) = V(l,k,2)
-                      GO TO 23
-                      !
-                 ENDIF
-                 !
-              ENDDO ! k
-           ENDDO ! l   
-23         CONTINUE
-        ENDDO ! j
-     ENDDO ! i
+        DO j = 1, dimn      ! <-- neighbor-list hook
+           CALL match_single( i, j, n_src2, styp_l2, styp_k2, sdist2, sval2, 4, .TRUE. )
+        ENDDO
+     ENDDO
   ENDIF
   !
   ! Find the missing Hubbard_V(i,j,1) i.e. standard-standard interactions.
   !
   DO i = 1, nat
-     DO j = 1, dimn
-        DO l = 1, nat
-           DO k = 1, dimn
-              !
-              IF ( ityp_s(k).EQ.ityp_s(j)                    .AND. &
-                   ityp(l).EQ.ityp(i)                        .AND. &
-                   ABS(dist_s(l,k)-dist_s(i,j)).LE.eps_dist  .AND. &
-                  ( ABS(V(l,k,1)).GE.eps1 ) )                THEN
-                  !
-                  IF (Hubbard_V(i,j,1).EQ.0.d0) Hubbard_V(i,j,1) = V(l,k,1)
-                  GO TO 32
-                  !
-              ENDIF
-              !
-              IF ( ityp_s(k).EQ.ityp(i)                      .AND. &
-                   ityp(l).EQ.ityp_s(j)                      .AND. &
-                   ABS(dist_s(l,k)-dist_s(i,j)).LE.eps_dist  .AND. &
-                  ( ABS(V(l,k,1)).GE.eps1 ) )                THEN
-                  !
-                  IF (Hubbard_V(i,j,1).EQ.0.d0) Hubbard_V(i,j,1) = V(l,k,1)
-                  GO TO 32
-                  !
-              ENDIF
-              !
-           ENDDO
-        ENDDO      
-32      CONTINUE
+     DO j = 1, dimn         ! <-- neighbor-list hook
+        CALL match_double( i, j, n_src1, styp_l1, styp_k1, sdist1, sval1, 1 )
      ENDDO
   ENDDO
   !
   ! Find the missing Hubbard_V(i,j,3) i.e. background-background interactions.
-  ! This loop is needed only when the background is included.
+  ! This is needed only when the background is included.
   !
-  IF ( ANY(V(:,:,3).GE.eps1) ) THEN 
+  IF (have3) THEN
      DO i = 1, nat
-        DO j = 1, dimn
-           DO l = 1, nat
-              DO k = 1, dimn
-                 !
-                 IF ( ityp_s(k).EQ.ityp_s(j)                   .AND. &
-                      ityp(l).EQ.ityp(i)                       .AND. &
-                      ABS(dist_s(l,k)-dist_s(i,j)).LE.eps_dist .AND. &
-                     ( ABS(V(l,k,3)).GE.eps1 ) )               THEN
-                     !
-                     IF (Hubbard_V(i,j,3).EQ.0.d0) Hubbard_V(i,j,3) = V(l,k,3)
-                     GO TO 33
-                     !
-                 ENDIF
-                 !
-                 IF ( ityp_s(k).EQ.ityp(i)                     .AND. &
-                      ityp(l).EQ.ityp_s(j)                     .AND. &
-                      ABS(dist_s(l,k)-dist_s(i,j)).LE.eps_dist .AND. &
-                     ( ABS(V(l,k,3)).GE.eps1) )                THEN
-                     !
-                     IF (Hubbard_V(i,j,3).EQ.0.d0) Hubbard_V(i,j,3) = V(l,k,3)
-                     GO TO 33
-                     !
-                 ENDIF
-                 !
-              ENDDO ! k
-           ENDDO ! l     
-33         CONTINUE
-        ENDDO ! j
-     ENDDO ! i
+        DO j = 1, dimn      ! <-- neighbor-list hook
+           CALL match_double( i, j, n_src3, styp_l3, styp_k3, sdist3, sval3, 3 )
+        ENDDO
+     ENDDO
   ENDIF
+  !
+  ! NOTE (neighbor-list hook): the "j = 1, dimn" loops above span the whole
+  ! supercell. Since Hubbard_V is short-ranged, a target couple (i,j) can only
+  ! get a nonzero value if dist_s(i,j) equals one of the (few) reference
+  ! distances, all of which are <= the interaction cutoff. To add a neighbor
+  ! list later, replace "DO j = 1, dimn" with a loop over the precomputed
+  ! neighbors of i (cutoff = max source distance + eps_dist); the match_*
+  ! routines are unaffected. The i==j diagonal is handled separately below and
+  ! does not depend on this.
+  !
+  ! Release the source lists (re-entry at label 13 reallocates them cleanly).
+  !
+  IF (ALLOCATED(styp_l1)) DEALLOCATE( styp_l1, styp_k1, sdist1, sval1 )
+  IF (ALLOCATED(styp_l2)) DEALLOCATE( styp_l2, styp_k2, sdist2, sval2 )
+  IF (ALLOCATED(styp_l3)) DEALLOCATE( styp_l3, styp_k3, sdist3, sval3 )
   !
   IF (.NOT.dfpt_hub) WRITE(stdout,'(/5x,"i",4x,"j",2x,"dist (Bohr)", &
                                 & 7x,"stan-stan",x,"stan-bac",x,"bac-bac",x,"bac-stan")')
@@ -460,6 +425,110 @@ SUBROUTINE alloc_neighborhood()
   CALL stop_clock( 'alloc_neigh' )
   !
   RETURN
+  !
+CONTAINS
+  !
+  !---------------------------------------------------------------------
+  SUBROUTINE build_src( comp, ns, tl, tk, ds, vs )
+    !-------------------------------------------------------------------
+    !
+    ! Collect, in (l,k) order, all reference couples with |V(l,k,comp)| >= eps1.
+    ! For each couple we store the unit-cell type tl=ityp(l), the supercell type
+    ! tk=ityp_s(k), the distance ds=dist_s(l,k) and the value vs=V(l,k,comp).
+    !
+    IMPLICIT NONE
+    INTEGER,  INTENT(IN)  :: comp
+    INTEGER,  INTENT(OUT) :: ns
+    INTEGER,  ALLOCATABLE, INTENT(OUT) :: tl(:), tk(:)
+    REAL(DP), ALLOCATABLE, INTENT(OUT) :: ds(:), vs(:)
+    INTEGER :: ll, kk, c
+    !
+    ns = 0
+    DO ll = 1, nat
+       DO kk = 1, dimn
+          IF (ABS(V(ll,kk,comp)).GE.eps1) ns = ns + 1
+       ENDDO
+    ENDDO
+    !
+    ALLOCATE( tl(ns), tk(ns), ds(ns), vs(ns) )
+    !
+    c = 0
+    DO ll = 1, nat
+       DO kk = 1, dimn
+          IF (ABS(V(ll,kk,comp)).GE.eps1) THEN
+             c = c + 1
+             tl(c) = ityp(ll)
+             tk(c) = ityp_s(kk)
+             ds(c) = dist_s(ll,kk)
+             vs(c) = V(ll,kk,comp)
+          ENDIF
+       ENDDO
+    ENDDO
+    !
+  END SUBROUTINE build_src
+  !
+  !---------------------------------------------------------------------
+  SUBROUTINE match_single( i0, j0, ns, tl, tk, ds, vs, tgt, swap )
+    !-------------------------------------------------------------------
+    !
+    ! Assign Hubbard_V(i0,j0,tgt) from the first source couple (in list order)
+    ! whose types and distance match. swap=.FALSE. matches tk<->ityp_s(j0),
+    ! tl<->ityp(i0); swap=.TRUE. matches the transposed pair. The value is set
+    ! only if currently zero, reproducing the original "first match wins" logic.
+    !
+    IMPLICIT NONE
+    INTEGER,  INTENT(IN) :: i0, j0, ns, tgt
+    INTEGER,  INTENT(IN) :: tl(:), tk(:)
+    REAL(DP), INTENT(IN) :: ds(:), vs(:)
+    LOGICAL,  INTENT(IN) :: swap
+    INTEGER :: s
+    !
+    DO s = 1, ns
+       IF (.NOT.swap) THEN
+          IF ( tk(s).EQ.ityp_s(j0) .AND. tl(s).EQ.ityp(i0) .AND. &
+               ABS(ds(s)-dist_s(i0,j0)).LE.eps_dist ) THEN
+             IF (Hubbard_V(i0,j0,tgt).EQ.0.d0) Hubbard_V(i0,j0,tgt) = vs(s)
+             RETURN
+          ENDIF
+       ELSE
+          IF ( tk(s).EQ.ityp(i0) .AND. tl(s).EQ.ityp_s(j0) .AND. &
+               ABS(ds(s)-dist_s(i0,j0)).LE.eps_dist ) THEN
+             IF (Hubbard_V(i0,j0,tgt).EQ.0.d0) Hubbard_V(i0,j0,tgt) = vs(s)
+             RETURN
+          ENDIF
+       ENDIF
+    ENDDO
+    !
+  END SUBROUTINE match_single
+  !
+  !---------------------------------------------------------------------
+  SUBROUTINE match_double( i0, j0, ns, tl, tk, ds, vs, tgt )
+    !-------------------------------------------------------------------
+    !
+    ! As match_single, but for each source couple both orientations are tested
+    ! (direct first, then transposed) before moving on, matching the original
+    ! two-branch standard-standard / background-background loops.
+    !
+    IMPLICIT NONE
+    INTEGER,  INTENT(IN) :: i0, j0, ns, tgt
+    INTEGER,  INTENT(IN) :: tl(:), tk(:)
+    REAL(DP), INTENT(IN) :: ds(:), vs(:)
+    INTEGER :: s
+    !
+    DO s = 1, ns
+       IF ( tk(s).EQ.ityp_s(j0) .AND. tl(s).EQ.ityp(i0) .AND. &
+            ABS(ds(s)-dist_s(i0,j0)).LE.eps_dist ) THEN
+          IF (Hubbard_V(i0,j0,tgt).EQ.0.d0) Hubbard_V(i0,j0,tgt) = vs(s)
+          RETURN
+       ENDIF
+       IF ( tk(s).EQ.ityp(i0) .AND. tl(s).EQ.ityp_s(j0) .AND. &
+            ABS(ds(s)-dist_s(i0,j0)).LE.eps_dist ) THEN
+          IF (Hubbard_V(i0,j0,tgt).EQ.0.d0) Hubbard_V(i0,j0,tgt) = vs(s)
+          RETURN
+       ENDIF
+    ENDDO
+    !
+  END SUBROUTINE match_double
   !
 END SUBROUTINE alloc_neighborhood
 !-----------------------------------------------------------------------
