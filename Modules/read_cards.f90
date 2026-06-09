@@ -2596,7 +2596,7 @@ CONTAINS
             IF (.NOT.ALLOCATED(ityp)) THEN
                IF (.NOT.ALLOCATED(sp_pos)) CALL errore ('card_hubbard', &
                        'card HUBBARD must follow card ATOMIC_SPECIES',1)
-               ALLOCATE(ityp(natx*(2*sc_size+1)**3))
+               ALLOCATE(ityp(nat*(2*sc_size+1)**3))
                ityp(1:nat) = sp_pos(1:nat)
                i = nat
                DO nx = -sc_size, sc_size
@@ -2614,7 +2614,7 @@ CONTAINS
             ENDIF
             !
             IF (.NOT.ALLOCATED(counter_v)) THEN
-               ALLOCATE(counter_v(natx,natx*(2*sc_size+1)**3))
+               ALLOCATE(counter_v(nat,nat*(2*sc_size+1)**3))
                counter_v(:,:) = 0
             ENDIF
             !
@@ -2626,7 +2626,7 @@ CONTAINS
                CALL errore( 'card_hubbard', 'Not allowed value of the atomic index na', i)
             CALL get_field(5, field_str, input_line)
             READ(field_str,'(i8)', END=14, ERR=15) nb
-            IF ( nb < 0 .or. nb > nat*natx ) &
+            IF ( nb < 0 .or. nb > nat*(2*sc_size+1)**3 ) &
                CALL errore( 'card_hubbard', 'Not allowed value of the atomic index nb', i)
             !
             ! In the DFT+U+V case there are maximum 4 Hubbard_V parameters per couple (na,nb)
