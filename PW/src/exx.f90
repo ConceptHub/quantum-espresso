@@ -23,7 +23,7 @@ MODULE exx
   USE control_flags,        ONLY : gamma_only, tqr, use_gpu, many_fft
   USE exx_base,             ONLY : exx_bgrp_type, EXX_BGRP_BANDS, dfftt, exxbuff , exxbuff_d, npwt, x_nbnd_occ, &
                                    ibnd_start, ibnd_end, gt, ggt, gcutmt, gkcut, gstart_t, ngmt_g, &
-                                   eps_occ, exxalfa, x_occupation, x_occupation_d, &
+                                   eps_occ, exxalfa, exxbeta, x_occupation, x_occupation_d, &
                                    locbuff, exxmat, locmat, nbndproj, local_thr
   !
   IMPLICIT NONE

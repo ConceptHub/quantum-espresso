@@ -105,7 +105,6 @@ MODULE exx_base
   REAL(DP) :: gau_scrlen = 0.d0
   !! CAM screening
   !
-  REAL(DP) :: exxalfa = 0._dp
   REAL(DP) :: exxbeta = 0._dp
   !! gau-pbe screening
   !

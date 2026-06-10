@@ -23,7 +23,8 @@
                                 angle1, angle2, ip_nat => nat, ip_nspin => nspin, ip_ityp => sp_pos, ip_tau => rd_pos,&
                                 ip_atomic_positions => atomic_positions, lspinorb, ip_nqx1 => nqx1, ip_nqx2 => nqx2,  &
                                 ip_nqx3 => nqx3, ip_ecutfock => ecutfock, ip_ecutvcut => ecutvcut, localization_thr,  &
-                                screening_parameter, exx_fraction, x_gamma_extrapolation, exxdiv_treatment,           &
+                                screening_parameter, exx_fraction, exx_lr_fraction, x_gamma_extrapolation,            &
+                                exxdiv_treatment,                                                                    &
                                 ip_lda_plus_u=>lda_plus_u, ip_lda_plus_u_kind => lda_plus_u_kind,                     &
                                 ip_hubbard_u => hubbard_u, ip_hubbard_u2 => hubbard_u2, ip_hubbard_Um => hubbard_um,  &
                                 ip_hubbard_Um_nc => hubbard_Um_nc, ip_hubbard_j0 => hubbard_j0,                       &
@@ -124,9 +125,9 @@
   TYPE(dftU_type)                          ::  dftU_
   TYPE(vdW_type)                           ::  vdW_
   REAL(DP),TARGET                          ::  xdm_a1_, xdm_a2_, lond_s6_, lond_rcut_, ts_vdw_econv_thr_,&
-                                               scr_par_, exx_frc_, ecutvcut_, ecut_fock_, loc_thr_, cell_factor_tg      
+                                               scr_par_, exx_frc_, exx_lr_frc_, ecutvcut_, ecut_fock_, loc_thr_, cell_factor_tg
   REAL(DP),POINTER                         ::  xdm_a1_pt, xdm_a2_pt, lond_s6_pt, lond_rcut_pt, ts_vdw_econv_thr_pt, & 
-                                               ecut_fock_opt, scr_par_opt, exx_frc_opt, ecutvcut_opt, loc_thr_p,    &
+                                               ecut_fock_opt, scr_par_opt, exx_frc_opt, exx_lr_frc_opt, ecutvcut_opt, loc_thr_p, &
                                                cell_factor_pt
   LOGICAL,TARGET                           ::  empirical_vdw, ts_vdw_isolated_, dftd3_threebody_
   LOGICAL,POINTER                          ::  ts_vdw_isolated_pt, dftd3_threebody_pt
@@ -147,7 +148,7 @@
   NULLIFY (gate_ptr, block_ptr, relaxz_ptr, block_1_ptr, block_2_ptr, block_height_ptr, zgate_ptr)
   NULLIFY (nr_1,nr_2,nr_3, nrs_1, nrs_2, nrs_3, nrb_1, nrb_2, nrb_3) 
   NULLIFY (xdm_a1_pt, xdm_a2_pt, lond_s6_pt, lond_rcut_pt, ts_vdw_econv_thr_pt) 
-  NULLIFY (ecut_fock_opt, scr_par_opt, exx_frc_opt, ecutvcut_opt)  
+  NULLIFY (ecut_fock_opt, scr_par_opt, exx_frc_opt, exx_lr_frc_opt, ecutvcut_opt)
   NULLIFY (loc_thr_p, cell_factor_pt) 
   NULLIFY (ts_vdw_isolated_pt, dftd3_threebody_pt ) 
   NULLIFY (dftd3_version_pt, nbnd_pt, nq1_pt, nq2_pt, nq3_pt) 
@@ -218,6 +219,10 @@
         exx_frc_ = exx_fraction 
         exx_frc_opt => exx_frc_ 
      END IF 
+     IF ( exx_lr_fraction > -1.0E5_DP) THEN
+        exx_lr_frc_ = exx_lr_fraction
+        exx_lr_frc_opt => exx_lr_frc_
+     END IF
      IF ( ip_ecutfock > 0.0_DP) THEN 
         ecut_fock_ = ip_ecutvcut/e2 
         ecut_fock_opt => ecut_fock_
@@ -240,7 +245,8 @@
      END IF 
      CALL qexsd_init_hybrid(hybrid_, dft_is_hybrid, NQ1 = ip_nqx1, NQ2= ip_nqx2, NQ3=ip_nqx3,&
                             ECUTFOCK = ecut_fock_opt, EXX_FRACTION = exx_frc_opt,          &
-                            SCREENING_PARAMETER = scr_par_opt,  EXXDIV_TREATMENT = exxdiv_treatment,&
+                            EXX_LR_FRACTION = exx_lr_frc_opt, SCREENING_PARAMETER = scr_par_opt, &
+                            EXXDIV_TREATMENT = exxdiv_treatment,&
                             X_GAMMA_EXTRAPOLATION = x_gamma_extrapolation, ECUTVCUT = ecutvcut_opt, &
                             LOCAL_THR = loc_thr_p )
   ELSE 

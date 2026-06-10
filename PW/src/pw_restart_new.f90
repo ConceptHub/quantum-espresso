@@ -1286,6 +1286,10 @@ MODULE pw_restart_new
       TYPE (input_type)         :: input_obj
       !
       !
+      exx_fraction = -1.0_DP
+      exx_lr_fraction = -1.0E6_DP
+      screening_parameter = -1.0_DP
+      !
       filename = xmlfile ( )
       !
       IF (ionode) CALL qexsd_readschema ( filename, &
@@ -1384,9 +1388,9 @@ MODULE pw_restart_new
       IF ( xclib_dft_is('hybrid') ) THEN
          ecutvcut = ecutvcut*e2
          ecutfock = ecutfock*e2
-         CALL xclib_set_exx_fraction( exx_fraction ) 
-         CALL xclib_set_exx_lr_fraction( exx_lr_fraction )
-         CALL set_screening_parameter( screening_parameter )
+         IF (exx_fraction >= 0.0_DP) CALL xclib_set_exx_fraction( exx_fraction )
+         IF (exx_lr_fraction > -1.0E5_DP) CALL xclib_set_exx_lr_fraction( exx_lr_fraction )
+         IF (screening_parameter >= 0.0_DP) CALL set_screening_parameter( screening_parameter )
          CALL start_exx ()
       END IF
       !! Band structure section
