@@ -699,7 +699,8 @@ MODULE input_parameters
              nqx1, nqx2, nqx3, ecutfock, localization_thr, scdm, ace,         &
              scdmden, scdmgrd, nscdm, n_proj,                                 &
              exxdiv_treatment, x_gamma_extrapolation, yukawa, ecutvcut,       &
-             exx_fraction, exx_lr_fraction, screening_parameter, ref_alat,    &
+             exx_fraction, exx_type, exx_lr_fraction, screening_parameter,    &
+             ref_alat,                                                        &
              noncolin, lspinorb, starting_spin_angle, lambda, angle1, angle2, &
              report, lforcet,                                                 &
              constrained_magnetization, B_field, fixed_magnetization,         &
