@@ -42,11 +42,18 @@ SUBROUTINE alloc_neighborhood()
   ! The (l,k) ordering of the lists (l outer, k inner) reproduces the original
   ! "first match wins" behaviour exactly.
   !
+  ! Number of source couples in each list (component 1/2/3)
   INTEGER :: n_src1, n_src2, n_src3
-  INTEGER,  ALLOCATABLE :: styp_l1(:), styp_k1(:), styp_l2(:), styp_k2(:), &
-                           styp_l3(:), styp_k3(:)
-  REAL(DP), ALLOCATABLE :: sdist1(:), sval1(:), sdist2(:), sval2(:), &
-                           sdist3(:), sval3(:)
+  ! Component-1 (standard-standard) source list, filled by build_src:
+  INTEGER,  ALLOCATABLE :: styp_l1(:), styp_k1(:)   ! atom types: l = unit cell, k = supercell
+  REAL(DP), ALLOCATABLE :: sdist1(:), sval1(:)      ! couple distance (Bohr) and value (Ry)
+  ! Component-2 (standard-background) source list:
+  INTEGER,  ALLOCATABLE :: styp_l2(:), styp_k2(:)
+  REAL(DP), ALLOCATABLE :: sdist2(:), sval2(:)
+  ! Component-3 (background-background) source list:
+  INTEGER,  ALLOCATABLE :: styp_l3(:), styp_k3(:)
+  REAL(DP), ALLOCATABLE :: sdist3(:), sval3(:)
+  ! Whether background components 2/3 occur in V (gates the corresponding loops)
   LOGICAL :: have2, have3
   !
   CALL start_clock( 'alloc_neigh' )
@@ -438,10 +445,20 @@ CONTAINS
     !
     IMPLICIT NONE
     INTEGER,  INTENT(IN)  :: comp
+    !! interaction component of V to scan: 1=standard-standard,
+    !! 2=standard-background, 3=background-background
     INTEGER,  INTENT(OUT) :: ns
-    INTEGER,  ALLOCATABLE, INTENT(OUT) :: tl(:), tk(:)
-    REAL(DP), ALLOCATABLE, INTENT(OUT) :: ds(:), vs(:)
+    !! number of source couples found (length of the output lists)
+    INTEGER,  ALLOCATABLE, INTENT(OUT) :: tl(:)
+    !! tl(s) = ityp(l): unit-cell atom type of source couple s
+    INTEGER,  ALLOCATABLE, INTENT(OUT) :: tk(:)
+    !! tk(s) = ityp_s(k): supercell atom type of source couple s
+    REAL(DP), ALLOCATABLE, INTENT(OUT) :: ds(:)
+    !! ds(s) = dist_s(l,k): distance of source couple s (Bohr)
+    REAL(DP), ALLOCATABLE, INTENT(OUT) :: vs(:)
+    !! vs(s) = V(l,k,comp): interaction value of source couple s (Ry)
     INTEGER :: ll, kk, c
+    ! ll, kk: loop indices over cell / supercell atoms; c: running output counter
     !
     ns = 0
     DO ll = 1, nat
@@ -477,11 +494,27 @@ CONTAINS
     ! only if currently zero, reproducing the original "first match wins" logic.
     !
     IMPLICIT NONE
-    INTEGER,  INTENT(IN) :: i0, j0, ns, tgt
-    INTEGER,  INTENT(IN) :: tl(:), tk(:)
-    REAL(DP), INTENT(IN) :: ds(:), vs(:)
+    INTEGER,  INTENT(IN) :: i0
+    !! target atom in the unit cell (1st index of Hubbard_V to fill)
+    INTEGER,  INTENT(IN) :: j0
+    !! target atom in the supercell (2nd index of Hubbard_V to fill)
+    INTEGER,  INTENT(IN) :: ns
+    !! number of source couples in the lists
+    INTEGER,  INTENT(IN) :: tl(:)
+    !! tl(s) = unit-cell atom type of source couple s (from build_src)
+    INTEGER,  INTENT(IN) :: tk(:)
+    !! tk(s) = supercell atom type of source couple s
+    REAL(DP), INTENT(IN) :: ds(:)
+    !! ds(s) = distance of source couple s (Bohr)
+    REAL(DP), INTENT(IN) :: vs(:)
+    !! vs(s) = interaction value of source couple s (Ry)
+    INTEGER,  INTENT(IN) :: tgt
+    !! component of Hubbard_V(i0,j0,:) to assign (1..4)
     LOGICAL,  INTENT(IN) :: swap
+    !! .FALSE.: match tk(s)=ityp_s(j0), tl(s)=ityp(i0);
+    !! .TRUE. : match the transposed pair tk(s)=ityp(i0), tl(s)=ityp_s(j0)
     INTEGER :: s
+    ! source-list index
     !
     DO s = 1, ns
        IF (.NOT.swap) THEN
@@ -510,10 +543,24 @@ CONTAINS
     ! two-branch standard-standard / background-background loops.
     !
     IMPLICIT NONE
-    INTEGER,  INTENT(IN) :: i0, j0, ns, tgt
-    INTEGER,  INTENT(IN) :: tl(:), tk(:)
-    REAL(DP), INTENT(IN) :: ds(:), vs(:)
+    INTEGER,  INTENT(IN) :: i0
+    !! target atom in the unit cell (1st index of Hubbard_V to fill)
+    INTEGER,  INTENT(IN) :: j0
+    !! target atom in the supercell (2nd index of Hubbard_V to fill)
+    INTEGER,  INTENT(IN) :: ns
+    !! number of source couples in the lists
+    INTEGER,  INTENT(IN) :: tl(:)
+    !! tl(s) = unit-cell atom type of source couple s (from build_src)
+    INTEGER,  INTENT(IN) :: tk(:)
+    !! tk(s) = supercell atom type of source couple s
+    REAL(DP), INTENT(IN) :: ds(:)
+    !! ds(s) = distance of source couple s (Bohr)
+    REAL(DP), INTENT(IN) :: vs(:)
+    !! vs(s) = interaction value of source couple s (Ry)
+    INTEGER,  INTENT(IN) :: tgt
+    !! component of Hubbard_V(i0,j0,:) to assign (1..4)
     INTEGER :: s
+    ! source-list index
     !
     DO s = 1, ns
        IF ( tk(s).EQ.ityp_s(j0) .AND. tl(s).EQ.ityp(i0) .AND. &
