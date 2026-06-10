@@ -853,7 +853,7 @@ MODULE exx_base
       ELSEIF (qq > eps_qdiv) THEN
          !
          IF ( erfc_scrlen > 0  ) THEN
-            IF ( igcx == 47 ) THEN
+            IF ( igcx == 52 ) THEN
                IF ( exxalfa == 0._DP) exxalfa = 0.0001_DP
                fac(ig)=e2*fpi/qq*(1._DP+EXP(-qq/4._DP/erfc_scrlen**2)*exxbeta/exxalfa)*grid_factor_track(ig)
             ELSE
@@ -872,8 +872,14 @@ MODULE exx_base
          IF (yukawa>0._DP .AND. .NOT.x_gamma_extrapolation) fac(ig) = fac(ig) + &
                                                             e2*fpi/( qq + yukawa )
          !
-         IF (erfc_scrlen>0._DP .AND. .NOT.x_gamma_extrapolation) fac(ig) = fac(ig) + &
-                                                                  e2*pi/(erfc_scrlen**2)
+         IF (erfc_scrlen>0._DP .AND. .NOT.x_gamma_extrapolation) THEN
+            IF ( igcx == 52 ) THEN
+               IF ( exxalfa == 0._DP) exxalfa = 0.0001_DP
+               fac(ig) = fac(ig) - exxbeta/exxalfa * e2*pi/(erfc_scrlen**2)
+            ELSE
+               fac(ig) = fac(ig) + e2*pi/(erfc_scrlen**2)
+            ENDIF
+         ENDIF
          !
       ENDIF
       !
@@ -957,7 +963,7 @@ MODULE exx_base
                  IF (.NOT.on_double_grid) THEN
                     IF ( qq > 1.d-8 ) THEN
                        IF ( erfc_scrlen > 0 ) THEN
-                          IF ( igcx == 47 ) THEN
+                          IF ( igcx == 52 ) THEN
                              IF ( exxalfa == 0._DP) exxalfa = 0.0001_DP
                              div = div + EXP( -alpha * qq) / qq * &
                                 (1._dp+EXP(-qq*tpiba2/4.d0/erfc_scrlen**2) * exxbeta / exxalfa) * &
@@ -993,7 +999,12 @@ MODULE exx_base
         IF ( yukawa > 0._dp) THEN
            div = div + tpiba2/yukawa
         ELSEIF( erfc_scrlen > 0._dp ) THEN
-           div = div + tpiba2/4.d0/erfc_scrlen**2
+           IF ( igcx == 52 ) THEN
+              IF ( exxalfa == 0._DP) exxalfa = 0.0001_DP
+              div = div - exxbeta/exxalfa * tpiba2/4.d0/erfc_scrlen**2
+           ELSE
+              div = div + tpiba2/4.d0/erfc_scrlen**2
+           ENDIF
         ELSE
            div = div - alpha
         ENDIF
@@ -1011,7 +1022,7 @@ MODULE exx_base
         q_ = dq * (iq+0.5d0)
         qq = q_ * q_
         IF ( erfc_scrlen > 0 ) THEN
-             IF (igcx == 47) THEN
+             IF (igcx == 52) THEN
                 IF (exxalfa == 0) exxalfa = 0.0001_DP
                 aa = aa + EXP( -alpha * qq) * EXP(-qq/4.d0/erfc_scrlen**2)*exxbeta/exxalfa*dq
              ELSE

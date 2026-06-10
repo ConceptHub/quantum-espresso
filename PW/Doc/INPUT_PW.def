@@ -1464,13 +1464,38 @@ input_description -distribution {Quantum ESPRESSO} -package PWscf -program pw.x 
             }
         }
 
+        var exx_lr_fraction -type REAL {
+            dimensionality { dimensionless }
+            default -kind conditional {
+                case { internal }
+            }
+
+            info {
+                Additional long-range EXX coefficient for range-separated hybrid
+                functional calculations. If unset, the default value is
+                determined by @ref input_dft. For @ref input_dft='CAM', the
+                default is -0.80. The short-range Fock exchange fraction is
+                @ref exx_fraction, while the long-range Fock exchange fraction
+                is @ref exx_fraction + @ref exx_lr_fraction. Thus, for CAM
+                defaults, short-range Fock exchange is 1.0 and long-range Fock
+                exchange is 0.2. In reciprocal space the EXX kernel is
+                proportional to exx_fraction + exx_lr_fraction *
+                exp(-q^2/(4 mu^2)), where mu is @ref screening_parameter.
+            }
+        }
+
         var screening_parameter -type REAL {
             dimensionality { length^-1 }
             units { bohr^-1 }
-            default { 0.106 }
+            default -kind conditional {
+                case { internal }
+            }
 
             info {
-                screening_parameter for HSE like hybrid functionals.
+                Screening parameter mu for HSE- and CAM-like range-separated
+                hybrid functionals, in bohr^-1. It appears in reciprocal space
+                as exp(-q^2/(4 mu^2)). The default is 0.106 for HSE-like
+                functionals and 0.7 for @ref input_dft='CAM'.
                 For more information, see:
                 J. Chem. Phys. 118, 8207 (2003), doi:10.1063/1.1564060
                 J. Chem. Phys. 124, 219906 (2006), doi:10.1063/1.2204597

@@ -627,6 +627,11 @@ module PW -title "PWSCF GUI: module PW.x" -script {
                         -label "Fraction of EXX for hybrid functional calculations (exx_fraction):"
                         -validate fortranreal
                     }
+
+                    var exx_lr_fraction {
+                        -label "Additional long-range EXX coefficient for range-separated hybrid functional calculations (exx_lr_fraction):"
+                        -validate fortranreal
+                    }
                     
                     var exxdiv_treatment {
                         -label "Approach for treating Coulomb potential divergencies at small q vectors (exxdiv_treatment):"
@@ -657,7 +662,7 @@ module PW -title "PWSCF GUI: module PW.x" -script {
                     }
                     
                     var screening_parameter {
-                        -label "Screening_parameter for HSE like hybrid functionals (screening_parameter):"
+                        -label "Screening parameter in bohr^-1 for HSE/CAM-like hybrid functionals (screening_parameter):"
                         -validate fortranreal
                     }
 
