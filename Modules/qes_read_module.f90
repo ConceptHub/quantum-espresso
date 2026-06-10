@@ -3180,10 +3180,10 @@ MODULE qes_read_module
     tmp_node_list_size = getLength(tmp_node_list)
     !
     IF (tmp_node_list_size > 1) THEN
-        IF (PRESENT(ierr) ) THEN 
+        IF (PRESENT(ierr) ) THEN
            CALL infomsg("qes_read:hybridType","exx_lr_fraction: too many occurrences")
-           ierr = ierr + 1 
-        ELSE 
+           ierr = ierr + 1
+        ELSE
            CALL errore("qes_read:hybridType","exx_lr_fraction: too many occurrences",10)
         END IF
     END IF
@@ -3193,7 +3193,7 @@ MODULE qes_read_module
       tmp_node => item(tmp_node_list, 0)
       CALL extractDataContent(tmp_node, obj%exx_lr_fraction , IOSTAT = iostat_)
       IF ( iostat_ /= 0 ) THEN
-         IF ( PRESENT (ierr ) ) THEN 
+         IF ( PRESENT (ierr ) ) THEN
             CALL infomsg("qes_read:hybridType","error reading exx_lr_fraction")
             ierr = ierr + 1
          ELSE

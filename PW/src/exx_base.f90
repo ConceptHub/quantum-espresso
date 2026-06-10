@@ -856,7 +856,7 @@ MODULE exx_base
             IF ( igcx == 47 ) THEN
                IF ( exxalfa == 0._DP) exxalfa = 0.0001_DP
                fac(ig)=e2*fpi/qq*(1._DP+EXP(-qq/4._DP/erfc_scrlen**2)*exxbeta/exxalfa)*grid_factor_track(ig)
-            ELSE    
+            ELSE
                fac(ig) = e2*fpi/qq*(1._DP-EXP(-qq/4._DP/erfc_scrlen**2)) * grid_factor_track(ig)
             ENDIF
          ELSEIF( erf_scrlen > 0 ) THEN
@@ -1011,7 +1011,7 @@ MODULE exx_base
         q_ = dq * (iq+0.5d0)
         qq = q_ * q_
         IF ( erfc_scrlen > 0 ) THEN
-             IF (igcx == 47) THEN 
+             IF (igcx == 47) THEN
                 IF (exxalfa == 0) exxalfa = 0.0001_DP
                 aa = aa + EXP( -alpha * qq) * EXP(-qq/4.d0/erfc_scrlen**2)*exxbeta/exxalfa*dq
              ELSE
