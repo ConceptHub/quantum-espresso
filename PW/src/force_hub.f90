@@ -1981,6 +1981,8 @@ SUBROUTINE calc_doverlap_inv( alpha, ipol, ik, ijkb0 )
    USE cell_base,        ONLY : tpiba
    USE gvect,            ONLY : g
    USE uspp,             ONLY : okvan
+   USE uspp_param,       ONLY : nh
+   USE ions_base,        ONLY : ityp
    USE klist,            ONLY : xk, ngk, igk_k
    USE basis,            ONLY : natomwfc, wfcatom, swfcatom
    USE force_mod,        ONLY : eigenval, eigenvect, overlap_inv, doverlap_inv
@@ -2001,15 +2003,17 @@ SUBROUTINE calc_doverlap_inv( alpha, ipol, ik, ijkb0 )
    !
    ! ... local variables
    !
-   INTEGER :: ig, m1, m2, npw, m_start, m_end
+   INTEGER :: ig, m1, m2, npw, m_start, m_end, nh_alpha
    REAL(DP) :: gvec, xki
    COMPLEX(DP), ALLOCATABLE :: dwfcatom(:,:)
    ! auxiliary array for fast calculation
    !$acc declare device_resident(dwfcatom)
    COMPLEX(DP), ALLOCATABLE :: doverlap(:,:)
-   ! derivative of the overlap matrix  
+   ! derivative of the overlap matrix
    COMPLEX(DP), ALLOCATABLE :: doverlap_us(:,:)
    ! derivative of the overlap matrix, auxiliary array
+   COMPLEX(DP), ALLOCATABLE :: dS_Lfac(:,:), dS_Rfac(:,:)
+   ! low-rank factors of the USPP/PAW dS term: dO_us = dS_Lfac*dS_Rfac + h.c.
    !
    CALL start_clock( 'calcdoverlp' )
    !
@@ -2058,45 +2062,82 @@ SUBROUTINE calc_doverlap_inv( alpha, ipol, ik, ijkb0 )
         doverlap_us(m_start,1), natomwfc )
    !$acc end host_data
    DEALLOCATE ( dwfcatom )
-   ! ... Calculate < phi_I | S | dphi_J/d\tau(alpha,ipol) >
-   ! ... (use hermitian conjugate of previously computed matrix)
-   !$acc kernels
-   doverlap(:,:) = doverlap_us(:,:)
-   !$acc end kernels
-   !$acc parallel loop collapse(2)
-   DO m1 = 1, natomwfc
-      DO m2 = m_start, m_end
-         doverlap(m1,m2) = doverlap(m1,m2) + CONJG(doverlap_us(m2,m1))
-      END DO
-   END DO
    !
-   ! ... Sum over G vectors
-   !
-   !$acc host_data use_device(doverlap)
-   CALL mp_sum( doverlap, intra_bgrp_comm )
-   !$acc end host_data 
-   !
-   ! ... Add the USPP term in dO_IJ/d\tau(alpha,ipol):
-   ! ... < phi_I | dS/d\tau(alpha,ipol) | phi_J >
-   !
-   IF (okvan) THEN
-      ! ... Calculate doverlap_us = < phi_I | dS/d\tau(alpha,ipol) | phi_J >
-      CALL matrix_element_of_dSdtau( alpha, ipol, ik, ijkb0, natomwfc, &
-                                     wfcatom, natomwfc, wfcatom,       &
-                                     doverlap_us, 1, natomwfc, 0, .true. )
+   IF (noncolin) THEN
+      !
+      ! ... Noncollinear case: assemble the full dO and use the dense solver.
+      ! ... Calculate < phi_I | S | dphi_J/d\tau(alpha,ipol) >
+      ! ... (use hermitian conjugate of previously computed matrix)
       !$acc kernels
-      doverlap(:,:) = doverlap(:,:) + doverlap_us(:,:)
+      doverlap(:,:) = doverlap_us(:,:)
       !$acc end kernels
+      !$acc parallel loop collapse(2)
+      DO m1 = 1, natomwfc
+         DO m2 = m_start, m_end
+            doverlap(m1,m2) = doverlap(m1,m2) + CONJG(doverlap_us(m2,m1))
+         END DO
+      END DO
+      !
+      ! ... Sum over G vectors
+      !
+      !$acc host_data use_device(doverlap)
+      CALL mp_sum( doverlap, intra_bgrp_comm )
+      !$acc end host_data
+      !
+      ! ... Add the USPP term in dO_IJ/d\tau(alpha,ipol):
+      ! ... < phi_I | dS/d\tau(alpha,ipol) | phi_J >
+      !
+      IF (okvan) THEN
+         CALL matrix_element_of_dSdtau( alpha, ipol, ik, ijkb0, natomwfc, &
+                                        wfcatom, natomwfc, wfcatom,       &
+                                        doverlap_us, 1, natomwfc, 0, .true. )
+         !$acc kernels
+         doverlap(:,:) = doverlap(:,:) + doverlap_us(:,:)
+         !$acc end kernels
+      ENDIF
+      !
+      CALL start_clock( 'lyapunov' )
+      CALL calculate_doverlap_inv( natomwfc, eigenval, eigenvect, &
+                                   doverlap, doverlap_inv )
+      CALL stop_clock( 'lyapunov' )
+      !
+   ELSE
+      !
+      ! ... Collinear case: keep dO in low-rank factored form and solve only
+      ! ... for the Hubbard-manifold columns of d(O^{-1/2}). dO/d\tau is the
+      ! ... sum of an "orbital" part (doverlap_us, nonzero only in the rows of
+      ! ... the displaced atom) and, for USPP/PAW, a "dS" part that factorizes
+      ! ... as dS_Lfac*dS_Rfac + h.c. Both are low rank.
+      !
+      ! ... G-sum the orbital factor (only its m_start:m_end rows are nonzero)
+      !$acc host_data use_device(doverlap_us)
+      CALL mp_sum( doverlap_us, intra_bgrp_comm )
+      !$acc end host_data
+      !
+      IF (okvan) THEN
+         nh_alpha = nh(ityp(alpha))
+      ELSE
+         nh_alpha = 1
+      ENDIF
+      ALLOCATE( dS_Lfac(natomwfc,nh_alpha), dS_Rfac(nh_alpha,natomwfc) )
+      !$acc enter data create(dS_Lfac,dS_Rfac)
+      !
+      IF (okvan) THEN
+         ! ... Get the low-rank factors of < phi_I | dS/d\tau | phi_J >
+         CALL dS_lowrank_factors( alpha, ipol, ik, ijkb0, natomwfc, wfcatom, &
+                                  nh_alpha, dS_Lfac, dS_Rfac )
+      ENDIF
+      !
+      CALL start_clock( 'lyapunov' )
+      CALL calculate_doverlap_inv_lr( natomwfc, eigenval, eigenvect, doverlap_us, &
+                                      m_start, m_end, okvan, dS_Lfac, dS_Rfac,    &
+                                      nh_alpha, doverlap_inv )
+      CALL stop_clock( 'lyapunov' )
+      !
+      !$acc exit data delete(dS_Lfac,dS_Rfac)
+      DEALLOCATE( dS_Lfac, dS_Rfac )
+      !
    ENDIF
-   !
-   !
-   ! ... Now compute dO^{-1/2}_JI/d\tau(alpha,ipol) using dO_IJ/d\tau(alpha,ipol)
-   ! ... Note the transposition!
-   !
-   CALL start_clock( 'lyapunov' )
-   CALL calculate_doverlap_inv( natomwfc, eigenval, eigenvect, &
-                                doverlap, doverlap_inv )
-   CALL stop_clock( 'lyapunov' )
    !
    !$acc end data
    DEALLOCATE( doverlap_us )
@@ -2104,6 +2145,256 @@ SUBROUTINE calc_doverlap_inv( alpha, ipol, ik, ijkb0 )
    CALL stop_clock( 'calcdoverlp' )
    !
 END SUBROUTINE calc_doverlap_inv
+!
+!
+!----------------------------------------------------------------------
+SUBROUTINE calculate_doverlap_inv_lr( m, e, U, dO_orb, m_start, m_end, &
+                                      okvan, Lfac, Rfac, nh_a, doverlap_inv )
+   !-------------------------------------------------------------------
+   !! Low-rank, Hubbard-column-restricted solver for \(d(O^{-1/2})\).
+   !! It returns the same result as \(\texttt{calculate_doverlap_inv}\),
+   !! \(d(O^{-1/2}) = -U\,D\,U^H\) with \(D_{ij} = (U^H dO\,U)_{ij} /
+   !! (e_i\sqrt{e_j}+e_j\sqrt{e_i})\), but
+   !!   1. evaluates the forward transform \(U^H dO\,U\) from the low-rank
+   !!      factors of \(dO\) (the orbital part is nonzero only in the rows of
+   !!      the displaced atom; the USPP/PAW dS part is \(L R + (LR)^H\)),
+   !!   2. computes only the Hubbard-manifold columns actually used by
+   !!      \(\texttt{dprojdtau_k}\) (the others are left zero).
+   !! This avoids the \(O(m^3)\) dense transforms of the original solver.
+   !
+   USE kinds,     ONLY : DP
+   USE ions_base, ONLY : nat, ityp
+   USE ldaU,      ONLY : is_hubbard, oatwfc, ldim_u
+   !
+   IMPLICIT NONE
+   !
+   INTEGER,     INTENT(IN)  :: m
+   !! number of atomic wavefunctions (natomwfc)
+   REAL(DP),    INTENT(IN)  :: e(m)
+   !! eigenvalues of the overlap matrix
+   COMPLEX(DP), INTENT(IN)  :: U(m,m)
+   !! eigenvectors of the overlap matrix
+   COMPLEX(DP), INTENT(IN)  :: dO_orb(m,m)
+   !! orbital part of dO: only rows m_start:m_end are nonzero (= the factor M)
+   INTEGER,     INTENT(IN)  :: m_start, m_end
+   !! range of atomic wavefunctions belonging to the displaced atom
+   LOGICAL,     INTENT(IN)  :: okvan
+   !! whether the USPP/PAW dS contribution is present
+   INTEGER,     INTENT(IN)  :: nh_a
+   !! number of beta projectors of the displaced atom (1 if .NOT.okvan)
+   COMPLEX(DP), INTENT(IN)  :: Lfac(m,nh_a), Rfac(nh_a,m)
+   !! low-rank factors of the dS part: dO_us = Lfac*Rfac + (Lfac*Rfac)^H
+   COMPLEX(DP), INTENT(OUT) :: doverlap_inv(m,m)
+   !! d(O^{-1/2}) (not transposed), Hubbard-manifold columns only
+   !
+   INTEGER :: nR, i, j, na, nt, offpm, ld, nwfcU, kc
+   COMPLEX(DP), ALLOCATABLE :: C(:,:), D(:,:), MU(:,:), P(:,:), RU(:,:)
+   COMPLEX(DP), ALLOCATABLE :: Uhub(:,:), DUhub(:,:), dinvhub(:,:)
+   !$acc declare device_resident(C,D,MU,P,RU,Uhub,DUhub,dinvhub)
+   !
+   nR = m_end - m_start + 1
+   !
+   ALLOCATE( C(m,m), D(m,m), MU(nR,m) )
+   !
+   ! ... Orbital part of the forward transform: U^H dO_orb U = U_R^H (M U) + h.c.
+   ! ...   M = dO_orb(m_start:m_end,:),  U_R = U(m_start:m_end,:)
+   !$acc host_data use_device(dO_orb, U, MU)
+   CALL MYZGEMM( 'N','N', nR, m, m, (1.d0,0.d0), dO_orb(m_start,1), m, U, m, &
+                 (0.d0,0.d0), MU, nR )
+   !$acc end host_data
+   !$acc host_data use_device(U, MU, C)
+   CALL MYZGEMM( 'C','N', m, m, nR, (1.d0,0.d0), U(m_start,1), m, MU, nR, &
+                 (0.d0,0.d0), C, m )
+   !$acc end host_data
+   DEALLOCATE( MU )
+   !
+   !$acc parallel loop collapse(2) present(C,D)
+   DO j = 1, m
+      DO i = 1, m
+         D(i,j) = C(i,j) + CONJG(C(j,i))
+      ENDDO
+   ENDDO
+   !
+   ! ... dS (USPP/PAW) part: add U^H dO_us U = P*RU + (P*RU)^H,
+   ! ...   P = U^H Lfac,  RU = Rfac U
+   IF (okvan) THEN
+      ALLOCATE( P(m,nh_a), RU(nh_a,m) )
+      !$acc host_data use_device(U, Lfac, P)
+      CALL MYZGEMM( 'C','N', m, nh_a, m, (1.d0,0.d0), U, m, Lfac, m, &
+                    (0.d0,0.d0), P, m )
+      !$acc end host_data
+      !$acc host_data use_device(Rfac, U, RU)
+      CALL MYZGEMM( 'N','N', nh_a, m, m, (1.d0,0.d0), Rfac, nh_a, U, m, &
+                    (0.d0,0.d0), RU, nh_a )
+      !$acc end host_data
+      ! ... reuse C as the P*RU buffer
+      !$acc host_data use_device(P, RU, C)
+      CALL MYZGEMM( 'N','N', m, m, nh_a, (1.d0,0.d0), P, m, RU, nh_a, &
+                    (0.d0,0.d0), C, m )
+      !$acc end host_data
+      !$acc parallel loop collapse(2) present(C,D)
+      DO j = 1, m
+         DO i = 1, m
+            D(i,j) = D(i,j) + C(i,j) + CONJG(C(j,i))
+         ENDDO
+      ENDDO
+      DEALLOCATE( P, RU )
+   ENDIF
+   !
+   ! ... Divide by the eigenvalue denominator: D = (U^H dO U) ./ denom
+   !$acc parallel loop collapse(2) present(D,e)
+   DO j = 1, m
+      DO i = 1, m
+         D(i,j) = D(i,j) / ( e(i)*DSQRT(e(j)) + e(j)*DSQRT(e(i)) )
+      ENDDO
+   ENDDO
+   !
+   ! ... Back transform for the Hubbard-manifold columns only:
+   ! ...   doverlap_inv(:,cols) = -U * ( D * U(cols,:)^H )
+   ! ... The Hubbard columns are gathered into a single contiguous block so the
+   ! ... two transforms are well-shaped GEMMs (instead of one tall-skinny GEMM
+   ! ... per Hubbard atom), then scattered back.
+   !$acc kernels present(doverlap_inv)
+   doverlap_inv(:,:) = (0.d0,0.d0)
+   !$acc end kernels
+   !
+   nwfcU = 0
+   DO na = 1, nat
+      IF (is_hubbard(ityp(na))) nwfcU = nwfcU + ldim_u(ityp(na))
+   ENDDO
+   !
+   ALLOCATE( Uhub(nwfcU,m), DUhub(m,nwfcU), dinvhub(m,nwfcU) )
+   !
+   ! ... Gather the Hubbard rows of U into Uhub
+   kc = 0
+   DO na = 1, nat
+      nt = ityp(na)
+      IF (.NOT.is_hubbard(nt)) CYCLE
+      offpm = oatwfc(na)
+      ld    = ldim_u(nt)
+      !$acc parallel loop collapse(2) present(Uhub,U)
+      DO j = 1, m
+         DO i = 1, ld
+            Uhub(kc+i,j) = U(offpm+i,j)
+         ENDDO
+      ENDDO
+      kc = kc + ld
+   ENDDO
+   !
+   ! ... DUhub = D * Uhub^H ;  dinvhub = -U * DUhub
+   !$acc host_data use_device(D, Uhub, DUhub)
+   CALL MYZGEMM( 'N','C', m, nwfcU, m, (1.d0,0.d0), D, m, Uhub, nwfcU, &
+                 (0.d0,0.d0), DUhub, m )
+   !$acc end host_data
+   !$acc host_data use_device(U, DUhub, dinvhub)
+   CALL MYZGEMM( 'N','N', m, nwfcU, m, (-1.d0,0.d0), U, m, DUhub, m, &
+                 (0.d0,0.d0), dinvhub, m )
+   !$acc end host_data
+   !
+   ! ... Scatter the result back into the Hubbard columns of doverlap_inv
+   kc = 0
+   DO na = 1, nat
+      nt = ityp(na)
+      IF (.NOT.is_hubbard(nt)) CYCLE
+      offpm = oatwfc(na)
+      ld    = ldim_u(nt)
+      !$acc parallel loop collapse(2) present(doverlap_inv,dinvhub)
+      DO j = 1, ld
+         DO i = 1, m
+            doverlap_inv(i,offpm+j) = dinvhub(i,kc+j)
+         ENDDO
+      ENDDO
+      kc = kc + ld
+   ENDDO
+   !
+   DEALLOCATE( Uhub, DUhub, dinvhub, C, D )
+   !
+END SUBROUTINE calculate_doverlap_inv_lr
+!
+!
+!----------------------------------------------------------------------
+SUBROUTINE dS_lowrank_factors( alpha, ipol, ik, ijkb0, lA, A, nh_a, Lfac, Rfac )
+   !-------------------------------------------------------------------
+   !! Low-rank factors of the USPP/PAW contribution to the overlap-matrix
+   !! derivative, \(\langle A | dS/d\tau(\alpha,\text{ipol}) | A\rangle =
+   !! L R + (L R)^H\), with \(L = \langle A|d\beta_\alpha\rangle\) and
+   !! \(R = qq\,\langle\beta_\alpha|A\rangle\). Collinear only. This is the
+   !! factored counterpart of \(\texttt{matrix_element_of_dSdtau}\) used by
+   !! the fast (low-rank) ortho-atomic solver.
+   !
+   USE kinds,            ONLY : DP
+   USE cell_base,        ONLY : tpiba
+   USE wvfct,            ONLY : npwx
+   USE uspp,             ONLY : vkb, qq_at
+   USE uspp_param,       ONLY : nh
+   USE klist,            ONLY : igk_k, ngk
+   USE becmod,           ONLY : calbec
+   USE gvect,            ONLY : g
+   USE control_flags,    ONLY : offload_type
+   !
+   IMPLICIT NONE
+   !
+   INTEGER,     INTENT(IN)  :: alpha, ipol, ik, ijkb0, lA, nh_a
+   COMPLEX(DP), INTENT(IN)  :: A(npwx,lA)
+   COMPLEX(DP), INTENT(OUT) :: Lfac(lA,nh_a)
+   !! L = <A|dbeta_alpha>
+   COMPLEX(DP), INTENT(OUT) :: Rfac(nh_a,lA)
+   !! R = qq * <beta_alpha|A>
+   !
+   INTEGER :: npw, ih, jh, ig
+   REAL(DP) :: gvec
+   COMPLEX(DP), ALLOCATABLE :: aux(:,:), betaB(:,:), qq(:,:)
+   !
+   npw = ngk(ik)
+   !
+   ALLOCATE( aux(npwx,nh_a), betaB(nh_a,lA), qq(nh_a,nh_a) )
+   !$acc data create(aux,betaB,qq) present_or_copyin(A) present(Lfac,Rfac)
+   !
+   ! ... qq matrix of the displaced atom
+   !$acc parallel loop collapse(2) present(qq_at)
+   DO jh = 1, nh_a
+      DO ih = 1, nh_a
+         qq(ih,jh) = CMPLX(qq_at(ih,jh,alpha), 0.0_dp, KIND=DP)
+      ENDDO
+   ENDDO
+   !
+   ! ... beta functions of the displaced atom
+   !$acc parallel loop collapse(2) present(vkb)
+   DO ih = 1, nh_a
+      DO ig = 1, npwx
+         IF (ig <= npw) THEN
+            aux(ig,ih) = vkb(ig,ijkb0+ih)
+         ELSE
+            aux(ig,ih) = (0.0_dp,0.0_dp)
+         ENDIF
+      ENDDO
+   ENDDO
+   !
+   ! ... betaB = <beta|A>
+   CALL calbec( offload_type, npw, aux, A, betaB )
+   !
+   ! ... derivative of the beta functions: dbeta = -i G beta
+   !$acc parallel loop collapse(2)
+   DO ih = 1, nh_a
+      DO ig = 1, npw
+         gvec = g(ipol,igk_k(ig,ik)) * tpiba
+         aux(ig,ih) = (0.0_dp,-1.0_dp) * aux(ig,ih) * gvec
+      ENDDO
+   ENDDO
+   !
+   ! ... Lfac = <A|dbeta>
+   CALL calbec( offload_type, npw, A, aux, Lfac )
+   !
+   ! ... Rfac = qq * betaB
+   !$acc host_data use_device(qq,betaB,Rfac)
+   CALL MYZGEMM( 'N','N', nh_a, lA, nh_a, (1.0_dp,0.0_dp), qq, nh_a, &
+                 betaB, nh_a, (0.0_dp,0.0_dp), Rfac, nh_a )
+   !$acc end host_data
+   !
+   !$acc end data
+   DEALLOCATE( aux, betaB, qq )
+   !
+END SUBROUTINE dS_lowrank_factors
 !
 !
 !----------------------------------------------------------------------
@@ -2353,7 +2644,7 @@ SUBROUTINE matrix_element_of_dSdtau( alpha, ipol, ik, ijkb0, lA, A, &
    DEALLOCATE( aux )
    !
    ! ... A_dS_B(iA,iB) = \sum_ih [Adbeta(iA,ih) * betaB(ih,iB) +
-   ! ...                          Abeta(iA,ih)  * dbetaB(ih,iB)] 
+   ! ...                          Abeta(iA,ih)  * dbetaB(ih,iB)]
    ! ... Only A_dS_B(:,lB_s:lB_e) are calculated
    !
    IF ( mykey == 0 ) THEN
