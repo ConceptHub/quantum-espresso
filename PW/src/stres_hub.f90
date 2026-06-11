@@ -442,6 +442,7 @@ SUBROUTINE stres_hub ( sigmah )
    CALL print_clock('dprojdeps1')
    CALL print_clock('dprojdeps2')
    CALL print_clock('dprojdeps3')
+   CALL print_clock('lyapunov')
    !
    RETURN
    !
@@ -1383,7 +1384,8 @@ SUBROUTINE dprojdepsilon_k ( spsi, ik, ipol, jpol, nb_s, nb_e, mykey, dproj )
    dproj_us(:,:),     & ! USPP contribution to dproj0
    dwfcU(:,:),        & ! the derivative of the (ortho-atomic) wavefunctions
    dwfca(:,:),        & ! the derivative of the atomic wavefunctions
-   doverlap(:,:),     & ! derivative of the overlap matrix  
+   dwfca_orb(:,:),    & ! strain derivative of the atomic wavefunctions (ortho term 1)
+   doverlap(:,:),     & ! derivative of the overlap matrix
    doverlap_us(:,:),  & ! USPP contribution to doverlap
    doverlap_inv(:,:)    ! derivative of (O^{-1/2})_JI (note the transposition)   
    REAL (DP), ALLOCATABLE :: &
@@ -1441,6 +1443,25 @@ SUBROUTINE dprojdepsilon_k ( spsi, ik, ipol, jpol, nb_s, nb_e, mykey, dproj )
    !
    !$acc data copyin(a1_temp, a2_temp, at_dj, at_dy)
    !
+   ! ... For the ortho-atomic case, precompute the strain derivative of all
+   ! ... atomic wavefunctions once; term 1 below is then a GEMM with O^{-1/2}
+   ! ... instead of an explicit reduction over the atomic-orbital index.
+   !
+   IF (Hubbard_projectors.EQ."ortho-atomic" .AND. .NOT.noncolin) THEN
+      ALLOCATE( dwfca_orb(npwx*npol,natomwfc) )
+      !$acc enter data create(dwfca_orb)
+      !$acc parallel loop collapse(2) present(dwfca_orb,at_dy,at_dj,a1_temp,a2_temp)
+      DO m1 = 1, natomwfc
+         DO ig = 1, npwx
+            IF (ig <= npw) THEN
+               dwfca_orb(ig,m1) = at_dy(ig,m1)*a1_temp(ig) + at_dj(ig,m1)*a2_temp(ig)
+            ELSE
+               dwfca_orb(ig,m1) = (0.0_dp,0.0_dp)
+            ENDIF
+         ENDDO
+      ENDDO
+   ENDIF
+   !
    DO na = 1, nat
       nt = ityp(na)
       ldim_std = 2*Hubbard_l(nt)+1
@@ -1472,33 +1493,46 @@ SUBROUTINE dprojdepsilon_k ( spsi, ik, ipol, jpol, nb_s, nb_e, mykey, dproj )
                ENDDO
             ENDDO      
          ELSEIF (Hubbard_projectors.EQ."ortho-atomic") THEN
-            DO m1 = 1, ldim_std*npol             
-               offpmU = offsetU(na)
-               offpm  = oatwfc(na)
-               !$acc parallel loop
-               DO ig = 1, npw
-                  temp = (0.0d0, 0.0d0)
-                  temp2 = (0.0d0, 0.0d0)
-                  DO m2 = 1, natomwfc
-                     temp = temp + overlap_inv(offpm+m1,m2) * &
-                         ( at_dy(ig,m2) * a1_temp(ig) + at_dj(ig,m2) * a2_temp(ig) )
-                     IF (noncolin) temp2 = temp2 + &
-                              overlap_inv(offpm+m1,m2) * &
-                              ( at_dy(ig+npwx,m2) * a1_temp(ig) &
-                              + at_dj(ig+npwx,m2) * a2_temp(ig) )   
-                  ENDDO   
-                  dwfcU(ig,offpmU+m1) = dwfcU(ig,offpmU+m1) + temp
-                  IF (noncolin) dwfcU(ig+npwx,offpmU+m1) = &
-                           dwfcU(ig+npwx,offpmU+m1) + temp2 
+            offpmU = offsetU(na)
+            offpm  = oatwfc(na)
+            IF (noncolin) THEN
+               DO m1 = 1, ldim_std*npol
+                  !$acc parallel loop
+                  DO ig = 1, npw
+                     temp = (0.0d0, 0.0d0)
+                     temp2 = (0.0d0, 0.0d0)
+                     DO m2 = 1, natomwfc
+                        temp = temp + overlap_inv(offpm+m1,m2) * &
+                            ( at_dy(ig,m2) * a1_temp(ig) + at_dj(ig,m2) * a2_temp(ig) )
+                        temp2 = temp2 + &
+                                 overlap_inv(offpm+m1,m2) * &
+                                 ( at_dy(ig+npwx,m2) * a1_temp(ig) &
+                                 + at_dj(ig+npwx,m2) * a2_temp(ig) )
+                     ENDDO
+                     dwfcU(ig,offpmU+m1) = dwfcU(ig,offpmU+m1) + temp
+                     dwfcU(ig+npwx,offpmU+m1) = dwfcU(ig+npwx,offpmU+m1) + temp2
+                  ENDDO
                ENDDO
-            ENDDO
+            ELSE
+               ! ... dwfcU(:,offpmU+m1) += sum_m2 overlap_inv(offpm+m1,m2) dwfca_orb(:,m2)
+               !$acc host_data use_device(dwfca_orb, overlap_inv, dwfcU)
+               CALL MYZGEMM( 'N','T', npw, ldim_std, natomwfc, (1.0_dp,0.0_dp), &
+                     dwfca_orb, npwx, overlap_inv(offpm+1,1), natomwfc, &
+                     (1.0_dp,0.0_dp), dwfcU(1,offpmU+1), npwx )
+               !$acc end host_data
+            ENDIF
          ENDIF
       ENDIF
    ENDDO
    !
+   IF (ALLOCATED(dwfca_orb)) THEN
+      !$acc exit data delete(dwfca_orb)
+      DEALLOCATE( dwfca_orb )
+   ENDIF
+   !
    ! The diagonal term
    IF (ipol.EQ.jpol) THEN
-      !$acc kernels 
+      !$acc kernels
       dwfcU(1:npw,:) = dwfcU(1:npw,:) - wfcU(1:npw,:)*0.5d0
       IF (noncolin) dwfcU(1+npwx:npwx+npw,:) = dwfcU(1+npwx:npwx+npw,:) - wfcU(1+npwx:npwx+npw,:)*0.5d0
       !$acc end kernels
@@ -1581,9 +1615,11 @@ SUBROUTINE dprojdepsilon_k ( spsi, ik, ipol, jpol, nb_s, nb_e, mykey, dproj )
       !
       ! Now compute dO^{-1/2}_JI/d\epsilon(ipol,jpol) using dO_IJ/d\epsilon(ipol,jpol)
       ! Note the transposition!
-      ! 
+      !
+      CALL start_clock('lyapunov')
       CALL calculate_doverlap_inv (natomwfc, eigenval, eigenvect, &
                                      doverlap, doverlap_inv)
+      CALL stop_clock('lyapunov')
       !
       ! Now compute \sum_J dO^{-1/2}_JI/d\epsilon(ipol,jpol) \phi_J
       ! and add it to another term (see above).

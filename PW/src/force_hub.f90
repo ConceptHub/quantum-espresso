@@ -423,13 +423,9 @@ SUBROUTINE dndtau_k( ldim, proj, spsi, alpha, jkb0, ipol, ik, nb_s, &
    USE wvfct,                ONLY : nbnd, npwx, wg
    USE uspp,                 ONLY : okvan
    USE force_mod,            ONLY : doverlap_inv, dproj_atom
-   USE basis,                ONLY : natomwfc, wfcatom
-   USE cell_base,            ONLY : tpiba
-   USE gvect,                ONLY : g
-   USE klist,                ONLY : xk, ngk, igk_k
+   USE basis,                ONLY : natomwfc
    USE wavefunctions,        ONLY : evc
    USE mp_pools,             ONLY : intra_pool_comm, me_pool, nproc_pool
-   USE mp_bands,             ONLY : intra_bgrp_comm
    USE mp,                   ONLY : mp_sum
    !
    IMPLICIT NONE
@@ -456,7 +452,7 @@ SUBROUTINE dndtau_k( ldim, proj, spsi, alpha, jkb0, ipol, ik, nb_s, &
    !! If each band appears more than once
    !! compute its contribution only once (i.e. when mykey=0)
    INTEGER, INTENT(IN) :: lpuk
-   !! index to control the standard (lpuk=1) or 
+   !! index to control the standard (lpuk=1) or
    !! background (lpuk=2) contribution to the force
    REAL(DP), INTENT(OUT) :: dns(ldim,ldim,nspin,nat)
    !! the derivative of the atomic occupations
@@ -464,11 +460,7 @@ SUBROUTINE dndtau_k( ldim, proj, spsi, alpha, jkb0, ipol, ik, nb_s, &
    ! ... local variables
    !
    INTEGER :: ibnd, is, na, nt, m1, m2, off1, off2, m11, m22, ldim1
-   INTEGER :: ig, npw, m_start, m_end
-   REAL(DP) :: gvec, xki
    COMPLEX(DP), ALLOCATABLE :: dproj(:,:), dproj_us(:,:)
-   COMPLEX(DP), ALLOCATABLE :: dwfcatom(:,:)
-   !$acc declare device_resident(dwfcatom)
    !
    CALL start_clock( 'dndtau' )
    !
@@ -495,47 +487,7 @@ SUBROUTINE dndtau_k( ldim, proj, spsi, alpha, jkb0, ipol, ik, nb_s, &
    IF (Hubbard_projectors.EQ."ortho-atomic") THEN
       ALLOCATE( doverlap_inv(natomwfc,natomwfc) )
       CALL calc_doverlap_inv( alpha, ipol, ik, jkb0 )
-      !
-      ! ... Precompute the projections of the derivative orbitals of the
-      ! ... displaced atom 'alpha' onto the bands:
-      ! ...    dproj_atom(J,n) = <dphi_J/dtau(alpha,ipol)|S|psi_n> ,
-      ! ... which is nonzero only for the orbitals J centred on 'alpha'
-      ! ... (the others do not move). Together with proj_atom this lets
-      ! ... dprojdtau_k assemble the projector derivative for every Hubbard
-      ! ... atom 'na' with small matrix products instead of plane-wave sums.
-      ! ... The allocation of dproj_atom also flags the fast path there.
-      !
-      CALL start_clock( 'dprojat' )
-      npw = ngk(ik)
-      xki = xk(ipol,ik)
-      CALL natomwfc_per_atom( alpha, m_start, m_end )
-      ALLOCATE( dproj_atom(natomwfc,nbnd) )
-      ALLOCATE( dwfcatom(npwx,m_start:m_end) )
-      !$acc enter data create(dproj_atom)
-      !$acc data present(wfcatom,spsi,dproj_atom)
-      !$acc parallel loop collapse(2)
-      DO m1 = m_start, m_end
-         DO ig = 1, npwx
-            IF ( ig <= npw ) THEN
-               gvec = (g(ipol,igk_k(ig,ik)) + xki) * tpiba
-            ELSE
-               gvec = 0.0_dp
-            ENDIF
-            dwfcatom(ig,m1) = CMPLX(0.0_dp,-1.0_dp,KIND=DP) * gvec * wfcatom(ig,m1)
-         ENDDO
-      ENDDO
-      !$acc kernels
-      dproj_atom(:,:) = (0.0_dp,0.0_dp)
-      !$acc end kernels
-      !$acc host_data use_device(dwfcatom,spsi,dproj_atom)
-      CALL MYZGEMM( 'C','N', m_end-m_start+1, nbnd, npwx, (1.0_dp,0.0_dp), &
-                    dwfcatom, npwx, spsi, npwx, (0.0_dp,0.0_dp), &
-                    dproj_atom(m_start,1), natomwfc )
-      CALL mp_sum( dproj_atom, intra_bgrp_comm )
-      !$acc end host_data
-      !$acc end data
-      DEALLOCATE( dwfcatom )
-      CALL stop_clock( 'dprojat' )
+      CALL compute_dproj_atom( alpha, ipol, ik, spsi )
    ENDIF
    !
    ! ... Band parallelization. If each band appears more than once
@@ -984,7 +936,7 @@ SUBROUTINE dngdtau_k( ldim, proj, spsi, alpha, jkb0, ipol, ik, nb_s, &
                                     neighood, Hubbard_projectors, wfcU
    USE wvfct,                ONLY : nbnd, npwx, npw, wg
    USE uspp,                 ONLY : okvan
-   USE force_mod,            ONLY : doverlap_inv
+   USE force_mod,            ONLY : doverlap_inv, dproj_atom
    USE basis,                ONLY : natomwfc
    USE wavefunctions,        ONLY : evc
    USE mp_pools,             ONLY : intra_pool_comm, me_pool, nproc_pool
@@ -1071,6 +1023,8 @@ SUBROUTINE dngdtau_k( ldim, proj, spsi, alpha, jkb0, ipol, ik, nb_s, &
       ! ... In the 'ortho-atomic' case calculate d[(O^{-1/2})^T]
       ALLOCATE( doverlap_inv(natomwfc,natomwfc) )
       CALL calc_doverlap_inv( alpha, ipol, ik, jkb0 )
+      ! ... Precompute dproj_atom to enable the fast path in dprojdtau_k
+      CALL compute_dproj_atom( alpha, ipol, ik, spsi )
    ENDIF
    !
    ! ... Band parallelization. If each band appears more than once
@@ -1156,6 +1110,10 @@ SUBROUTINE dngdtau_k( ldim, proj, spsi, alpha, jkb0, ipol, ik, nb_s, &
    DEALLOCATE( dproj1 )
    DEALLOCATE( dproj2 )
    IF (ALLOCATED(doverlap_inv)) DEALLOCATE( doverlap_inv )
+   IF (ALLOCATED(dproj_atom)) THEN
+      !$acc exit data delete(dproj_atom)
+      DEALLOCATE( dproj_atom )
+   ENDIF
    IF (okvan) DEALLOCATE( dproj_us )
    !
    CALL mp_sum( dnsg, intra_pool_comm )
@@ -1969,6 +1927,71 @@ SUBROUTINE natomwfc_per_atom( alpha, m_start, m_end )
    RETURN
    !
 END SUBROUTINE natomwfc_per_atom
+!
+!--------------------------------------------------------------------
+SUBROUTINE compute_dproj_atom( alpha, ipol, ik, spsi )
+   !-----------------------------------------------------------------
+   !! Precompute \(\text{dproj_atom}(J,n) = \langle d\phi_J/d\tau(\alpha,\text{ipol})
+   !! | S | \psi_n\rangle\), which is nonzero only for the atomic orbitals \(J\)
+   !! of the displaced atom \(\alpha\). Together with \(\text{proj_atom}\) this
+   !! lets \(\texttt{dprojdtau_k}\) build the ortho-atomic projector derivative
+   !! for every Hubbard atom with small matrix products instead of plane-wave
+   !! sums. Allocating \(\text{dproj_atom}\) also flags that fast path.
+   !! Collinear ortho-atomic only.
+   !
+   USE kinds,     ONLY : DP
+   USE wvfct,     ONLY : nbnd, npwx
+   USE cell_base, ONLY : tpiba
+   USE gvect,     ONLY : g
+   USE klist,     ONLY : xk, ngk, igk_k
+   USE basis,     ONLY : natomwfc, wfcatom
+   USE force_mod, ONLY : dproj_atom
+   USE mp_bands,  ONLY : intra_bgrp_comm
+   USE mp,        ONLY : mp_sum
+   !
+   IMPLICIT NONE
+   !
+   INTEGER, INTENT(IN) :: alpha, ipol, ik
+   COMPLEX(DP), INTENT(IN) :: spsi(npwx,nbnd)
+   !
+   INTEGER :: npw, ig, m1, m_start, m_end
+   REAL(DP) :: gvec, xki
+   COMPLEX(DP), ALLOCATABLE :: dwfcatom(:,:)
+   !$acc declare device_resident(dwfcatom)
+   !
+   CALL start_clock( 'dprojat' )
+   npw = ngk(ik)
+   xki = xk(ipol,ik)
+   CALL natomwfc_per_atom( alpha, m_start, m_end )
+   ALLOCATE( dproj_atom(natomwfc,nbnd) )
+   ALLOCATE( dwfcatom(npwx,m_start:m_end) )
+   !$acc enter data create(dproj_atom)
+   !$acc data present(wfcatom,spsi,dproj_atom)
+   !$acc parallel loop collapse(2)
+   DO m1 = m_start, m_end
+      DO ig = 1, npwx
+         IF ( ig <= npw ) THEN
+            gvec = (g(ipol,igk_k(ig,ik)) + xki) * tpiba
+         ELSE
+            gvec = 0.0_dp
+         ENDIF
+         dwfcatom(ig,m1) = CMPLX(0.0_dp,-1.0_dp,KIND=DP) * gvec * wfcatom(ig,m1)
+      ENDDO
+   ENDDO
+   !$acc kernels
+   dproj_atom(:,:) = (0.0_dp,0.0_dp)
+   !$acc end kernels
+   !$acc host_data use_device(dwfcatom,spsi,dproj_atom)
+   CALL MYZGEMM( 'C','N', m_end-m_start+1, nbnd, npwx, (1.0_dp,0.0_dp), &
+                 dwfcatom, npwx, spsi, npwx, (0.0_dp,0.0_dp), &
+                 dproj_atom(m_start,1), natomwfc )
+   CALL mp_sum( dproj_atom, intra_bgrp_comm )
+   !$acc end host_data
+   !$acc end data
+   DEALLOCATE( dwfcatom )
+   CALL stop_clock( 'dprojat' )
+   !
+END SUBROUTINE compute_dproj_atom
 !
 !--------------------------------------------------------------------
 SUBROUTINE calc_doverlap_inv( alpha, ipol, ik, ijkb0 )
