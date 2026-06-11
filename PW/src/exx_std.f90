@@ -705,8 +705,9 @@ MODULE exx_std
        CALL mp_bcast(hpsi,0,inter_bgrp_comm)
        CALL mp_bcast(psi,0,inter_bgrp_comm)
     ENDIF
+    !$acc update device(psi)
     !
-    !$acc data create(rhoc, vc, fac)  copyin(exxbuff, x_occupation)  
+    !$acc data create(rhoc, vc, fac, temppsic, result, result_g) copyin(exxbuff, x_occupation)  
     !
     LOOP_ON_PSI_BANDS : &
     DO im = 1,m !for each band of psi (the k cycle is outside band)
@@ -715,7 +716,9 @@ MODULE exx_std
        IF (noncolin) THEN
           temppsic_nc = 0._DP
        ELSE
+          !$acc kernels
           temppsic    = 0._DP
+          !$acc end kernels
        ENDIF
        !
        IF (noncolin) THEN
@@ -736,16 +739,25 @@ MODULE exx_std
           !
        ELSE
           !
-!$omp parallel do  default(shared), private(ig)
+#if defined(__CUDA)
+          !$acc parallel loop
+#else
+          !$omp parallel do  default(shared), private(ig)
+#endif
           DO ig = 1, n
              temppsic( dfftt%nl(igk_k(ig,current_k)) ) = psi(ig,im)
           ENDDO
-!$omp end parallel do
+#if !defined(__CUDA)
+          !$omp end parallel do
+#endif
+          !
+          !$acc host_data use_device(temppsic)
           CALL invfft ('Wave', temppsic, dfftt)
+          !$acc end host_data
           !
        ENDIF
        !
-       !$acc data copyout(result, result_nc)  copyin(temppsic, temppsic_nc) 
+       !$acc data copyout(result_nc)  copyin(temppsic_nc) 
        !
        IF (noncolin) THEN
           !$acc kernels
@@ -957,20 +969,31 @@ MODULE exx_std
           !
        ELSE
           !
+          !$acc host_data use_device(result)
           CALL fwfft ('Wave', RESULT, dfftt)
+          !$acc end host_data
           !
           !communicate result
+          !$acc parallel loop
           DO ig = 1, n
              result_g(ig) = RESULT(dfftt%nl(igk_k(ig,current_k)))
           ENDDO
+          !$acc host_data use_device(result_g)
           CALL mp_sum( result_g(1:n), inter_bgrp_comm)
+          !$acc end host_data
           !
           !adds it to hpsi
-!$omp parallel do default(shared), private(ig)
+#if defined(__CUDA) 
+          !$acc parallel loop 
+#else
+          !$omp parallel do default(shared), private(ig)
+#endif
           DO ig = 1, n
              hpsi(ig,im)=hpsi(ig,im) - exxalfa*result_g(ig)
           ENDDO
-!$omp end parallel do
+#if !defined(__CUDA) 
+          !$omp end parallel do
+#endif
        ENDIF
        !
        ! add non-local \sum_I |beta_I> \alpha_Ii (the sum on i is outside)
