@@ -381,6 +381,13 @@ MODULE force_mod
   COMPLEX(DP), ALLOCATABLE :: doverlap_inv(:,:)
   !$acc declare device_resident(doverlap_inv)
   !! derivative of the overlap matrix (not transposed): d(O^{-1/2})
+  COMPLEX(DP), ALLOCATABLE :: proj_atom(:,:)
+  !! bare atomic-orbital projections <phi_J|S|psi_n> for the current k-point;
+  !! used to evaluate the ortho-atomic projector derivative without plane-wave sums
+  COMPLEX(DP), ALLOCATABLE :: dproj_atom(:,:)
+  !! projections of the derivative orbitals <dphi_J/dtau|S|psi_n> for the
+  !! displaced atom; nonzero only for the rows J belonging to that atom.
+  !! Its allocation status selects the fast ortho-atomic path in dprojdtau_k
   COMPLEX (DP), ALLOCATABLE :: at_dy(:,:), at_dj(:,:)
   !! derivatives of spherical harmonics and spherical Bessel functions (for atomic functions)
   COMPLEX (DP), ALLOCATABLE :: us_dy(:,:), us_dj(:,:)
