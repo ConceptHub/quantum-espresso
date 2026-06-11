@@ -113,6 +113,7 @@ MODULE exx_std
        ALLOCATE( temppsic_nc(nrxxs, npol), psic_nc(nrxxs, npol) )
     ELSEIF ( .NOT. gamma_only ) THEN
        ALLOCATE( temppsic(nrxxs) )
+       !$acc enter data create(temppsic(1:nrxxs))
     ENDIF
     !
     CALL divide( inter_egrp_comm, x_nbnd_occ, ibnd_start, ibnd_end )
@@ -171,7 +172,10 @@ MODULE exx_std
     KPOINTS_LOOP : &
     DO ik = 1, nks
        !
-       IF ( nks > 1 ) CALL get_buffer( evc, nwordwfc, iunwfc, ik )
+       IF ( nks > 1 ) THEN
+         CALL get_buffer( evc, nwordwfc, iunwfc, ik )
+         !$acc update device(evc)
+       END IF
        !
        ! ik         = index of k-point in this pool
        ! current_ik = index of k-point over all pools
@@ -232,9 +236,16 @@ MODULE exx_std
                 temppsic_nc(dfftt%nl(igk_k(1:npw,ik)),2) = evc(npwx+1:npwx+npw,ibnd)
                 CALL invfft( 'Wave', temppsic_nc(:,2), dfftt )
              ELSE
+                !$acc kernels
                 temppsic(:) = ( 0._DP, 0._DP )
-                temppsic(dfftt%nl(igk_k(1:npw,ik))) = evc(1:npw,ibnd)
+                !$acc end kernels
+                !$acc parallel loop 
+                do i = 1, npw
+                  temppsic(dfftt%nl(igk_k(i,ik))) = evc(i,ibnd)
+                end do 
+                !$acc host_data use_device(temppsic)
                 CALL invfft( 'Wave', temppsic, dfftt )
+                !$acc end host_data
              ENDIF
              !
              DO ikq = 1, nkqs
@@ -283,6 +294,7 @@ MODULE exx_std
                       exxbuff(nrxxs+1:nrxxs+nrxxs,ibnd,ikq) = -CONJG(psic_nc(:,1))
                    ENDIF
                 ELSE ! noncolinear
+                   !$acc update host(temppsic)
 #if defined(__MPI)
                    CALL gather_grid( dfftt, temppsic, temppsic_all )
                    IF ( me_egrp == 0 ) psic_all(:) = temppsic_all(rir(:,isym))
@@ -311,6 +323,7 @@ MODULE exx_std
        DEALLOCATE( temppsic_all_nc, psic_all_nc )
 #endif
     ELSE IF ( .NOT. gamma_only ) THEN
+       !$acc exit data delete(temppsic)
        DEALLOCATE( temppsic )
 #if defined(__MPI)
        DEALLOCATE( temppsic_all, psic_all )
