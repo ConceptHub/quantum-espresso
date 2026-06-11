@@ -707,14 +707,16 @@ MODULE exx_std
     ENDIF
     !$acc update device(psi)
     !
-    !$acc data create(rhoc, vc, fac, temppsic, result, result_g) copyin(exxbuff, x_occupation)  
+    !$acc data create(rhoc, vc, fac, temppsic, result, result_g, temppsic_nc, result_nc, result_nc_g) copyin(exxbuff, x_occupation)  
     !
     LOOP_ON_PSI_BANDS : &
     DO im = 1,m !for each band of psi (the k cycle is outside band)
        IF(okvan) deexx = 0._DP
        !
        IF (noncolin) THEN
+          !$acc kernels
           temppsic_nc = 0._DP
+          !$acc end kernels
        ELSE
           !$acc kernels
           temppsic    = 0._DP
@@ -723,19 +725,33 @@ MODULE exx_std
        !
        IF (noncolin) THEN
           !
-!$omp parallel do  default(shared), private(ig)
+#if defined(__CUDA)
+          !$acc parallel loop
+#else
+          !$omp parallel do  default(shared), private(ig)
+#endif
           DO ig = 1, n
              temppsic_nc(dfftt%nl(igk_k(ig,current_k)),1) = psi(ig,im)
           ENDDO
-!$omp end parallel do
-!$omp parallel do  default(shared), private(ig)
+#if !defined(__CUDA)
+          !$omp end parallel do
+#endif
+#if defined(__CUDA)
+          !$acc parallel loop
+#else
+          !$omp parallel do  default(shared), private(ig)
+#endif
           DO ig = 1, n
              temppsic_nc(dfftt%nl(igk_k(ig,current_k)),2) = psi(npwx+ig,im)
           ENDDO
-!$omp end parallel do
+#if !defined(__CUDA)
+          !$omp end parallel do
+#endif
           !
+          !$acc host_data use_device(temppsic_nc)
           CALL invfft ('Wave', temppsic_nc(:,1), dfftt)
           CALL invfft ('Wave', temppsic_nc(:,2), dfftt)
+          !$acc end host_data
           !
        ELSE
           !
@@ -756,8 +772,6 @@ MODULE exx_std
           !$acc end host_data
           !
        ENDIF
-       !
-       !$acc data copyout(result_nc)  copyin(temppsic_nc) 
        !
        IF (noncolin) THEN
           !$acc kernels
@@ -935,8 +949,6 @@ MODULE exx_std
        ENDDO &
        INTERNAL_LOOP_ON_Q
        !
-       !$acc end data 
-       !
        IF(okvan) THEN
          CALL mp_sum(deexx,intra_bgrp_comm)
          CALL mp_sum(deexx,inter_bgrp_comm)
@@ -946,26 +958,43 @@ MODULE exx_std
        !
        IF (noncolin) THEN
           !
+          !$acc host_data use_device(result_nc)
           CALL fwfft ('Wave', result_nc(:,1), dfftt)
           CALL fwfft ('Wave', result_nc(:,2), dfftt)
+          !$acc end host_data
           !
           !communicate result
+          !$acc parallel loop
           DO ig = 1, n
              result_nc_g(ig,1:npol) = result_nc(dfftt%nl(igk_k(ig,current_k)),1:npol)
           ENDDO
+          !$acc host_data use_device(result_nc_g)
           CALL mp_sum( result_nc_g(1:n,1:npol), inter_bgrp_comm)
+          !$acc end host_data
           !
           !adds it to hpsi
-!$omp parallel do default(shared), private(ig)
+#if defined(__CUDA)
+          !$acc parallel loop
+#else
+          !$omp parallel do default(shared), private(ig)
+#endif
           DO ig = 1, n
              hpsi(ig,im)    = hpsi(ig,im)     - exxalfa*result_nc_g(ig,1)
           ENDDO
-!$omp end parallel do
-!$omp parallel do default(shared), private(ig)
+#if !defined(__CUDA)
+          !$omp end parallel do
+#endif
+#if defined(__CUDA)
+          !$acc parallel loop
+#else    
+          !$omp parallel do default(shared), private(ig)
+#endif
           DO ig = 1, n
              hpsi(lda+ig,im)= hpsi(lda+ig,im) - exxalfa*result_nc_g(ig,2)
           ENDDO
-!$omp end parallel do
+#if !defined(__CUDA)
+          !$omp end parallel do
+#endif
           !
        ELSE
           !
