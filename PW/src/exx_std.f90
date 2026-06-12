@@ -676,6 +676,7 @@ MODULE exx_std
     ! <LMS> temp array for vcut_spheric
     INTEGER, EXTERNAL :: global_kpoint_index
     INTEGER :: ngmt
+    REAL(DP) :: x_occ
     !
     ngmt = dfftt%ngm 
     ALLOCATE( fac(ngmt) )
@@ -707,7 +708,7 @@ MODULE exx_std
     ENDIF
     !$acc update device(psi)
     !
-    !$acc data create(rhoc, vc, fac, temppsic, result, result_g, temppsic_nc, result_nc, result_nc_g) copyin(exxbuff, x_occupation)  
+    !$acc data create(rhoc, vc, fac, temppsic, result, result_g, temppsic_nc, result_nc, result_nc_g) copyin(exxbuff)  
     !
     LOOP_ON_PSI_BANDS : &
     DO im = 1,m !for each band of psi (the k cycle is outside band)
@@ -732,16 +733,6 @@ MODULE exx_std
 #endif
           DO ig = 1, n
              temppsic_nc(dfftt%nl(igk_k(ig,current_k)),1) = psi(ig,im)
-          ENDDO
-#if !defined(__CUDA)
-          !$omp end parallel do
-#endif
-#if defined(__CUDA)
-          !$acc parallel loop
-#else
-          !$omp parallel do  default(shared), private(ig)
-#endif
-          DO ig = 1, n
              temppsic_nc(dfftt%nl(igk_k(ig,current_k)),2) = psi(npwx+ig,im)
           ENDDO
 #if !defined(__CUDA)
@@ -799,6 +790,8 @@ MODULE exx_std
           DO ibnd=ibnd_start,ibnd_end !for each band of psi
              !
              IF ( abs(x_occupation(ibnd,ik)) < eps_occ) CYCLE IBND_LOOP_K
+             !
+             x_occ = x_occupation(ibnd,ik) / nqs
              !
              !loads the phi from file
              !
@@ -864,8 +857,7 @@ MODULE exx_std
              !$omp parallel do default(shared), private(ig)
 #endif
              DO ig = 1, ngmt
-                vc(dfftt%nl(ig)) = fac(ig) * rhoc(dfftt%nl(ig)) * &
-                                             x_occupation(ibnd,ik) / nqs
+                vc(dfftt%nl(ig)) = fac(ig) * rhoc(dfftt%nl(ig)) * x_occ 
              ENDDO
 #if !defined(__CUDA)
              !$omp end parallel do
@@ -894,7 +886,7 @@ MODULE exx_std
              !
              ! Add PAW one-center contribution
              IF(okpaw) THEN
-                CALL PAW_newdxx(x_occupation(ibnd,ik)/nqs, becxx(ikq)%k(:,ibnd), becpsi%k(:,im), deexx)
+                CALL PAW_newdxx(x_occ , becxx(ikq)%k(:,ibnd), becpsi%k(:,im), deexx)
              ENDIF
              !
              !accumulates over bands and k points
@@ -907,18 +899,6 @@ MODULE exx_std
 #endif
                 DO ir = 1, nrxxs
                    result_nc(ir,1)= result_nc(ir,1) + vc(ir) * exxbuff(ir,ibnd,ikq)
-                ENDDO
-#if defined(__CUDA)
-                !$acc end kernels
-#else
-                !$omp end parallel do
-#endif
-#if defined(__CUDA)
-                !$acc kernels
-#else
-                !$omp parallel do default(shared), private(ir)
-#endif
-                DO ir = 1, nrxxs
                    result_nc(ir,2)= result_nc(ir,2) + vc(ir) * exxbuff(ir+nrxxs,ibnd,ikq)
                 ENDDO
 #if defined(__CUDA)
@@ -964,9 +944,11 @@ MODULE exx_std
           !$acc end host_data
           !
           !communicate result
-          !$acc parallel loop
-          DO ig = 1, n
-             result_nc_g(ig,1:npol) = result_nc(dfftt%nl(igk_k(ig,current_k)),1:npol)
+          !$acc parallel loop collapse(2)
+          DO ipol = 1, npol
+            DO ig = 1, n
+               result_nc_g(ig,ipol) = result_nc(dfftt%nl(igk_k(ig,current_k)),ipol)
+            ENDDO
           ENDDO
           !$acc host_data use_device(result_nc_g)
           CALL mp_sum( result_nc_g(1:n,1:npol), inter_bgrp_comm)
@@ -980,16 +962,6 @@ MODULE exx_std
 #endif
           DO ig = 1, n
              hpsi(ig,im)    = hpsi(ig,im)     - exxalfa*result_nc_g(ig,1)
-          ENDDO
-#if !defined(__CUDA)
-          !$omp end parallel do
-#endif
-#if defined(__CUDA)
-          !$acc parallel loop
-#else    
-          !$omp parallel do default(shared), private(ig)
-#endif
-          DO ig = 1, n
              hpsi(lda+ig,im)= hpsi(lda+ig,im) - exxalfa*result_nc_g(ig,2)
           ENDDO
 #if !defined(__CUDA)
