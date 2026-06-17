@@ -679,11 +679,14 @@ MODULE exx_std
     ! <LMS> temp array for vcut_spheric
     INTEGER, EXTERNAL :: global_kpoint_index
     INTEGER :: ngmt
+    INTEGER :: batchsize ! batch dimension (fixed parameter in FFTXlib)
+    INTEGER :: msize     ! number of bands per fft
     REAL(DP) :: x_occ
     !
     ngmt = dfftt%ngm 
     ALLOCATE( fac(ngmt) )
     nrxxs= dfftt%nnr
+    batchsize = dfftt%batchsize
     !
     ALLOCATE( nl(ngmt), nl_k(n) )
     !
@@ -743,9 +746,16 @@ MODULE exx_std
       enddo
     end do 
     !
-    !$acc host_data use_device(temppsic)
-    CALL invfft ('Wave', temppsic, dfftt, howmany=m)
-    !$acc end host_data
+    do im = 1, m, batchsize
+      if( (m-im)/batchsize > 0 ) then
+        msize = batchsize 
+      else
+        msize = mod(m, batchsize)
+      end if 
+      !$acc host_data use_device(temppsic)
+      CALL invfft ('Wave', temppsic( (im-1)*nrxxs + 1 : (im-1)*nrxxs + msize*nrxxs ), dfftt, howmany=msize)
+      !$acc end host_data
+    end do 
     !
     Call stop_clock('vexx_k_setup')
     !
@@ -817,9 +827,16 @@ call stop_clock('vexx-@2')
              !
              !   >>>> brings it to G-space
 call start_clock('vexx-@3')
-             !$acc host_data use_device(rhoc)
-             CALL fwfft('Rho', rhoc, dfftt, howmany=m)
-             !$acc end host_data
+             do im = 1, m, batchsize
+               if( (m-im)/batchsize > 0 ) then
+                 msize = batchsize 
+               else
+                 msize = mod(m, batchsize)
+               end if 
+               !$acc host_data use_device(rhoc)
+               CALL fwfft('Rho', rhoc( (im-1)*nrxxs + 1 : (im-1)*nrxxs + msize*nrxxs ) , dfftt, howmany=msize)
+               !$acc end host_data
+             end do 
 call stop_clock('vexx-@3')
              !
              !   >>>> add augmentation in G space HERE
@@ -865,9 +882,16 @@ call stop_clock('vexx-@4')
              !
              !brings back v in real space
 call start_clock('vexx-@5')
-             !$acc host_data use_device(vc)
-             CALL invfft ('Rho', vc, dfftt, howmany=m)
-             !$acc end host_data
+             do im = 1, m, batchsize
+               if( (m-im)/batchsize > 0 ) then
+                 msize = batchsize 
+               else
+                 msize = mod(m, batchsize)
+               end if 
+               !$acc host_data use_device(vc)
+               CALL invfft('Rho', vc( (im-1)*nrxxs + 1 : (im-1)*nrxxs + msize*nrxxs ) , dfftt, howmany=msize)
+               !$acc end host_data
+             end do 
 call stop_clock('vexx-@5')
              !
 !!             ! Add ultrasoft contribution (REAL SPACE)
@@ -937,9 +961,16 @@ call stop_clock('vexx_k_main')
     !
 CALL start_clock( 'vexx_k_fin' )
     !
-    !$acc host_data use_device(result)
-    CALL fwfft ('Wave', result, dfftt, howmany=m)
-    !$acc end host_data
+    do im = 1, m, batchsize
+      if( (m-im)/batchsize > 0 ) then
+        msize = batchsize 
+      else
+        msize = mod(m, batchsize)
+      end if 
+      !$acc host_data use_device(rhoc)
+      CALL fwfft('Wave', result( (im-1)*nrxxs + 1 : (im-1)*nrxxs + msize*nrxxs ) , dfftt, howmany=msize)
+      !$acc end host_data
+    end do 
     !
     !$acc host_data use_device(result)
     CALL mp_sum( result, inter_bgrp_comm)
