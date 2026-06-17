@@ -660,11 +660,11 @@ MODULE exx_std
     TYPE(bec_type), OPTIONAL :: becpsi ! or call a calbec(...psi) instead
     !
     ! local variables
-    COMPLEX(DP),ALLOCATABLE :: temppsic_all(:)
-    COMPLEX(DP),ALLOCATABLE :: result_all(:)
-    COMPLEX(DP),ALLOCATABLE :: vc_all(:), rhoc_all(:)
+    COMPLEX(DP),ALLOCATABLE :: temppsic(:)
+    COMPLEX(DP),ALLOCATABLE :: result(:)
+    COMPLEX(DP),ALLOCATABLE :: vc(:), rhoc(:)
     COMPLEX(DP),ALLOCATABLE :: temppsic_nc(:,:),result_nc(:,:)
-    COMPLEX(DP),ALLOCATABLE :: result_g(:), result_nc_g(:,:)
+    COMPLEX(DP),ALLOCATABLE :: result_nc_g(:,:)
     !
     COMPLEX(DP),ALLOCATABLE :: deexx(:)
     INTEGER, ALLOCATABLE :: nl(:), nl_k(:)
@@ -681,7 +681,6 @@ MODULE exx_std
     INTEGER :: ngmt
     REAL(DP) :: x_occ
     !
-print *, '@@passing right here'
     ngmt = dfftt%ngm 
     ALLOCATE( fac(ngmt) )
     nrxxs= dfftt%nnr
@@ -692,11 +691,10 @@ print *, '@@passing right here'
        ALLOCATE( temppsic_nc(nrxxs,npol), result_nc(nrxxs,npol) )
        ALLOCATE( result_nc_g(n,npol) )
     ELSE
-       ALLOCATE( temppsic_all(nrxxs*m) )
-       ALLOCATE( vc_all(nrxxs*m) )
-       ALLOCATE( rhoc_all(nrxxs*m) )
-       ALLOCATE( result_all(nrxxs*m) )
-       ALLOCATE( result_g(n) )
+       ALLOCATE( temppsic(nrxxs*m) )
+       ALLOCATE( vc(nrxxs*m) )
+       ALLOCATE( rhoc(nrxxs*m) )
+       ALLOCATE( result(nrxxs*m) )
     ENDIF
     !
     IF(okvan) ALLOCATE(deexx(nkb))
@@ -716,9 +714,7 @@ print *, '@@passing right here'
     ENDIF
     !$acc update device(psi)
     !
-    !$acc data create( rhoc_all, vc_all, fac, nl, nl_k, &
-    !$acc  temppsic_all, result_all, result_g, temppsic_nc, &
-    !$acc  result_nc, result_nc_g) copyin(exxbuff)  
+    !$acc data create( rhoc, vc, fac, nl, nl_k, temppsic, result, temppsic_nc, result_nc, result_nc_g) copyin(exxbuff)
     !
     CALL start_clock( 'vexx_k_setup' )
     !
@@ -735,19 +731,21 @@ print *, '@@passing right here'
     !$acc parallel loop collapse(2)
     do im = 1, m
       do ir = 1, nrxxs
-        temppsic_all( (im-1)*nrxxs + ir ) = 0._dp
-        result_all( (im-1)*nrxxs + ir ) = 0._dp
+        temppsic( (im-1)*nrxxs + ir ) = 0._dp
+        result( (im-1)*nrxxs + ir ) = 0._dp
       end do   
     end do 
     !
     !$acc parallel loop  collapse(2)
     do im = 1, m
       do ig = 1, n
-         temppsic_all( (im-1)*nrxxs + nl_k(ig) ) = psi(ig,im)
+         temppsic( (im-1)*nrxxs + nl_k(ig) ) = psi(ig,im)
       enddo
     end do 
     !
-    CALL invfft ('Wave', temppsic_all, dfftt, howmany=m)
+    !$acc host_data use_device(temppsic)
+    CALL invfft ('Wave', temppsic, dfftt, howmany=m)
+    !$acc end host_data
     !
     Call stop_clock('vexx_k_setup')
     !
@@ -801,7 +799,7 @@ call start_clock('vexx-@2')
 #endif
                 DO im = 1,m !for each band of psi (the k cycle is outside band)
                   DO ir = 1, nrxxs
-                     rhoc_all( (im-1)*nrxxs + ir )=conjg(exxbuff(ir,ibnd,ikq))*temppsic_all( (im-1)*nrxxs + ir ) / omega
+                     rhoc( (im-1)*nrxxs + ir )=conjg(exxbuff(ir,ibnd,ikq))*temppsic( (im-1)*nrxxs + ir ) / omega
                   ENDDO
                 ENDDO
 #if defined(__CUDA)
@@ -819,8 +817,8 @@ call stop_clock('vexx-@2')
              !
              !   >>>> brings it to G-space
 call start_clock('vexx-@3')
-             !$acc host_data use_device(rhoc_all)
-             CALL fwfft('Rho', rhoc_all, dfftt, howmany=m)
+             !$acc host_data use_device(rhoc)
+             CALL fwfft('Rho', rhoc, dfftt, howmany=m)
              !$acc end host_data
 call stop_clock('vexx-@3')
              !
@@ -836,7 +834,7 @@ call stop_clock('vexx-@3')
              !$acc parallel loop collapse(2)
              do im = 1, m
                do ir = 1, nrxxs
-                 vc_all( (im-1)*nrxxs + ir ) = 0._DP
+                 vc( (im-1)*nrxxs + ir ) = 0._DP
                end do 
              end do 
              !
@@ -848,7 +846,7 @@ call start_clock('vexx-@4')
 #endif
              do im = 1, m
                DO ig = 1, ngmt
-                  vc_all( (im-1)*nrxxs + nl(ig) ) = fac(ig) * rhoc_all( (im-1)*nrxxs + nl(ig) ) * x_occ 
+                  vc( (im-1)*nrxxs + nl(ig) ) = fac(ig) * rhoc( (im-1)*nrxxs + nl(ig) ) * x_occ 
                ENDDO
              enddo
 #if !defined(__CUDA)
@@ -867,8 +865,8 @@ call stop_clock('vexx-@4')
              !
              !brings back v in real space
 call start_clock('vexx-@5')
-             !$acc host_data use_device(vc_all)
-             CALL invfft ('Rho', vc_all, dfftt, howmany=m)
+             !$acc host_data use_device(vc)
+             CALL invfft ('Rho', vc, dfftt, howmany=m)
              !$acc end host_data
 call stop_clock('vexx-@5')
              !
@@ -910,7 +908,7 @@ call start_clock('vexx-@6')
 #endif
                 do im = 1, m
                   DO ir = 1, nrxxs
-                    result_all((im-1)*nrxxs+ir) = result_all((im-1)*nrxxs+ir) + vc_all((im-1)*nrxxs+ir)*exxbuff(ir,ibnd,ikq)
+                    result((im-1)*nrxxs+ir) = result((im-1)*nrxxs+ir) + vc((im-1)*nrxxs+ir)*exxbuff(ir,ibnd,ikq)
                   ENDDO
                 end do 
 #if defined(__CUDA)
@@ -938,77 +936,97 @@ call stop_clock('vexx-@6')
 call stop_clock('vexx_k_main')
     !
 CALL start_clock( 'vexx_k_fin' )
-
-    CALL fwfft ('Wave', result_all, dfftt, howmany=m)
-
-    FIN_LOOP_ON_PSI_BANDS : &
-    DO im = 1,m !for each band of psi (the k cycle is outside band)
-       !
-       ! bring result back to G-space
-       !
-       IF (noncolin) THEN
-!!          !
-!!          !$acc host_data use_device(result_nc)
-!!          CALL fwfft ('Wave', result_nc(:,1), dfftt)
-!!          CALL fwfft ('Wave', result_nc(:,2), dfftt)
-!!          !$acc end host_data
-!!          !
-!!          !communicate result
-!!          !$acc parallel loop collapse(2)
-!!          DO ipol = 1, npol
-!!            DO ig = 1, n
-!!               result_nc_g(ig,ipol) = result_nc(dfftt%nl(igk_k(ig,current_k)),ipol)
-!!            ENDDO
-!!          ENDDO
-!!          !$acc host_data use_device(result_nc_g)
-!!          CALL mp_sum( result_nc_g(1:n,1:npol), inter_bgrp_comm)
-!!          !$acc end host_data
-!!          !
-!!          !adds it to hpsi
-!!#if defined(__CUDA)
-!!          !$acc parallel loop
-!!#else
-!!          !$omp parallel do default(shared), private(ig)
-!!#endif
-!!          DO ig = 1, n
-!!             hpsi(ig,im)    = hpsi(ig,im)     - exxalfa*result_nc_g(ig,1)
-!!             hpsi(lda+ig,im)= hpsi(lda+ig,im) - exxalfa*result_nc_g(ig,2)
-!!          ENDDO
-!!#if !defined(__CUDA)
-!!          !$omp end parallel do
-!!#endif
-!!          !
-       ELSE
-          !
-          !communicate result
-          !$acc parallel loop
-          DO ig = 1, n
-             result_g(ig) = result_all( (im-1)*nrxxs + nl_k(ig) )
-          ENDDO
-          !$acc host_data use_device(result_g)
-          CALL mp_sum( result_g(1:n), inter_bgrp_comm)
-          !$acc end host_data
-          !
-          !adds it to hpsi
+    !
+    !$acc host_data use_device(result)
+    CALL fwfft ('Wave', result, dfftt, howmany=m)
+    !$acc end host_data
+    !
+    !$acc host_data use_device(result)
+    CALL mp_sum( result, inter_bgrp_comm)
+    !$acc end host_data
+    !
 #if defined(__CUDA) 
-          !$acc parallel loop 
+    !$acc parallel loop collapse(2)
 #else
-          !$omp parallel do default(shared), private(ig)
+    !$omp parallel do default(shared), private(ig)
 #endif
-          DO ig = 1, n
-             hpsi(ig,im)=hpsi(ig,im) - exxalfa*result_g(ig)
-          ENDDO
+    do im = 1, m
+      DO ig = 1, n
+         hpsi(ig,im) = hpsi(ig,im) - exxalfa*result( (im-1)*nrxxs + nl_k(ig) )
+      ENDDO
+    end do 
 #if !defined(__CUDA) 
-          !$omp end parallel do
+    !$omp end parallel do
 #endif
-       ENDIF
-       !
-       ! add non-local \sum_I |beta_I> \alpha_Ii (the sum on i is outside)
-!!       IF(okvan) CALL add_nlxx_pot(lda, hpsi(:,im), xkp, n, igk_k(:,current_k),&
-!!                                       deexx, eps_occ, exxalfa)
-       !
-    ENDDO &
-    FIN_LOOP_ON_PSI_BANDS
+
+!!!    FIN_LOOP_ON_PSI_BANDS : &
+!!!    DO im = 1,m !for each band of psi (the k cycle is outside band)
+!!!       !
+!!!       ! bring result back to G-space
+!!!       !
+!!!       IF (noncolin) THEN
+!!!!!          !
+!!!!!          !$acc host_data use_device(result_nc)
+!!!!!          CALL fwfft ('Wave', result_nc(:,1), dfftt)
+!!!!!          CALL fwfft ('Wave', result_nc(:,2), dfftt)
+!!!!!          !$acc end host_data
+!!!!!          !
+!!!!!          !communicate result
+!!!!!          !$acc parallel loop collapse(2)
+!!!!!          DO ipol = 1, npol
+!!!!!            DO ig = 1, n
+!!!!!               result_nc_g(ig,ipol) = result_nc(dfftt%nl(igk_k(ig,current_k)),ipol)
+!!!!!            ENDDO
+!!!!!          ENDDO
+!!!!!          !$acc host_data use_device(result_nc_g)
+!!!!!          CALL mp_sum( result_nc_g(1:n,1:npol), inter_bgrp_comm)
+!!!!!          !$acc end host_data
+!!!!!          !
+!!!!!          !adds it to hpsi
+!!!!!#if defined(__CUDA)
+!!!!!          !$acc parallel loop
+!!!!!#else
+!!!!!          !$omp parallel do default(shared), private(ig)
+!!!!!#endif
+!!!!!          DO ig = 1, n
+!!!!!             hpsi(ig,im)    = hpsi(ig,im)     - exxalfa*result_nc_g(ig,1)
+!!!!!             hpsi(lda+ig,im)= hpsi(lda+ig,im) - exxalfa*result_nc_g(ig,2)
+!!!!!          ENDDO
+!!!!!#if !defined(__CUDA)
+!!!!!          !$omp end parallel do
+!!!!!#endif
+!!!!!          !
+!!!       ELSE
+!!!          !
+!!!          !communicate result
+!!!          !$acc parallel loop
+!!!          DO ig = 1, n
+!!!             result_g(ig) = result_all( (im-1)*nrxxs + nl_k(ig) )
+!!!          ENDDO
+!!!          !$acc host_data use_device(result_g)
+!!!          CALL mp_sum( result_g(1:n), inter_bgrp_comm)
+!!!          !$acc end host_data
+!!!          !
+!!!          !adds it to hpsi
+!!!#if defined(__CUDA) 
+!!!          !$acc parallel loop 
+!!!#else
+!!!          !$omp parallel do default(shared), private(ig)
+!!!#endif
+!!!          DO ig = 1, n
+!!!             hpsi(ig,im)=hpsi(ig,im) - exxalfa*result_g(ig)
+!!!          ENDDO
+!!!#if !defined(__CUDA) 
+!!!          !$omp end parallel do
+!!!#endif
+!!!       ENDIF
+!!!       !
+!!!       ! add non-local \sum_I |beta_I> \alpha_Ii (the sum on i is outside)
+!!!!!       IF(okvan) CALL add_nlxx_pot(lda, hpsi(:,im), xkp, n, igk_k(:,current_k),&
+!!!!!                                       deexx, eps_occ, exxalfa)
+!!!       !
+!!!    ENDDO &
+!!!    FIN_LOOP_ON_PSI_BANDS
 CALL stop_clock( 'vexx_k_fin' )
     !
     !$acc end data
@@ -1016,10 +1034,10 @@ CALL stop_clock( 'vexx_k_fin' )
     IF (noncolin) THEN
        DEALLOCATE(temppsic_nc, result_nc, result_nc_g )
     ELSE
-       DEALLOCATE(temppsic_all, result_all, result_g )
+       DEALLOCATE(temppsic, result )
     ENDIF
     !
-    DEALLOCATE(rhoc_all, vc_all, fac )
+    DEALLOCATE(rhoc, vc, fac )
     !
     IF(okvan) DEALLOCATE( deexx)
     !
