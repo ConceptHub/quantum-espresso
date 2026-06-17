@@ -667,6 +667,7 @@ MODULE exx_std
     COMPLEX(DP),ALLOCATABLE :: result_g(:), result_nc_g(:,:)
     !
     COMPLEX(DP),ALLOCATABLE :: deexx(:)
+    INTEGER, ALLOCATABLE :: nl(:), nl_k(:)
     REAL(DP),   ALLOCATABLE :: fac(:)
     INTEGER          :: ibnd, ik, im , ikq, iq, ipol
     INTEGER          :: ir, ig
@@ -684,6 +685,8 @@ print *, '@@passing right here'
     ngmt = dfftt%ngm 
     ALLOCATE( fac(ngmt) )
     nrxxs= dfftt%nnr
+    !
+    ALLOCATE( nl(ngmt), nl_k(n) )
     !
     IF (noncolin) THEN
        ALLOCATE( temppsic_nc(nrxxs,npol), result_nc(nrxxs,npol) )
@@ -713,12 +716,22 @@ print *, '@@passing right here'
     ENDIF
     !$acc update device(psi)
     !
-    !$acc data create( rhoc_all, vc_all, fac, &
+    !$acc data create( rhoc_all, vc_all, fac, nl, nl_k, &
     !$acc  temppsic_all, result_all, result_g, temppsic_nc, &
     !$acc  result_nc, result_nc_g) copyin(exxbuff)  
     !
-CALL start_clock( 'vexx_k_setup' )
-!
+    CALL start_clock( 'vexx_k_setup' )
+    !
+    !$acc parallel loop
+    do ig = 1, ngmt 
+      nl(ig) = dfftt%nl(ig)
+    end do
+    !
+    !$acc parallel loop
+    do ig = 1, n  
+      nl_k(ig) = dfftt%nl(igk_k(ig,current_k))
+    end do
+    !
     !$acc parallel loop collapse(2)
     do im = 1, m
       do ir = 1, nrxxs
@@ -730,15 +743,15 @@ CALL start_clock( 'vexx_k_setup' )
     !$acc parallel loop  collapse(2)
     do im = 1, m
       do ig = 1, n
-         temppsic_all( (im-1)*nrxxs + dfftt%nl(igk_k(ig,current_k)) ) = psi(ig,im)
+         temppsic_all( (im-1)*nrxxs + nl_k(ig) ) = psi(ig,im)
       enddo
     end do 
-      !
+    !
     CALL invfft ('Wave', temppsic_all, dfftt, howmany=m)
-
-call stop_clock('vexx_k_setup')
-!
-call start_clock('vexx_k_main')
+    !
+    Call stop_clock('vexx_k_setup')
+    !
+    Call start_clock('vexx_k_main')
        !
        INTERNAL_LOOP_ON_Q : &
        DO iq=1,nqs
@@ -754,7 +767,6 @@ call start_clock('vexx-@1')
 call stop_clock('vexx-@1')
           IF ( okvan .and..not.tqr ) CALL qvan_init (ngmt, xkq, xkp)
           !
-print *, '@std-idx: ', ibnd_start,ibnd_end , iq
           IBND_LOOP_K : &
           DO ibnd=ibnd_start,ibnd_end !for each band of psi
              !
@@ -836,7 +848,7 @@ call start_clock('vexx-@4')
 #endif
              do im = 1, m
                DO ig = 1, ngmt
-                  vc_all( (im-1)*nrxxs + dfftt%nl(ig) ) = fac(ig) * rhoc_all( (im-1)*nrxxs + dfftt%nl(ig) ) * x_occ 
+                  vc_all( (im-1)*nrxxs + nl(ig) ) = fac(ig) * rhoc_all( (im-1)*nrxxs + nl(ig) ) * x_occ 
                ENDDO
              enddo
 #if !defined(__CUDA)
@@ -971,7 +983,7 @@ CALL start_clock( 'vexx_k_fin' )
           !communicate result
           !$acc parallel loop
           DO ig = 1, n
-             result_g(ig) = result_all( (im-1)*nrxxs + dfftt%nl(igk_k(ig,current_k)) )
+             result_g(ig) = result_all( (im-1)*nrxxs + nl_k(ig) )
           ENDDO
           !$acc host_data use_device(result_g)
           CALL mp_sum( result_g(1:n), inter_bgrp_comm)
