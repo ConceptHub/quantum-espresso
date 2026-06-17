@@ -660,7 +660,7 @@ MODULE exx_std
     TYPE(bec_type), OPTIONAL :: becpsi ! or call a calbec(...psi) instead
     !
     ! local variables
-    COMPLEX(DP),ALLOCATABLE :: temppsic_batched(:,:)
+    COMPLEX(DP),ALLOCATABLE :: temppsic_all(:)
     COMPLEX(DP),ALLOCATABLE :: result_all(:)
     COMPLEX(DP),ALLOCATABLE :: vc_all(:), rhoc_all(:)
     COMPLEX(DP),ALLOCATABLE :: temppsic_nc(:,:),result_nc(:,:)
@@ -689,7 +689,7 @@ print *, '@@passing right here'
        ALLOCATE( temppsic_nc(nrxxs,npol), result_nc(nrxxs,npol) )
        ALLOCATE( result_nc_g(n,npol) )
     ELSE
-       ALLOCATE( temppsic_batched(nrxxs,m) )
+       ALLOCATE( temppsic_all(nrxxs*m) )
        ALLOCATE( vc_all(nrxxs*m) )
        ALLOCATE( rhoc_all(nrxxs*m) )
        ALLOCATE( result_all(nrxxs*m) )
@@ -714,7 +714,7 @@ print *, '@@passing right here'
     !$acc update device(psi)
     !
     !$acc data create( rhoc_all, vc_all, fac, &
-    !$acc  temppsic_batched, result_all, result_g, temppsic_nc, &
+    !$acc  temppsic_all, result_all, result_g, temppsic_nc, &
     !$acc  result_nc, result_nc_g) copyin(exxbuff)  
     !
 CALL start_clock( 'vexx_k_setup' )
@@ -722,7 +722,7 @@ CALL start_clock( 'vexx_k_setup' )
     !$acc parallel loop collapse(2)
     do im = 1, m
       do ir = 1, nrxxs
-        temppsic_batched(ir, im ) = 0._dp
+        temppsic_all( (im-1)*nrxxs + ir ) = 0._dp
         result_all( (im-1)*nrxxs + ir ) = 0._dp
       end do   
     end do 
@@ -730,15 +730,12 @@ CALL start_clock( 'vexx_k_setup' )
     !$acc parallel loop  collapse(2)
     do im = 1, m
       do ig = 1, n
-         temppsic_batched( dfftt%nl(igk_k(ig,current_k)), im ) = psi(ig,im)
+         temppsic_all( (im-1)*nrxxs + dfftt%nl(igk_k(ig,current_k)) ) = psi(ig,im)
       enddo
     end do 
       !
-    do im = 1, m
-      !$acc host_data use_device(temppsic_batched)
-      CALL invfft ('Wave', temppsic_batched(:,im), dfftt)
-      !$acc end host_data
-    end do 
+    CALL invfft ('Wave', temppsic_all, dfftt, howmany=m)
+
 call stop_clock('vexx_k_setup')
 !
 call start_clock('vexx_k_main')
@@ -792,7 +789,7 @@ call start_clock('vexx-@2')
 #endif
                 DO im = 1,m !for each band of psi (the k cycle is outside band)
                   DO ir = 1, nrxxs
-                     rhoc_all( (im-1)*nrxxs + ir )=conjg(exxbuff(ir,ibnd,ikq))*temppsic_batched(ir,im) / omega
+                     rhoc_all( (im-1)*nrxxs + ir )=conjg(exxbuff(ir,ibnd,ikq))*temppsic_all( (im-1)*nrxxs + ir ) / omega
                   ENDDO
                 ENDDO
 #if defined(__CUDA)
@@ -1007,7 +1004,7 @@ CALL stop_clock( 'vexx_k_fin' )
     IF (noncolin) THEN
        DEALLOCATE(temppsic_nc, result_nc, result_nc_g )
     ELSE
-       DEALLOCATE(temppsic_batched, result_all, result_g )
+       DEALLOCATE(temppsic_all, result_all, result_g )
     ENDIF
     !
     DEALLOCATE(rhoc_all, vc_all, fac )
