@@ -660,6 +660,397 @@ MODULE exx_std
     TYPE(bec_type), OPTIONAL :: becpsi ! or call a calbec(...psi) instead
     !
     ! local variables
+    COMPLEX(DP),ALLOCATABLE :: temppsic_batched(:,:)
+    COMPLEX(DP),ALLOCATABLE :: result_batched(:,:)
+    COMPLEX(DP),ALLOCATABLE :: vc_all(:), rhoc_all(:)
+    COMPLEX(DP),ALLOCATABLE :: temppsic_nc(:,:),result_nc(:,:)
+    COMPLEX(DP),ALLOCATABLE :: result_g(:), result_nc_g(:,:)
+    !
+    COMPLEX(DP),ALLOCATABLE :: deexx(:)
+    REAL(DP),   ALLOCATABLE :: fac(:)
+    INTEGER          :: ibnd, ik, im , ikq, iq, ipol
+    INTEGER          :: ir, ig
+    INTEGER          :: current_ik
+    INTEGER          :: ibnd_loop_start
+    INTEGER          :: h_ibnd, nrxxs
+    REAL(DP) :: x1, x2, xkp(3)
+    REAL(DP) :: xkq(3)
+    ! <LMS> temp array for vcut_spheric
+    INTEGER, EXTERNAL :: global_kpoint_index
+    INTEGER :: ngmt
+    REAL(DP) :: x_occ
+    !
+print *, '@@passing right here'
+    ngmt = dfftt%ngm 
+    ALLOCATE( fac(ngmt) )
+    nrxxs= dfftt%nnr
+    !
+    IF (noncolin) THEN
+       ALLOCATE( temppsic_nc(nrxxs,npol), result_nc(nrxxs,npol) )
+       ALLOCATE( result_nc_g(n,npol) )
+    ELSE
+       ALLOCATE( temppsic_batched(nrxxs,m) )
+       ALLOCATE( vc_all(nrxxs*m) )
+       ALLOCATE( rhoc_all(nrxxs*m) )
+       ALLOCATE( result_batched(nrxxs,m) )
+       ALLOCATE( result_g(n) )
+    ENDIF
+    !
+    IF(okvan) ALLOCATE(deexx(nkb))
+    !
+    current_ik = global_kpoint_index ( nkstot, current_k )
+    xkp = xk(:,current_k)
+    !
+    ! This is to stop numerical inconsistencies creeping in through the band parallelization.
+    !
+    IF(my_bgrp_id>0) THEN
+       hpsi=0.0_DP
+       psi =0.0_DP
+    ENDIF
+    IF (nbgrp>1) THEN
+       CALL mp_bcast(hpsi,0,inter_bgrp_comm)
+       CALL mp_bcast(psi,0,inter_bgrp_comm)
+    ENDIF
+    !$acc update device(psi)
+    !
+    !$acc data create( rhoc_all, vc_all, fac, &
+    !$acc  temppsic_batched, result_batched, result_g, temppsic_nc, &
+    !$acc  result_nc, result_nc_g) copyin(exxbuff)  
+    !
+CALL start_clock( 'vexx_k_setup' )
+!
+    !$acc parallel loop collapse(2)
+    do im = 1, m
+      do ir = 1, nrxxs
+        temppsic_batched(ir, im ) = 0._dp
+        result_batched(ir, im ) = 0._dp
+      end do   
+    end do 
+    !
+    !$acc parallel loop  collapse(2)
+    do im = 1, m
+      do ig = 1, n
+         temppsic_batched( dfftt%nl(igk_k(ig,current_k)), im ) = psi(ig,im)
+      enddo
+    end do 
+      !
+    do im = 1, m
+      !$acc host_data use_device(temppsic_batched)
+      CALL invfft ('Wave', temppsic_batched(:,im), dfftt)
+      !$acc end host_data
+    end do 
+call stop_clock('vexx_k_setup')
+!
+call start_clock('vexx_k_main')
+       !
+       INTERNAL_LOOP_ON_Q : &
+       DO iq=1,nqs
+          !
+          ikq  = index_xkq(current_ik,iq)
+          ik   = index_xk(ikq)
+          xkq  = xkq_collect(:,ikq)
+          !
+call start_clock('vexx-@1')
+          ! calculate the 1/|r-r'| (actually, k+q+g) factor and place it in fac
+          CALL g2_convolution(ngmt, gt, xkp, xkq, fac)
+          !$acc update device(fac)
+call stop_clock('vexx-@1')
+          IF ( okvan .and..not.tqr ) CALL qvan_init (ngmt, xkq, xkp)
+          !
+print *, '@std-idx: ', ibnd_start,ibnd_end , iq
+          IBND_LOOP_K : &
+          DO ibnd=ibnd_start,ibnd_end !for each band of psi
+             !
+             IF ( abs(x_occupation(ibnd,ik)) < eps_occ) CYCLE IBND_LOOP_K
+             !
+             x_occ = x_occupation(ibnd,ik) / nqs
+             !
+             !loads the phi from file
+             !
+             !   >>>> calculate rho in real space
+call start_clock('vexx-@2')
+             IF (noncolin) THEN
+!!#if defined(__CUDA)
+!!                !$acc kernels 
+!!#else
+!!                !$omp parallel do default(shared), private(ir)
+!!#endif
+!!                DO ir = 1, nrxxs
+!!                   rhoc(ir) = ( conjg(exxbuff(ir,ibnd,ikq))*temppsic_nc(ir,1) + &
+!!                                conjg(exxbuff(nrxxs+ir,ibnd,ikq))*temppsic_nc(ir,2) )/omega
+!!                ENDDO
+!!#if defined(__CUDA)
+!!                !$acc end kernels
+!!#else
+!!                !$omp end parallel do
+!!#endif
+             ELSE
+#if defined(__CUDA)
+                !$acc parallel loop collapse(2)
+#else
+                !$omp parallel do default(shared), private(ir)
+#endif
+                DO im = 1,m !for each band of psi (the k cycle is outside band)
+                  DO ir = 1, nrxxs
+                     rhoc_all( (im-1)*nrxxs + ir )=conjg(exxbuff(ir,ibnd,ikq))*temppsic_batched(ir,im) / omega
+                  ENDDO
+                ENDDO
+#if defined(__CUDA)
+#else
+                !$omp end parallel do
+#endif
+             ENDIF
+call stop_clock('vexx-@2')
+             !   >>>> add augmentation in REAL space HERE
+!!             IF(okvan .and. tqr) THEN ! augment the "charge" in real space
+!!                !$acc update host(rhoc)
+!!                CALL addusxx_r( rhoc, becxx(ikq)%k(:,ibnd), becpsi%k(:,im))
+!!                !$acc update device(rhoc)
+!!             ENDIF
+             !
+             !   >>>> brings it to G-space
+call start_clock('vexx-@3')
+             !$acc host_data use_device(rhoc_all)
+             CALL fwfft('Rho', rhoc_all, dfftt, howmany=m)
+             !$acc end host_data
+call stop_clock('vexx-@3')
+             !
+             !   >>>> add augmentation in G space HERE
+!!             IF(okvan .and. .not. tqr) THEN
+!!                !$acc update host(rhoc)
+!!                CALL addusxx_g(dfftt, rhoc, xkq, xkp, 'c', &
+!!                   becphi_c=becxx(ikq)%k(:,ibnd),becpsi_c=becpsi%k(:,im))
+!!                !$acc update device(rhoc)
+!!             ENDIF
+             !   >>>> charge done
+             !
+             !$acc parallel loop collapse(2)
+             do im = 1, m
+               do ir = 1, nrxxs
+                 vc_all( (im-1)*nrxxs + ir ) = 0._DP
+               end do 
+             end do 
+             !
+call start_clock('vexx-@4')
+#if defined(__CUDA)
+             !$acc parallel loop collapse(2) 
+#else
+             !$omp parallel do default(shared), private(ig)
+#endif
+             do im = 1, m
+               DO ig = 1, ngmt
+                  vc_all( (im-1)*nrxxs + dfftt%nl(ig) ) = fac(ig) * rhoc_all( (im-1)*nrxxs + dfftt%nl(ig) ) * x_occ 
+               ENDDO
+             enddo
+#if !defined(__CUDA)
+             !$omp end parallel do
+#endif
+call stop_clock('vexx-@4')
+             !
+             ! Add ultrasoft contribution (RECIPROCAL SPACE)
+             ! compute alpha_I,j,k+q = \sum_J \int <beta_J|phi_j,k+q> V_i,j,k,q Q_I,J(r) d3r
+!!             IF(okvan .and. .not. tqr) THEN
+!!                !$acc update host(vc)
+!!                CALL newdxx_g(dfftt, vc, xkq, xkp, 'c', deexx, &
+!!                              becphi_c=becxx(ikq)%k(:,ibnd))
+!!                !$acc update device(vc)
+!!             ENDIF
+             !
+             !brings back v in real space
+call start_clock('vexx-@5')
+             !$acc host_data use_device(vc_all)
+             CALL invfft ('Rho', vc_all, dfftt, howmany=m)
+             !$acc end host_data
+call stop_clock('vexx-@5')
+             !
+!!             ! Add ultrasoft contribution (REAL SPACE)
+!!             IF(okvan .and. tqr) THEN
+!!               !$acc update host(vc)
+!!               CALL newdxx_r(dfftt,vc, becxx(ikq)%k(:,ibnd), deexx)
+!!               !$acc update device(vc)
+!!             END IF
+!!             !
+!!             ! Add PAW one-center contribution
+!!             IF(okpaw) THEN
+!!                CALL PAW_newdxx(x_occ , becxx(ikq)%k(:,ibnd), becpsi%k(:,im), deexx)
+!!             ENDIF
+             !
+             !accumulates over bands and k points
+             !
+call start_clock('vexx-@6')
+             IF (noncolin) THEN
+!!#if defined(__CUDA)
+!!                !$acc kernels
+!!#else
+!!                !$omp parallel do default(shared), private(ir)
+!!#endif
+!!                DO ir = 1, nrxxs
+!!                   result_nc(ir,1)= result_nc(ir,1) + vc(ir) * exxbuff(ir,ibnd,ikq)
+!!                   result_nc(ir,2)= result_nc(ir,2) + vc(ir) * exxbuff(ir+nrxxs,ibnd,ikq)
+!!                ENDDO
+!!#if defined(__CUDA)
+!!                !$acc end kernels
+!!#else
+!!                !$omp end parallel do
+!!#endif
+             ELSE
+#if defined(__CUDA)
+                !$acc parallel loop collapse(2)
+#else
+                !$omp parallel do default(shared), private(ir)
+#endif
+                do im = 1, m
+                  DO ir = 1, nrxxs
+                    result_batched(ir, im) = result_batched(ir, im) + vc_all( (im-1)*nrxxs +ir )*exxbuff(ir,ibnd,ikq)
+                  ENDDO
+                end do 
+#if defined(__CUDA)
+!!                !$acc end kernels
+#else
+                !$omp end parallel do
+#endif
+             ENDIF
+call stop_clock('vexx-@6')
+             !
+          ENDDO &
+          IBND_LOOP_K
+!          IF ( okvan .and..not.tqr ) CALL qvan_clean ()
+          !
+       ENDDO &
+       INTERNAL_LOOP_ON_Q
+       !
+!!       IF(okvan) THEN
+!!         CALL mp_sum(deexx,intra_bgrp_comm)
+!!         CALL mp_sum(deexx,inter_bgrp_comm)
+!!       ENDIF
+       !
+!    ENDDO &
+!    LOOP_ON_PSI_BANDS
+call stop_clock('vexx_k_main')
+    !
+CALL start_clock( 'vexx_k_fin' )
+    FIN_LOOP_ON_PSI_BANDS : &
+    DO im = 1,m !for each band of psi (the k cycle is outside band)
+       !
+       ! bring result back to G-space
+       !
+       IF (noncolin) THEN
+!!          !
+!!          !$acc host_data use_device(result_nc)
+!!          CALL fwfft ('Wave', result_nc(:,1), dfftt)
+!!          CALL fwfft ('Wave', result_nc(:,2), dfftt)
+!!          !$acc end host_data
+!!          !
+!!          !communicate result
+!!          !$acc parallel loop collapse(2)
+!!          DO ipol = 1, npol
+!!            DO ig = 1, n
+!!               result_nc_g(ig,ipol) = result_nc(dfftt%nl(igk_k(ig,current_k)),ipol)
+!!            ENDDO
+!!          ENDDO
+!!          !$acc host_data use_device(result_nc_g)
+!!          CALL mp_sum( result_nc_g(1:n,1:npol), inter_bgrp_comm)
+!!          !$acc end host_data
+!!          !
+!!          !adds it to hpsi
+!!#if defined(__CUDA)
+!!          !$acc parallel loop
+!!#else
+!!          !$omp parallel do default(shared), private(ig)
+!!#endif
+!!          DO ig = 1, n
+!!             hpsi(ig,im)    = hpsi(ig,im)     - exxalfa*result_nc_g(ig,1)
+!!             hpsi(lda+ig,im)= hpsi(lda+ig,im) - exxalfa*result_nc_g(ig,2)
+!!          ENDDO
+!!#if !defined(__CUDA)
+!!          !$omp end parallel do
+!!#endif
+!!          !
+       ELSE
+          !
+          !$acc host_data use_device(result_batched)
+          CALL fwfft ('Wave', result_batched(:,im), dfftt)
+          !$acc end host_data
+          !
+          !communicate result
+          !$acc parallel loop
+          DO ig = 1, n
+             result_g(ig) = result_batched(dfftt%nl(igk_k(ig,current_k)), im)
+          ENDDO
+          !$acc host_data use_device(result_g)
+          CALL mp_sum( result_g(1:n), inter_bgrp_comm)
+          !$acc end host_data
+          !
+          !adds it to hpsi
+#if defined(__CUDA) 
+          !$acc parallel loop 
+#else
+          !$omp parallel do default(shared), private(ig)
+#endif
+          DO ig = 1, n
+             hpsi(ig,im)=hpsi(ig,im) - exxalfa*result_g(ig)
+          ENDDO
+#if !defined(__CUDA) 
+          !$omp end parallel do
+#endif
+       ENDIF
+       !
+       ! add non-local \sum_I |beta_I> \alpha_Ii (the sum on i is outside)
+!!       IF(okvan) CALL add_nlxx_pot(lda, hpsi(:,im), xkp, n, igk_k(:,current_k),&
+!!                                       deexx, eps_occ, exxalfa)
+       !
+    ENDDO &
+    FIN_LOOP_ON_PSI_BANDS
+CALL stop_clock( 'vexx_k_fin' )
+    !
+    !$acc end data
+    !
+    IF (noncolin) THEN
+       DEALLOCATE(temppsic_nc, result_nc, result_nc_g )
+    ELSE
+       DEALLOCATE(temppsic_batched, result_batched, result_g )
+    ENDIF
+    !
+    DEALLOCATE(rhoc_all, vc_all, fac )
+    !
+    IF(okvan) DEALLOCATE( deexx)
+    !
+    !-----------------------------------------------------------------------
+  END SUBROUTINE vexx_std_k
+  !-----------------------------------------------------------------------
+  !
+  !-----------------------------------------------------------------------
+  SUBROUTINE vexx_std_k_nonbatched(lda, n, m, psi, hpsi, becpsi)
+  !-----------------------------------------------------------------------
+    !
+    ! ... generic, k-point version of vexx
+    !
+    USE constants,      ONLY : fpi, e2, pi
+    USE cell_base,      ONLY : omega
+    USE gvect,          ONLY : ngm, g
+    USE wvfct,          ONLY : npwx, current_k
+    USE klist,          ONLY : xk, nks, nkstot, igk_k
+    USE fft_interfaces, ONLY : fwfft, invfft
+    USE becmod,         ONLY : bec_type
+    USE mp_bands,       ONLY : inter_bgrp_comm, intra_bgrp_comm, my_bgrp_id, nbgrp
+    USE mp,             ONLY : mp_sum, mp_barrier, mp_bcast
+    USE uspp,           ONLY : nkb, okvan
+    USE paw_variables,  ONLY : okpaw
+    USE us_exx,         ONLY : bexg_merge, becxx, addusxx_g, addusxx_r, &
+                               newdxx_g, newdxx_r, add_nlxx_pot, &
+                               qvan_init, qvan_clean
+    USE paw_exx,        ONLY : PAW_newdxx
+    USE exx_base,       ONLY : gt, nqs, index_xkq, x_occupation, g2_convolution
+    !
+    !
+    IMPLICIT NONE
+    !
+    INTEGER                  :: lda, n, m
+    COMPLEX(DP)              :: psi(lda*npol,m)
+    COMPLEX(DP)              :: hpsi(lda*npol,m)
+    TYPE(bec_type), OPTIONAL :: becpsi ! or call a calbec(...psi) instead
+    !
+    ! local variables
     COMPLEX(DP),ALLOCATABLE :: temppsic(:), RESULT(:)
     COMPLEX(DP),ALLOCATABLE :: temppsic_nc(:,:),result_nc(:,:)
     COMPLEX(DP),ALLOCATABLE :: result_g(:), result_nc_g(:,:)
@@ -1017,7 +1408,7 @@ MODULE exx_std
     IF(okvan) DEALLOCATE( deexx)
     !
     !-----------------------------------------------------------------------
-  END SUBROUTINE vexx_std_k
+  END SUBROUTINE vexx_std_k_nonbatched
   !-----------------------------------------------------------------------
   !
   !-----------------------------------------------------------------------
