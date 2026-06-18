@@ -332,6 +332,11 @@ input_description -distribution {Quantum ESPRESSO} -package PHonon -program ph.x
                     Available for both metals and insulators.
                     @ref trans=.false. is required.
                 }
+                opt -val 'prt' {
+                    Print to output the |g(n,m,nu,s)| vertex (meV) for all n,m 
+                    (bands), nu (modes), s (spin) indices;
+                    do the average over degenerate states.
+                }
 		info {
 		    For metals only, requires gaussian smearing (except for 'ahc').
 		
