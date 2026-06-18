@@ -539,10 +539,10 @@ SUBROUTINE phq_readin()
      CALL mp_bcast(xq, meta_ionode_id, world_comm  )
   ENDIF
 
-  IF (.NOT.ldisp) THEN
-     lgamma = xq (1) .EQ.0.D0.AND.xq (2) .EQ.0.D0.AND.xq (3) .EQ.0.D0
-     IF ( (epsil.OR.zue.or.lraman.or.elop) .AND..NOT.lgamma) &
-                CALL errore ('phq_readin', 'gamma is needed for elec.field', 1)
+  IF (.NOT.ldisp .AND. .NOT. qplot) THEN
+     lgamma = ( xq(1)==0.0_dp .AND. xq(2)==0.0_dp .AND. xq(3)==0.0_dp )
+     IF ( .NOT.lgamma .AND. (epsil.OR.zue.OR.lraman.OR.elop) ) &
+        CALL errore ('phq_readin', 'gamma is needed for elec.field', 1)
   ENDIF
 
   IF (magnetic_sym.AND.(epsil.OR.zue.or.lraman.or.elop)) &
