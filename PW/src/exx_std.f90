@@ -669,7 +669,7 @@ MODULE exx_std
     COMPLEX(DP),ALLOCATABLE :: deexx(:)
     INTEGER, ALLOCATABLE :: nl(:), nl_k(:)
     REAL(DP),   ALLOCATABLE :: fac(:)
-    INTEGER          :: ibnd, ik, im , ikq, iq, ipol
+    INTEGER          :: ibnd, ik, ikq, iq, ipol
     INTEGER          :: ir, ig
     INTEGER          :: current_ik
     INTEGER          :: ibnd_loop_start
@@ -679,14 +679,33 @@ MODULE exx_std
     ! <LMS> temp array for vcut_spheric
     INTEGER, EXTERNAL :: global_kpoint_index
     INTEGER :: ngmt
-    INTEGER :: batchsize ! batch dimension (fixed parameter in FFTXlib)
-    INTEGER :: msize     ! number of bands per fft
     REAL(DP) :: x_occ
+    !
+    ! local variables to control FFT band batching
+    !
+    INTEGER :: batchsize      
+    ! batch dimension to control allocations of batched variables (batchsize <= dfftt%batchsize)
+    INTEGER :: nb, nb_last
+    ! number of batched bands per fft 
+    ! in principle nb=batchsize, but it may vary for the last batch (nb_last).
+    ! using a fixed batchsize prevents allocating and deallocating batched variables inside the loop
+    INTEGER :: nbatch, ibatch 
+    ! loop over batches 
+    INTEGER :: im, im_start
+    ! global index of bands ranging (1...m)
+    INTEGER :: ib
+    ! local index of bands ranging (1...nb)
     !
     ngmt = dfftt%ngm 
     ALLOCATE( fac(ngmt) )
     nrxxs= dfftt%nnr
-    batchsize = dfftt%batchsize
+    !
+    batchsize = 16 ! can be set <= dfftt%batchsize = 16
+    !
+    nbatch = m / batchsize 
+    !
+    nb_last = mod( m, batchsize )  ! bands remaining in the last batch
+    if(nb_last > 0 ) nbatch = nbatch + 1 
     !
     ALLOCATE( nl(ngmt), nl_k(n) )
     !
@@ -694,10 +713,10 @@ MODULE exx_std
        ALLOCATE( temppsic_nc(nrxxs,npol), result_nc(nrxxs,npol) )
        ALLOCATE( result_nc_g(n,npol) )
     ELSE
-       ALLOCATE( temppsic(nrxxs*m) )
-       ALLOCATE( vc(nrxxs*m) )
-       ALLOCATE( rhoc(nrxxs*m) )
-       ALLOCATE( result(nrxxs*m) )
+       ALLOCATE( temppsic(nrxxs*batchsize) )
+       ALLOCATE( vc(nrxxs*batchsize) )
+       ALLOCATE( rhoc(nrxxs*batchsize) )
+       ALLOCATE( result(nrxxs*batchsize) )
     ENDIF
     !
     IF(okvan) ALLOCATE(deexx(nkb))
@@ -719,8 +738,6 @@ MODULE exx_std
     !
     !$acc data create( rhoc, vc, fac, nl, nl_k, temppsic, result, temppsic_nc, result_nc, result_nc_g) copyin(exxbuff)
     !
-    CALL start_clock( 'vexx_k_setup' )
-    !
     !$acc parallel loop
     do ig = 1, ngmt 
       nl(ig) = dfftt%nl(ig)
@@ -731,334 +748,250 @@ MODULE exx_std
       nl_k(ig) = dfftt%nl(igk_k(ig,current_k))
     end do
     !
-    !$acc parallel loop collapse(2)
-    do im = 1, m
-      do ir = 1, nrxxs
-        temppsic( (im-1)*nrxxs + ir ) = 0._dp
-        result( (im-1)*nrxxs + ir ) = 0._dp
-      end do   
-    end do 
-    !
-    !$acc parallel loop  collapse(2)
-    do im = 1, m
-      do ig = 1, n
-         temppsic( (im-1)*nrxxs + nl_k(ig) ) = psi(ig,im)
-      enddo
-    end do 
-    !
-    do im = 1, m, batchsize
-      if( (m-im)/batchsize > 0 ) then
-        msize = batchsize 
-      else
-        msize = mod(m, batchsize)
-      end if 
-      !$acc host_data use_device(temppsic)
-      CALL invfft ('Wave', temppsic( (im-1)*nrxxs + 1 : (im-1)*nrxxs + msize*nrxxs ), dfftt, howmany=msize)
-      !$acc end host_data
-    end do 
-    !
-    Call stop_clock('vexx_k_setup')
-    !
-    Call start_clock('vexx_k_main')
+    EXTERNAL_LOOP_ON_BATCHES: &
+    do ibatch = 1, nbatch
        !
-       INTERNAL_LOOP_ON_Q : &
-       DO iq=1,nqs
+       CALL start_clock( 'vexx_k_setup' )
+       !
+       ! set the actual number of bands in this batch
+       if(nb_last > 0 .and. ibatch==nbatch ) then
+         nb = nb_last 
+       else
+         nb = batchsize
+       endif
+       ! set the global band starting index for this batch
+       im_start = (ibatch-1) * batchsize 
+       !
+       ! inizializations on the whole allocation dimension (batchsize)
+       !$acc parallel loop collapse(2)
+       do ib = 1, batchsize
+         do ir = 1, nrxxs
+           temppsic( (ib-1)*nrxxs + ir ) = 0._dp
+           result( (ib-1)*nrxxs + ir ) = 0._dp
+         end do   
+       end do 
+       !
+       !$acc parallel loop  collapse(2)
+       do ib = 1, nb
+         do ig = 1, n
+            temppsic( (ib-1)*nrxxs + nl_k(ig) ) = psi(ig, im_start + ib)
+         enddo
+       end do 
+       !
+       !$acc host_data use_device(temppsic)
+       CALL invfft ('Wave', temppsic, dfftt, howmany=nb)
+       !$acc end host_data
+       !
+       Call stop_clock('vexx_k_setup')
+       !
+       Call start_clock('vexx_k_main')
           !
-          ikq  = index_xkq(current_ik,iq)
-          ik   = index_xk(ikq)
-          xkq  = xkq_collect(:,ikq)
-          !
-call start_clock('vexx-@1')
-          ! calculate the 1/|r-r'| (actually, k+q+g) factor and place it in fac
-          CALL g2_convolution(ngmt, gt, xkp, xkq, fac)
-          !$acc update device(fac)
-call stop_clock('vexx-@1')
-          IF ( okvan .and..not.tqr ) CALL qvan_init (ngmt, xkq, xkp)
-          !
-          IBND_LOOP_K : &
-          DO ibnd=ibnd_start,ibnd_end !for each band of psi
+          INTERNAL_LOOP_ON_Q : &
+          DO iq=1,nqs
              !
-             IF ( abs(x_occupation(ibnd,ik)) < eps_occ) CYCLE IBND_LOOP_K
+             ikq  = index_xkq(current_ik,iq)
+             ik   = index_xk(ikq)
+             xkq  = xkq_collect(:,ikq)
              !
-             x_occ = x_occupation(ibnd,ik) / nqs
+             Call start_clock('vexx-@1')
+             ! calculate the 1/|r-r'| (actually, k+q+g) factor and place it in fac
+             CALL g2_convolution(ngmt, gt, xkp, xkq, fac)
+             !$acc update device(fac)
+             Call stop_clock('vexx-@1')
              !
-             !loads the phi from file
+             !IF ( okvan .and..not.tqr ) CALL qvan_init (ngmt, xkq, xkp)
              !
-             !   >>>> calculate rho in real space
-call start_clock('vexx-@2')
-             IF (noncolin) THEN
-!!#if defined(__CUDA)
-!!                !$acc kernels 
-!!#else
-!!                !$omp parallel do default(shared), private(ir)
-!!#endif
-!!                DO ir = 1, nrxxs
-!!                   rhoc(ir) = ( conjg(exxbuff(ir,ibnd,ikq))*temppsic_nc(ir,1) + &
-!!                                conjg(exxbuff(nrxxs+ir,ibnd,ikq))*temppsic_nc(ir,2) )/omega
-!!                ENDDO
-!!#if defined(__CUDA)
-!!                !$acc end kernels
-!!#else
-!!                !$omp end parallel do
-!!#endif
-             ELSE
+             IBND_LOOP_K : &
+             DO ibnd=ibnd_start,ibnd_end !for each band of psi
+                !
+                IF ( abs(x_occupation(ibnd,ik)) < eps_occ) CYCLE IBND_LOOP_K
+                !
+                x_occ = x_occupation(ibnd,ik) / nqs
+                !
+                !loads the phi from file
+                !
+                Call start_clock('vexx-@2')
+                !   >>>> calculate rho in real space
+                IF (noncolin) THEN
+                   !!#if defined(__CUDA)
+                   !!                !$acc kernels 
+                   !!#else
+                   !!                !$omp parallel do default(shared), private(ir)
+                   !!#endif
+                   !!                DO ir = 1, nrxxs
+                   !!                   rhoc(ir) = ( conjg(exxbuff(ir,ibnd,ikq))*temppsic_nc(ir,1) + &
+                   !!                                conjg(exxbuff(nrxxs+ir,ibnd,ikq))*temppsic_nc(ir,2) )/omega
+                   !!                ENDDO
+                   !!#if defined(__CUDA)
+                   !!                !$acc end kernels
+                   !!#else
+                   !!                !$omp end parallel do
+                   !!#endif
+                ELSE
 #if defined(__CUDA)
-                !$acc parallel loop collapse(2)
+                   !$acc parallel loop collapse(2)
 #else
-                !$omp parallel do default(shared), private(ir)
+                   !$omp parallel do default(shared), private(ir)
 #endif
-                DO im = 1,m !for each band of psi (the k cycle is outside band)
-                  DO ir = 1, nrxxs
-                     rhoc( (im-1)*nrxxs + ir )=conjg(exxbuff(ir,ibnd,ikq))*temppsic( (im-1)*nrxxs + ir ) / omega
-                  ENDDO
-                ENDDO
-#if defined(__CUDA)
-#else
-                !$omp end parallel do
-#endif
-             ENDIF
-call stop_clock('vexx-@2')
-             !   >>>> add augmentation in REAL space HERE
-!!             IF(okvan .and. tqr) THEN ! augment the "charge" in real space
-!!                !$acc update host(rhoc)
-!!                CALL addusxx_r( rhoc, becxx(ikq)%k(:,ibnd), becpsi%k(:,im))
-!!                !$acc update device(rhoc)
-!!             ENDIF
-             !
-             !   >>>> brings it to G-space
-call start_clock('vexx-@3')
-             do im = 1, m, batchsize
-               if( (m-im)/batchsize > 0 ) then
-                 msize = batchsize 
-               else
-                 msize = mod(m, batchsize)
-               end if 
-               !$acc host_data use_device(rhoc)
-               CALL fwfft('Rho', rhoc( (im-1)*nrxxs + 1 : (im-1)*nrxxs + msize*nrxxs ) , dfftt, howmany=msize)
-               !$acc end host_data
-             end do 
-call stop_clock('vexx-@3')
-             !
-             !   >>>> add augmentation in G space HERE
-!!             IF(okvan .and. .not. tqr) THEN
-!!                !$acc update host(rhoc)
-!!                CALL addusxx_g(dfftt, rhoc, xkq, xkp, 'c', &
-!!                   becphi_c=becxx(ikq)%k(:,ibnd),becpsi_c=becpsi%k(:,im))
-!!                !$acc update device(rhoc)
-!!             ENDIF
-             !   >>>> charge done
-             !
-             !$acc parallel loop collapse(2)
-             do im = 1, m
-               do ir = 1, nrxxs
-                 vc( (im-1)*nrxxs + ir ) = 0._DP
-               end do 
-             end do 
-             !
-call start_clock('vexx-@4')
-#if defined(__CUDA)
-             !$acc parallel loop collapse(2) 
-#else
-             !$omp parallel do default(shared), private(ig)
-#endif
-             do im = 1, m
-               DO ig = 1, ngmt
-                  vc( (im-1)*nrxxs + nl(ig) ) = fac(ig) * rhoc( (im-1)*nrxxs + nl(ig) ) * x_occ 
-               ENDDO
-             enddo
+                   DO ib = 1,nb !for each band of psi (the k cycle is outside band)
+                     DO ir = 1, nrxxs
+                        rhoc( (ib-1)*nrxxs + ir )=conjg(exxbuff(ir,ibnd,ikq))*temppsic( (ib-1)*nrxxs + ir ) / omega
+                     ENDDO
+                   ENDDO
 #if !defined(__CUDA)
-             !$omp end parallel do
+                   !$omp end parallel do
 #endif
-call stop_clock('vexx-@4')
-             !
-             ! Add ultrasoft contribution (RECIPROCAL SPACE)
-             ! compute alpha_I,j,k+q = \sum_J \int <beta_J|phi_j,k+q> V_i,j,k,q Q_I,J(r) d3r
-!!             IF(okvan .and. .not. tqr) THEN
-!!                !$acc update host(vc)
-!!                CALL newdxx_g(dfftt, vc, xkq, xkp, 'c', deexx, &
-!!                              becphi_c=becxx(ikq)%k(:,ibnd))
-!!                !$acc update device(vc)
-!!             ENDIF
-             !
-             !brings back v in real space
-call start_clock('vexx-@5')
-             do im = 1, m, batchsize
-               if( (m-im)/batchsize > 0 ) then
-                 msize = batchsize 
-               else
-                 msize = mod(m, batchsize)
-               end if 
-               !$acc host_data use_device(vc)
-               CALL invfft('Rho', vc( (im-1)*nrxxs + 1 : (im-1)*nrxxs + msize*nrxxs ) , dfftt, howmany=msize)
-               !$acc end host_data
-             end do 
-call stop_clock('vexx-@5')
-             !
-!!             ! Add ultrasoft contribution (REAL SPACE)
-!!             IF(okvan .and. tqr) THEN
-!!               !$acc update host(vc)
-!!               CALL newdxx_r(dfftt,vc, becxx(ikq)%k(:,ibnd), deexx)
-!!               !$acc update device(vc)
-!!             END IF
-!!             !
-!!             ! Add PAW one-center contribution
-!!             IF(okpaw) THEN
-!!                CALL PAW_newdxx(x_occ , becxx(ikq)%k(:,ibnd), becpsi%k(:,im), deexx)
-!!             ENDIF
-             !
-             !accumulates over bands and k points
-             !
-call start_clock('vexx-@6')
-             IF (noncolin) THEN
-!!#if defined(__CUDA)
-!!                !$acc kernels
-!!#else
-!!                !$omp parallel do default(shared), private(ir)
-!!#endif
-!!                DO ir = 1, nrxxs
-!!                   result_nc(ir,1)= result_nc(ir,1) + vc(ir) * exxbuff(ir,ibnd,ikq)
-!!                   result_nc(ir,2)= result_nc(ir,2) + vc(ir) * exxbuff(ir+nrxxs,ibnd,ikq)
-!!                ENDDO
-!!#if defined(__CUDA)
-!!                !$acc end kernels
-!!#else
-!!                !$omp end parallel do
-!!#endif
-             ELSE
-#if defined(__CUDA)
+                ENDIF
+                Call stop_clock('vexx-@2')
+                !   >>>> add augmentation in REAL space HERE
+                !!IF(okvan .and. tqr) THEN ! augment the "charge" in real space
+                !!   !$acc update host(rhoc)
+                !!   CALL addusxx_r( rhoc, becxx(ikq)%k(:,ibnd), becpsi%k(:,im))
+                !!   !$acc update device(rhoc)
+                !!ENDIF
+                !
+                !   >>>> brings it to G-space
+                Call start_clock('vexx-@3')
+                !$acc host_data use_device(rhoc)
+                CALL fwfft('Rho', rhoc, dfftt, howmany=nb)
+                !$acc end host_data
+                Call stop_clock('vexx-@3')
+                !
+                !   >>>> add augmentation in G space HERE
+                !!IF(okvan .and. .not. tqr) THEN
+                !!   !$acc update host(rhoc)
+                !!   CALL addusxx_g(dfftt, rhoc, xkq, xkp, 'c', &
+                !!      becphi_c=becxx(ikq)%k(:,ibnd),becpsi_c=becpsi%k(:,im))
+                !!   !$acc update device(rhoc)
+                !!ENDIF
+                !   >>>> charge done
+                !
+                ! inizializations on the whole allocation dimension (batchsize)
                 !$acc parallel loop collapse(2)
-#else
-                !$omp parallel do default(shared), private(ir)
-#endif
-                do im = 1, m
-                  DO ir = 1, nrxxs
-                    result((im-1)*nrxxs+ir) = result((im-1)*nrxxs+ir) + vc((im-1)*nrxxs+ir)*exxbuff(ir,ibnd,ikq)
-                  ENDDO
+                do ib = 1, batchsize
+                  do ir = 1, nrxxs
+                    vc( (ib-1)*nrxxs + ir ) = 0._DP
+                  end do 
                 end do 
+                !
+                Call start_clock('vexx-@4')
 #if defined(__CUDA)
-!!                !$acc end kernels
+                !$acc parallel loop collapse(2) 
 #else
+                !$omp parallel do default(shared), private(ig)
+#endif
+                do ib = 1, nb
+                  DO ig = 1, ngmt
+                     vc( (ib-1)*nrxxs + nl(ig) ) = fac(ig) * rhoc( (ib-1)*nrxxs + nl(ig) ) * x_occ 
+                  ENDDO
+                enddo
+#if !defined(__CUDA)
                 !$omp end parallel do
 #endif
-             ENDIF
-call stop_clock('vexx-@6')
+                Call stop_clock('vexx-@4')
+                !
+                ! Add ultrasoft contribution (RECIPROCAL SPACE)
+                ! compute alpha_I,j,k+q = \sum_J \int <beta_J|phi_j,k+q> V_i,j,k,q Q_I,J(r) d3r
+                !!IF(okvan .and. .not. tqr) THEN
+                !!   !$acc update host(vc)
+                !!   CALL newdxx_g(dfftt, vc, xkq, xkp, 'c', deexx, &
+                !!                 becphi_c=becxx(ikq)%k(:,ibnd))
+                !!   !$acc update device(vc)
+                !!ENDIF
+                !
+                !brings back v in real space
+                Call start_clock('vexx-@5')
+                !$acc host_data use_device(vc)
+                CALL invfft('Rho', vc, dfftt, howmany=nb)
+                !$acc end host_data
+                Call stop_clock('vexx-@5')
+                !
+                !!! Add ultrasoft contribution (REAL SPACE)
+                !!IF(okvan .and. tqr) THEN
+                !!  !$acc update host(vc)
+                !!  CALL newdxx_r(dfftt,vc, becxx(ikq)%k(:,ibnd), deexx)
+                !!  !$acc update device(vc)
+                !!END IF
+                !!!
+                !!! Add PAW one-center contribution
+                !!IF(okpaw) THEN
+                !!   CALL PAW_newdxx(x_occ , becxx(ikq)%k(:,ibnd), becpsi%k(:,im), deexx)
+                !!ENDIF
+                !
+                !accumulates over bands and k points
+                !
+                Call start_clock('vexx-@6')
+                IF (noncolin) THEN
+                    !!#if defined(__CUDA)
+                    !!                !$acc kernels
+                    !!#else
+                    !!                !$omp parallel do default(shared), private(ir)
+                    !!#endif
+                    !!                DO ir = 1, nrxxs
+                    !!                   result_nc(ir,1)= result_nc(ir,1) + vc(ir) * exxbuff(ir,ibnd,ikq)
+                    !!                   result_nc(ir,2)= result_nc(ir,2) + vc(ir) * exxbuff(ir+nrxxs,ibnd,ikq)
+                    !!                ENDDO
+                    !!#if defined(__CUDA)
+                    !!                !$acc end kernels
+                    !!#else
+                    !!                !$omp end parallel do
+                    !!#endif
+                ELSE
+#if defined(__CUDA)
+                   !$acc parallel loop collapse(2)
+#else
+                   !$omp parallel do default(shared), private(ir)
+#endif
+                   do ib = 1, nb
+                     DO ir = 1, nrxxs
+                       result((ib-1)*nrxxs+ir) = result((ib-1)*nrxxs+ir) + vc((ib-1)*nrxxs+ir)*exxbuff(ir,ibnd,ikq)
+                     ENDDO
+                   end do 
+#if !defined(__CUDA)
+                   !$omp end parallel do
+#endif
+                ENDIF
+                Call stop_clock('vexx-@6')
+                !
+             ENDDO &
+             IBND_LOOP_K
+             !IF ( okvan .and..not.tqr ) CALL qvan_clean ()
              !
           ENDDO &
-          IBND_LOOP_K
-!          IF ( okvan .and..not.tqr ) CALL qvan_clean ()
+          INTERNAL_LOOP_ON_Q
           !
-       ENDDO &
-       INTERNAL_LOOP_ON_Q
-       !
-!!       IF(okvan) THEN
-!!         CALL mp_sum(deexx,intra_bgrp_comm)
-!!         CALL mp_sum(deexx,inter_bgrp_comm)
-!!       ENDIF
-       !
-!    ENDDO &
-!    LOOP_ON_PSI_BANDS
-call stop_clock('vexx_k_main')
-    !
-CALL start_clock( 'vexx_k_fin' )
-    !
-    do im = 1, m, batchsize
-      if( (m-im)/batchsize > 0 ) then
-        msize = batchsize 
-      else
-        msize = mod(m, batchsize)
-      end if 
-      !$acc host_data use_device(rhoc)
-      CALL fwfft('Wave', result( (im-1)*nrxxs + 1 : (im-1)*nrxxs + msize*nrxxs ) , dfftt, howmany=msize)
-      !$acc end host_data
-    end do 
-    !
-    !$acc host_data use_device(result)
-    CALL mp_sum( result, inter_bgrp_comm)
-    !$acc end host_data
-    !
+          !!IF(okvan) THEN
+          !!  CALL mp_sum(deexx,intra_bgrp_comm)
+          !!  CALL mp_sum(deexx,inter_bgrp_comm)
+          !!ENDIF
+          Call stop_clock('vexx_k_main')
+          !
+          CALL start_clock( 'vexx_k_fin' )
+          !
+          !$acc host_data use_device(result)
+          CALL fwfft('Wave', result, dfftt, howmany=nb)
+          !$acc end host_data
+          !
+          !$acc host_data use_device(result)
+          CALL mp_sum( result, inter_bgrp_comm)
+          !$acc end host_data
+          !
 #if defined(__CUDA) 
-    !$acc parallel loop collapse(2)
+          !$acc parallel loop collapse(2)
 #else
-    !$omp parallel do default(shared), private(ig)
+          !$omp parallel do default(shared), private(ig)
 #endif
-    do im = 1, m
-      DO ig = 1, n
-         hpsi(ig,im) = hpsi(ig,im) - exxalfa*result( (im-1)*nrxxs + nl_k(ig) )
-      ENDDO
-    end do 
+          do ib = 1, nb
+            DO ig = 1, n
+               hpsi(ig,im_start+ib) = hpsi(ig,im_start+ib) - exxalfa*result( (ib-1)*nrxxs + nl_k(ig) )
+            ENDDO
+          end do 
 #if !defined(__CUDA) 
-    !$omp end parallel do
+          !$omp end parallel do
 #endif
-
-!!!    FIN_LOOP_ON_PSI_BANDS : &
-!!!    DO im = 1,m !for each band of psi (the k cycle is outside band)
-!!!       !
-!!!       ! bring result back to G-space
-!!!       !
-!!!       IF (noncolin) THEN
-!!!!!          !
-!!!!!          !$acc host_data use_device(result_nc)
-!!!!!          CALL fwfft ('Wave', result_nc(:,1), dfftt)
-!!!!!          CALL fwfft ('Wave', result_nc(:,2), dfftt)
-!!!!!          !$acc end host_data
-!!!!!          !
-!!!!!          !communicate result
-!!!!!          !$acc parallel loop collapse(2)
-!!!!!          DO ipol = 1, npol
-!!!!!            DO ig = 1, n
-!!!!!               result_nc_g(ig,ipol) = result_nc(dfftt%nl(igk_k(ig,current_k)),ipol)
-!!!!!            ENDDO
-!!!!!          ENDDO
-!!!!!          !$acc host_data use_device(result_nc_g)
-!!!!!          CALL mp_sum( result_nc_g(1:n,1:npol), inter_bgrp_comm)
-!!!!!          !$acc end host_data
-!!!!!          !
-!!!!!          !adds it to hpsi
-!!!!!#if defined(__CUDA)
-!!!!!          !$acc parallel loop
-!!!!!#else
-!!!!!          !$omp parallel do default(shared), private(ig)
-!!!!!#endif
-!!!!!          DO ig = 1, n
-!!!!!             hpsi(ig,im)    = hpsi(ig,im)     - exxalfa*result_nc_g(ig,1)
-!!!!!             hpsi(lda+ig,im)= hpsi(lda+ig,im) - exxalfa*result_nc_g(ig,2)
-!!!!!          ENDDO
-!!!!!#if !defined(__CUDA)
-!!!!!          !$omp end parallel do
-!!!!!#endif
-!!!!!          !
-!!!       ELSE
-!!!          !
-!!!          !communicate result
-!!!          !$acc parallel loop
-!!!          DO ig = 1, n
-!!!             result_g(ig) = result_all( (im-1)*nrxxs + nl_k(ig) )
-!!!          ENDDO
-!!!          !$acc host_data use_device(result_g)
-!!!          CALL mp_sum( result_g(1:n), inter_bgrp_comm)
-!!!          !$acc end host_data
-!!!          !
-!!!          !adds it to hpsi
-!!!#if defined(__CUDA) 
-!!!          !$acc parallel loop 
-!!!#else
-!!!          !$omp parallel do default(shared), private(ig)
-!!!#endif
-!!!          DO ig = 1, n
-!!!             hpsi(ig,im)=hpsi(ig,im) - exxalfa*result_g(ig)
-!!!          ENDDO
-!!!#if !defined(__CUDA) 
-!!!          !$omp end parallel do
-!!!#endif
-!!!       ENDIF
-!!!       !
-!!!       ! add non-local \sum_I |beta_I> \alpha_Ii (the sum on i is outside)
-!!!!!       IF(okvan) CALL add_nlxx_pot(lda, hpsi(:,im), xkp, n, igk_k(:,current_k),&
-!!!!!                                       deexx, eps_occ, exxalfa)
-!!!       !
-!!!    ENDDO &
-!!!    FIN_LOOP_ON_PSI_BANDS
-CALL stop_clock( 'vexx_k_fin' )
+          CALL stop_clock( 'vexx_k_fin' )
+    END DO &
+    EXTERNAL_LOOP_ON_BATCHES
     !
     !$acc end data
     !
