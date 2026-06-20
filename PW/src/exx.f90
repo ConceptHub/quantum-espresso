@@ -21,7 +21,8 @@ MODULE exx
   USE io_global,            ONLY : stdout
   !
   USE control_flags,        ONLY : gamma_only, tqr, use_gpu, many_fft
-  USE exx_base,             ONLY : exx_bgrp_type, EXX_BGRP_BANDS, dfftt, exxbuff , exxbuff_d, npwt, x_nbnd_occ, &
+  USE exx_base,             ONLY : exx_bgrp_type, EXX_BGRP_PAIRS, EXX_BGRP_BANDS, EXX_BGRP_INBTC, EXX_BGRP_EXBTC, &
+                                   dfftt, exxbuff , exxbuff_d, npwt, x_nbnd_occ, &
                                    ibnd_start, ibnd_end, gt, ggt, gcutmt, gkcut, gstart_t, ngmt_g, &
                                    eps_occ, exxalfa, exxbeta, x_occupation, x_occupation_d, &
                                    locbuff, exxmat, locmat, nbndproj, local_thr
@@ -402,7 +403,7 @@ MODULE exx
     USE uspp,           ONLY : okvan
     USE paw_variables,  ONLY : okpaw
     USE wvfct,          ONLY : nbnd
-    USE exx_std,        ONLY : vexx_std_gamma, vexx_std_k
+    USE exx_std,        ONLY : vexx_std_gamma, vexx_std_k_inner, vexx_std_k_outer, vexx_std_k_one
     USE exx_bp,         ONLY : vexx_bp
     !
     IMPLICIT NONE
@@ -429,10 +430,16 @@ MODULE exx
        if (gamma_only ) then
           Call vexx_std_gamma(lda, n, m, psi, hpsi, becpsi )
        else
-          Call vexx_std_k(lda, n, m, psi, hpsi, becpsi )
+          Call vexx_std_k_one(lda, n, m, psi, hpsi, becpsi )
        end if 
-    else
+    elseif(exx_bgrp_type .eq. EXX_BGRP_EXBTC) then
+       Call vexx_std_k_outer(lda, n, m, psi, hpsi, becpsi )
+    elseif(exx_bgrp_type .eq. EXX_BGRP_INBTC) then
+       Call vexx_std_k_inner(lda, n, m, psi, hpsi, becpsi )
+    elseif(exx_bgrp_type .eq. EXX_BGRP_PAIRS) then
        Call vexx_bp(lda, n, m, psi, hpsi, becpsi )
+    else
+       CALL errore( 'vexx','Wrong exx_bgrp_type in vexx', 2 )
     end if 
     !
     CALL stop_clock( 'vexx' )

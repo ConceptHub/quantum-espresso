@@ -2150,7 +2150,7 @@ SUBROUTINE exx_iosys ( ecutwfc, ecutrho )
                               gau_parameter, localization_thr, scdm, ace,  &
                               scdmden, scdmgrd, nscdm, n_proj,             & 
                               exx_fraction, exx_lr_fraction, exx_type,     &
-                              screening_parameter, ecutfock
+                              exx_batch_size, screening_parameter, ecutfock
   USE io_global,     ONLY : stdout
   USE klist,         ONLY : tot_charge
   USE ions_base,     ONLY : nat, ityp, zv
@@ -2159,12 +2159,14 @@ SUBROUTINE exx_iosys ( ecutwfc, ecutrho )
                             set_screening_parameter
   USE exx_base,      ONLY : x_gamma_extrapolation_ => x_gamma_extrapolation, &
                             nq1, nq2, nq3, exx_bgrp_type, EXX_BGRP_BANDS, EXX_BGRP_PAIRS, &
+                            batchsize, EXX_BGRP_INBTC, EXX_BGRP_EXBTC, &
                             exxdiv_treatment_ => exxdiv_treatment, &
                             yukawa_           => yukawa, &
                             ecutvcut_         => ecutvcut
   USE exx,          ONLY :  ecutfock_         => ecutfock, &
                             use_ace, nbndproj, local_thr 
   USE loc_scdm,      ONLY : use_scdm, scdm_den, scdm_grd, n_scdm
+  USE control_flags, ONLY : gamma_only
   !
   IMPLICIT NONE
   REAL(dp), INTENT(IN):: ecutwfc, ecutrho
@@ -2217,16 +2219,26 @@ SUBROUTINE exx_iosys ( ecutwfc, ecutrho )
   IF (xclib_dft_is('hybrid')) WRITE(stdout, &
      '(/,5x,"Exact exchange band parallelism type set to ",A/)' ) trim(adjustl(exx_type))
   !
+  IF ( exx_batch_size > 0 ) batchsize = exx_batch_size
+  !
   select case(trim(adjustl(exx_type)))
   case("bands")
     exx_bgrp_type = EXX_BGRP_BANDS
 !#if defined(__CUDA)
 !    Call errore('input', 'exx_type = bands on GPU not present in this version (use exx_type = band_pairs)',1)
 !#endif
+  case("bands_outer")
+    if(gamma_only) CALL errore('input','exx_type = bands_outer at gamma not yet implemented',1)
+    exx_bgrp_type = EXX_BGRP_EXBTC
+    write(stdout, '(/,5x,"Exact exchange outer batching size: ",I4/)' ) batchsize 
+  case("bands_inner")
+    if(gamma_only) CALL errore('input','exx_type = bands_inner at gamma not yet implemented',1)
+    exx_bgrp_type = EXX_BGRP_INBTC
+    write(stdout, '(/,5x,"Exact exchange inner batching size: ",I4/)' ) batchsize 
   case("band_pairs")
     exx_bgrp_type = EXX_BGRP_PAIRS
   case default
-    CALL errore('input','Invalid value of exx_type (values: bands or band_pairs)',1)
+    CALL errore('input','Invalid value of exx_type (values: bands, bands_outer, bands_inner, band_pairs)',1)
   end select
   !
 END SUBROUTINE exx_iosys

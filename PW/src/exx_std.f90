@@ -629,8 +629,7 @@ MODULE exx_std
   !-----------------------------------------------------------------------
   !
   !-----------------------------------------------------------------------
-  SUBROUTINE vexx_std_k(lda, n, m, psi, hpsi, becpsi)
-  ! vexx_std_k_batched_internal
+  SUBROUTINE vexx_std_k_inner(lda, n, m, psi, hpsi, becpsi)
   !-----------------------------------------------------------------------
     !
     ! ... generic, k-point version of vexx
@@ -650,7 +649,7 @@ MODULE exx_std
                                newdxx_g, newdxx_r, add_nlxx_pot, &
                                qvan_init, qvan_clean
     USE paw_exx,        ONLY : PAW_newdxx
-    USE exx_base,       ONLY : gt, nqs, index_xkq, x_occupation, g2_convolution
+    USE exx_base,       ONLY : gt, nqs, index_xkq, x_occupation, g2_convolution, batchsize
     !
     !
     IMPLICIT NONE
@@ -684,8 +683,8 @@ MODULE exx_std
     !
     ! local variables to control FFT band batching
     !
-    INTEGER :: batchsize      
-    ! batch dimension to control allocations of batched variables (batchsize <= dfftt%batchsize)
+    !!INTEGER :: batchsize      
+    !! batch dimension to control allocations of batched variables (batchsize <= dfftt%batchsize)
     INTEGER :: nb, nb_last
     ! number of batched bands per fft 
     ! in principle nb=batchsize, but it may vary for the last batch (nb_last).
@@ -701,7 +700,8 @@ MODULE exx_std
     ALLOCATE( fac(ngmt) )
     nrxxs= dfftt%nnr
     !
-    batchsize = 16 ! can be set <= dfftt%batchsize = 16
+    !!batchsize = 16 ! can be set <= dfftt%batchsize = 16
+    if( batchsize > dfftt%batchsize ) Call errore('vexx_std_k_inner', "EXX batch size is too large (max 16)", 1)
     !
     nbatch = m / batchsize 
     !
@@ -946,11 +946,11 @@ MODULE exx_std
     IF(okvan) DEALLOCATE( deexx)
     !
     !-----------------------------------------------------------------------
-  END SUBROUTINE vexx_std_k
+  END SUBROUTINE vexx_std_k_inner
   !-----------------------------------------------------------------------
   !
   !-----------------------------------------------------------------------
-  SUBROUTINE vexx_std_k_batched_external(lda, n, m, psi, hpsi, becpsi)
+  SUBROUTINE vexx_std_k_outer(lda, n, m, psi, hpsi, becpsi)
   !-----------------------------------------------------------------------
     !
     ! ... generic, k-point version of vexx
@@ -970,7 +970,7 @@ MODULE exx_std
                                newdxx_g, newdxx_r, add_nlxx_pot, &
                                qvan_init, qvan_clean
     USE paw_exx,        ONLY : PAW_newdxx
-    USE exx_base,       ONLY : gt, nqs, index_xkq, x_occupation, g2_convolution
+    USE exx_base,       ONLY : gt, nqs, index_xkq, x_occupation, g2_convolution, batchsize
     !
     !
     IMPLICIT NONE
@@ -1004,8 +1004,8 @@ MODULE exx_std
     !
     ! local variables to control FFT band batching
     !
-    INTEGER :: batchsize      
-    ! batch dimension to control allocations of batched variables (batchsize <= dfftt%batchsize)
+    !INTEGER :: batchsize      
+    !! batch dimension to control allocations of batched variables (batchsize <= dfftt%batchsize)
     INTEGER :: nb, nb_last
     ! number of batched bands per fft 
     ! in principle nb=batchsize, but it may vary for the last batch (nb_last).
@@ -1021,7 +1021,8 @@ MODULE exx_std
     ALLOCATE( fac(ngmt) )
     nrxxs= dfftt%nnr
     !
-    batchsize = 16 ! can be set <= dfftt%batchsize = 16
+    !batchsize = 16 ! can be set <= dfftt%batchsize = 16
+    if( batchsize > dfftt%batchsize ) Call errore('vexx_std_k_outer', "EXX batch size is too large (max 16)", 2)
     !
     nbatch = m / batchsize 
     !
@@ -1327,11 +1328,11 @@ MODULE exx_std
     IF(okvan) DEALLOCATE( deexx)
     !
     !-----------------------------------------------------------------------
-  END SUBROUTINE vexx_std_k_batched_external
+  END SUBROUTINE vexx_std_k_outer
   !-----------------------------------------------------------------------
   !
   !-----------------------------------------------------------------------
-  SUBROUTINE vexx_std_k_nonbatched(lda, n, m, psi, hpsi, becpsi)
+  SUBROUTINE vexx_std_k_one(lda, n, m, psi, hpsi, becpsi)
   !-----------------------------------------------------------------------
     !
     ! ... generic, k-point version of vexx
@@ -1719,7 +1720,7 @@ MODULE exx_std
     IF(okvan) DEALLOCATE( deexx)
     !
     !-----------------------------------------------------------------------
-  END SUBROUTINE vexx_std_k_nonbatched
+  END SUBROUTINE vexx_std_k_one
   !-----------------------------------------------------------------------
   !
   !-----------------------------------------------------------------------
