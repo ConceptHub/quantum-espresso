@@ -766,15 +766,18 @@ MODULE exx_std
       enddo
     end do 
     !
-    do im = 1, m , batchsize
-      if( (m-im)/batchsize > 0 ) then
-        nb = batchsize
-      else
-        nb = nb_last  
-      end if 
-      !$acc host_data use_device(temppsic)
-      CALL invfft ('Wave', temppsic( (im-1)*nrxxs + 1 : (im-1)*nrxxs + nb*nrxxs ), dfftt, howmany=nb)
-      !$acc end host_data
+    do ibatch = 1, nbatch
+       ! set the actual number of bands in this batch
+       if(nb_last > 0 .and. ibatch==nbatch ) then
+          nb = nb_last 
+       else
+          nb = batchsize
+       endif
+       ! set the global band starting index for this batch
+       im_start = (ibatch-1) * batchsize 
+       !$acc host_data use_device(temppsic)
+       CALL invfft ('Wave', temppsic( im_start*nrxxs + 1 : im_start*nrxxs + nb*nrxxs ), dfftt, howmany=nb)
+       !$acc end host_data
     end do
     !
     Call stop_clock('vexx_k_setup')
@@ -903,16 +906,20 @@ MODULE exx_std
     !
     CALL start_clock( 'vexx_k_fin' )
     !
-    do im = 1, m , batchsize
-      if( (m-im)/batchsize > 0 ) then
-        nb = batchsize 
-      else
-        nb = nb_last   
-      end if 
-      !$acc host_data use_device(result)
-      CALL fwfft('Wave', result( (im-1)*nrxxs + 1 : (im-1)*nrxxs + nb*nrxxs ), dfftt, howmany=nb)
-      !$acc end host_data
+    do ibatch = 1, nbatch
+       ! set the actual number of bands in this batch
+       if(nb_last > 0 .and. ibatch==nbatch ) then
+          nb = nb_last 
+       else
+          nb = batchsize
+       endif
+       ! set the global band starting index for this batch
+       im_start = (ibatch-1) * batchsize 
+       !$acc host_data use_device(result)
+       CALL fwfft('Wave', result( im_start*nrxxs + 1 : im_start*nrxxs + nb*nrxxs ), dfftt, howmany=nb)
+       !$acc end host_data
     end do
+    !
     !
     !$acc host_data use_device(result)
     CALL mp_sum( result, inter_bgrp_comm)
