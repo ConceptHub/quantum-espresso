@@ -683,8 +683,6 @@ MODULE exx_std
     !
     ! local variables to control FFT band batching
     !
-    !!INTEGER :: batchsize      
-    !! batch dimension to control allocations of batched variables (batchsize <= dfftt%batchsize)
     INTEGER :: nb, nb_last
     ! number of batched bands per fft 
     ! in principle nb=batchsize, but it may vary for the last batch (nb_last).
@@ -695,13 +693,29 @@ MODULE exx_std
     ! global index of bands ranging (1...m)
     INTEGER :: ib
     ! local index of bands ranging (1...nb)
+    INTEGER :: batchsize0 = 0, subbatchsize0 = 0
+    !! batckup values in case FFT internal batching is changed
     !
     ngmt = dfftt%ngm 
     ALLOCATE( fac(ngmt) )
     nrxxs= dfftt%nnr
     !
     !!batchsize = 16 ! can be set <= dfftt%batchsize = 16
-    if( batchsize > dfftt%batchsize ) Call errore('vexx_std_k_inner', "EXX batch size is too large (max 16)", 1)
+    !if( batchsize > dfftt%batchsize ) Call errore('vexx_std_k_inner', "EXX batch size is too large (max 16)", 1)
+    if( batchsize > dfftt%batchsize ) then
+      batchsize0 = dfftt%batchsize
+      subbatchsize0 = dfftt%subbatchsize
+      ! set new batchsize and subbatchsize
+      if ( mod( batchsize, 4 ) == 0 ) then
+        dfftt%subbatchsize = batchsize / 4
+        dfftt%batchsize = batchsize 
+      else
+        dfftt%subbatchsize = batchsize / 4 + 1 
+        dfftt%batchsize = dfftt%subbatchsize * 4 
+      endif
+    endif
+    write(stdout, '(3(A,I4))') &
+      "EXX batchsize: ", batchsize, " FFT batchsize: ", dfftt%batchsize, " subbatchsize: ", dfftt%subbatchsize
     !
     nbatch = m / batchsize 
     !
@@ -942,6 +956,12 @@ MODULE exx_std
     !
     !$acc end data
     !
+    ! restore original FFT batching parameters
+    if( batchsize0 > 0 ) then
+      dfftt%batchsize = batchsize0
+      dfftt%subbatchsize = subbatchsize0 
+    endif
+    !
     IF (noncolin) THEN
        DEALLOCATE(temppsic_nc, result_nc, result_nc_g )
     ELSE
@@ -1011,8 +1031,6 @@ MODULE exx_std
     !
     ! local variables to control FFT band batching
     !
-    !INTEGER :: batchsize      
-    !! batch dimension to control allocations of batched variables (batchsize <= dfftt%batchsize)
     INTEGER :: nb, nb_last
     ! number of batched bands per fft 
     ! in principle nb=batchsize, but it may vary for the last batch (nb_last).
@@ -1023,13 +1041,31 @@ MODULE exx_std
     ! global index of bands ranging (1...m)
     INTEGER :: ib
     ! local index of bands ranging (1...nb)
+    INTEGER :: batchsize0 = 0, subbatchsize0 = 0
+    !! batckup values in case FFT internal batching is changed
     !
     ngmt = dfftt%ngm 
     ALLOCATE( fac(ngmt) )
     nrxxs= dfftt%nnr
     !
+    ! update internal FFT batching parameters 
+    !
     !batchsize = 16 ! can be set <= dfftt%batchsize = 16
-    if( batchsize > dfftt%batchsize ) Call errore('vexx_std_k_outer', "EXX batch size is too large (max 16)", 2)
+    !if( batchsize > dfftt%batchsize ) Call errore('vexx_std_k_outer', "EXX batch size is too large (max 16)", 2)
+    if( batchsize > dfftt%batchsize ) then
+      batchsize0 = dfftt%batchsize
+      subbatchsize0 = dfftt%subbatchsize
+      ! set new batchsize and subbatchsize
+      if ( mod( batchsize, 4 ) == 0 ) then
+        dfftt%subbatchsize = batchsize / 4
+        dfftt%batchsize = batchsize 
+      else
+        dfftt%subbatchsize = batchsize / 4 + 1 
+        dfftt%batchsize = dfftt%subbatchsize * 4 
+      endif
+    endif
+    write(stdout, '(3(A,I4))') &
+      "EXX batchsize: ", batchsize, " FFT batchsize: ", dfftt%batchsize, " subbatchsize: ", dfftt%subbatchsize
     !
     nbatch = m / batchsize 
     !
@@ -1323,6 +1359,12 @@ MODULE exx_std
     EXTERNAL_LOOP_ON_BATCHES
     !
     !$acc end data
+    !
+    ! restore original FFT batching parameters
+    if( batchsize0 > 0 ) then
+      dfftt%batchsize = batchsize0
+      dfftt%subbatchsize = subbatchsize0 
+    endif
     !
     IF (noncolin) THEN
        DEALLOCATE(temppsic_nc, result_nc, result_nc_g )
