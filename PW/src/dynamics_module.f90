@@ -441,7 +441,7 @@ CONTAINS
              ekin, temp_new, ( ekin  + etot )
       IF (tnosep) THEN  
         WRITE (stdout, '(5X,"Ions Nose Energy   = ",    F20.8," Ry",/,  & 
-                     &   5X,"Ekin + Etot + Ions Nose =",F20.8," Ry")'), &
+                     &   5X,"Ekin + Etot + Ions Nose =",F20.8," Ry")')  &
                      & Ha_to_Ry *ions_nose_energy, (ekin + etot + Ha_to_Ry * ions_nose_energy)
       END IF  
       !
@@ -739,7 +739,7 @@ CONTAINS
              ekin, temp_new, ( ekin  + etot )
       IF (tnosep) THEN  
         WRITE (stdout, '(5X,"Ions Nose Energy   = ",    F20.8," Ry",/,  & 
-                     &   5X,"Ekin + Etot + Ions Nose =",F20.8," Ry")'), &
+                     &   5X,"Ekin + Etot + Ions Nose =",F20.8," Ry")')  &
                      & Ha_to_Ry * nose_energy, (ekin + etot + Ha_to_Ry * nose_energy)
       END IF  
       !
@@ -1873,8 +1873,7 @@ CONTAINS
       !! Refold atomic positions.
       !
       USE ions_base,          ONLY : nat, tau
-      USE cell_base,          ONLY : alat
-      USE constraints_module, ONLY : pbc
+      USE cell_base,          ONLY : alat, pbc
       !
       IMPLICIT NONE
       !
@@ -1896,8 +1895,7 @@ CONTAINS
       !! Molecular dynamics - compute averages.
       !
       USE ions_base,          ONLY : nat, tau, fixatom
-      USE cell_base,          ONLY : alat, at
-      USE constraints_module, ONLY : pbc
+      USE cell_base,          ONLY : alat, at, pbc
       USE io_files,           ONLY : delete_if_present
       !
       IMPLICIT NONE

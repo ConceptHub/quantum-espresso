@@ -34,8 +34,7 @@ dfpt_type.o \
 dynmat_sub.o \
 h_prec.o \
 h_prec_freq.o \
-incdrhoscf.o \
-incdrhoscf_nc.o \
+incdrhoscf_mod.o \
 dv_of_drho.o \
 dgradcorr.o \
 dnonloccorr.o \
@@ -91,7 +90,9 @@ non_scf_ph.o \
 efermi_shift.o \
 dfpt_kernels.o
 
+# see comments in file tldeps for explanations
 TLDEPS=mods pwlibs
+include ../install/tldeps
 
 all : liblrmod.a
 
@@ -99,14 +100,8 @@ liblrmod.a: $(LR_MODULES)
 	$(AR) $(ARFLAGS) $@ $?       
 	$(RANLIB) $@    
 
-tldeps :
-	if test -n "$(TLDEPS)" ; then \
-	( cd ../; $(MAKE) $(TLDEPS) || exit 1 ) ; fi
-
 clean :
 	- /bin/rm -f *.o *.a *.d *.i *~ *_tmp.f90 *.mod *.L
 
 
 include make.depend
-
-

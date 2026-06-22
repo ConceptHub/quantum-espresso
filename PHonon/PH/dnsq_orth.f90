@@ -10,7 +10,7 @@
 SUBROUTINE dnsq_orth() 
   !-----------------------------------------------------------------------
   !! DFPT+U: This routine calculates, in case of USPP, the bare variation 
-  !! of the occupation matrix due to orthogonality contraints.
+  !! of the occupation matrix due to orthogonality constraints.
   !
   !! $$ \text{dnsorth_cart}(m1,m2,\text{ispin},I,\text{icart},na) = 
   !!   - \sum_{k,n,n'} \text{wgg}(n,n',k) \cdot \langle\psi(n,k,\text{ispin})|
@@ -176,12 +176,12 @@ SUBROUTINE dnsq_orth()
         ! 
         DO na = 1, nat
            !
-           nt = ityp(na)
-           !
            DO icart = 1, 3 
               !   
               ! Calculates the derivatives \delta(na,icart) of beta functions
               ! only for j=na, at k and k+q (for all the states l,l')
+              !
+              nt = ityp(na)
               !
               DO ih = 1, nh(nt)
                  !

@@ -80,6 +80,7 @@ SUBROUTINE phq_readin()
   USE open_close_input_file, ONLY : open_input_file, close_input_file
   USE el_phon,       ONLY : kx, ky, kz, elph_print
   USE two_chem,      ONLY : twochem
+  USE upf_utils,     ONLY : imatches
   !
   IMPLICIT NONE
   !
@@ -102,7 +103,6 @@ SUBROUTINE phq_readin()
   LOGICAL      :: q2d, q_in_band_form
   INTEGER, EXTERNAL  :: atomic_number
   REAL(DP), EXTERNAL :: atom_weight
-  LOGICAL, EXTERNAL  :: imatches
   LOGICAL, EXTERNAL  :: has_xml
   LOGICAL :: exst, parallelfs
   REAL(DP), ALLOCATABLE :: xqaux(:,:)
@@ -383,6 +383,8 @@ SUBROUTINE phq_readin()
      isolve = 0
   CASE ('cg')
      isolve = 1
+  CASE ('direct')
+     isolve = 5
   CASE DEFAULT
      CALL errore('phq_readin','diagonalization '//trim(diagonalization)//' not implemented',1)
   END SELECT
@@ -816,6 +818,10 @@ SUBROUTINE phq_readin()
 
   IF (noncolin.and.(lraman.or.elop)) CALL errore('phq_readin', &
       'lraman, elop, and noncolin not programmed',1)
+#if defined(__CUDA)
+  IF (lraman) CALL errore('phq_readin', &
+          'Raman for GPU not present in this version', 1)
+#endif
   IF ( domag .and. lspinorb .and. elph ) CALL errore('phq_readin', & 
     'el-ph coefficient calculation disabled in magnetic spinorbit case',1)
 
@@ -954,6 +960,16 @@ SUBROUTINE phq_readin()
   !   IF (meta_ionode) ios = close_input_file ()
   !
   IF (twochem.AND.elph) CALL errore ('phq_readin', 'electron-phonon with twochem approach not yet implemented',1)
+  !
+  ! The twochem method with USPP is not implemented nor tested. One thing
+  ! needed to implement it is the conduction-band Pulay augmentation charge.
+  ! It would need modification of compute_alphasum and compute_becsum_ph and
+  ! using them in addusddens_pulay. Since this code is not used, this code
+  ! was deleted. See commit d144d538d for the last state with this code
+  ! present, which can serve as a starting point for twochem+USPP implementation.
+  IF (twochem .AND. okvan) CALL errore ('phq_readin', &
+       'twochem with ultrasoft/PAW pseudopotentials is not implemented', 1)
+  !
   IF (epsil.AND.(lgauss .OR. ltetra)) &
         CALL errore ('phq_readin', 'no elec. field with metals', 1)
   IF (modenum > 0) THEN

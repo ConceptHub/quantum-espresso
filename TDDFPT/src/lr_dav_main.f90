@@ -108,11 +108,18 @@ PROGRAM lr_dav_main
       ! Check to see if the wall time limit has been exceeded.
       if ( check_stop_now() ) then
          call lr_write_restart_dav() 
-!!         goto 100
          exit
       endif
       !
   enddo
+  if ( .not. dav_conv .and. dav_iter == max_iter) then
+     call lr_write_restart_dav()
+     write(stdout,'(/7x,"================================================================")')
+     write(stdout,'(/7x,"Davidson diagonalization has NOT converged in",I5," steps.")') dav_iter
+     write(stdout,'(/7x,"================================================================")')
+     goto 100
+  endif        
+
   ! Extract physical meaning from the solution
   if ( check_stop_now() ) goto 100
   call interpret_eign('END')

@@ -196,7 +196,6 @@ xml_io_rism.o
 
 OBJS = \
 atom_weight.o \
-capital.o \
 cryst_to_car.o \
 expint.o \
 generate_k_along_lines.o \
@@ -205,7 +204,6 @@ inpfile.o \
 int_to_char.o \
 latgen.o \
 linpack.o \
-matches.o \
 plot_io.o \
 radial_gradients.o \
 rgen.o \
@@ -213,7 +211,6 @@ recips.o \
 remove_tot_torque.o \
 sort.o \
 trimcheck.o \
-test_input_file.o \
 date_and_tim.o \
 volume.o \
 wgauss.o \
@@ -227,19 +224,16 @@ sockets.o
 # GPU versions of modules
 MODULES += \
   random_numbers_gpu.o
-
-TLDEPS= libfox libla libfft libutil libmbd librxc libupf
+ 
+# see comments in file tldeps for explanations
+TLDEPS= $(FOX) libla libfft libutil libmbd librxc libupf
+include ../install/tldeps
 
 all : libqemod.a
 
 libqemod.a: 	$(MODULES) $(OBJS) $(RISMLIB)
 	$(AR) $(ARFLAGS) $@ $?       
 	$(RANLIB) $@    
-
-tldeps :
-	if test -n "$(TLDEPS)" ; then \
-	( cd ../.. ; $(MAKE) $(TLDEPS) || exit 1 ) ; fi
-
 
 clean :
 	- /bin/rm -f *.o *.a *.d *.i *~ *_tmp.f90 *.mod *.L

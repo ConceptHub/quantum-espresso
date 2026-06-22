@@ -9,11 +9,19 @@
 SUBROUTINE lr_addusddens (npert, dbecsum, drhop)
   !---------------------------------------------------------------------------
   !
-  ! Calculate the additional charge in reciprocal space due to US PP's
-  ! See Eq.(36) in B. Walker and R. Gebauer, J. Chem. Phys. 127, 164106 (2007)
-  ! Then sum up the normal and ultrasoft charges.
+  ! Self-consistent ultrasoft-augmentation contribution to drho.
+  ! Given dbecsum (built from the Sternheimer dpsi), adds to drhop the
+  ! corresponding augmentation density: Eq. (36) of B. Walker and
+  ! R. Gebauer, J. Chem. Phys. 127, 164106 (2007).
+  !
+  ! This is the SCF augmentation piece that applies to every DFPT
+  ! perturbation type (phonon, electric field, EELS, Hubbard, ...). For
+  ! phonons there is an additional non-self-consistent Pulay-like
+  ! contribution coming from the displacement of the projector centers;
+  ! that piece is computed by PHonon/PH/addusddens_pulay.f90 and stored in
+  ! dfpt_data%drhop_pulay. It is added in response_kernels.f90, not here.
+  !
   ! It assumes that the array dbecsum has already been computed.
-  ! Inspired by PH/addusddens.f90
   !
   ! Created by Iurii Timrov (2013)
   !
@@ -39,15 +47,21 @@ SUBROUTINE lr_addusddens (npert, dbecsum, drhop)
   !
   ! the local variables
   !
-  INTEGER :: ig, na, nt, ih, jh, is, ijh, ir
+  COMPLEX(DP) :: dbec
+  ! temporary scalar to hold dbecsum value
+  !
+  INTEGER :: ig, na, nt, ih, jh, is, ijh, ir, nab, nb
   ! counter on G vectors
   ! counter on atoms
   ! counter on atomic type
   ! counter on beta functions
   ! counter on beta functions
-  ! counter on r vectors
   ! counter on spin
   ! counter on combined beta functions
+  ! counter on r vectors
+  ! max number of atoms of type nt
+  ! counter on atoms of the same type
+  !
   INTEGER :: ipert
   !! counter on perturbations
   !
@@ -56,7 +70,7 @@ SUBROUTINE lr_addusddens (npert, dbecsum, drhop)
   ! the values of q+G
   ! the spherical harmonics
   !
-  COMPLEX(DP), ALLOCATABLE :: sk(:), qgm(:), aux(:, :, :), aux_r(:)
+  COMPLEX(DP), ALLOCATABLE :: sk(:,:), qgm(:), aux(:, :, :), aux_r(:)
   ! the structure factor
   ! q_lm(G)
   ! auxiliary variable for drho(G)
@@ -68,26 +82,60 @@ SUBROUTINE lr_addusddens (npert, dbecsum, drhop)
   !
   ALLOCATE (aux(ngm, nspin_mag, npert))
   ALLOCATE (aux_r(dfftp%nnr))
-  ALLOCATE (sk(ngm))
   ALLOCATE (ylmk0(ngm,lmaxq * lmaxq))
   ALLOCATE (qgm(ngm))
   ALLOCATE (qmod(ngm))
   ALLOCATE (qpg(3,ngm))
   !
-  aux(:, :, :) = (0.d0, 0.d0)
-  !
   ! Calculate the q+G vector, its modulus, and the spherical harmonics.
   !
   CALL setqmod (ngm, xq, g, qmod, qpg)
   !
-  CALL ylmr2 (lmaxq * lmaxq, ngm, qpg, qmod, ylmk0)
+  !$acc data create(ylmk0, qgm) copyin(qmod, eigqts) copyout(aux)
   !
+  ! ylmr2 has copyin(qpg, qmod) and copyout(ylmk0)
+  CALL ylmr2 (lmaxq * lmaxq, ngm, qpg, qmod, ylmk0)
+  DEALLOCATE (qpg)
+  !
+  !$acc parallel loop
   DO ig = 1, ngm
      qmod(ig) = sqrt(qmod(ig)) * tpiba
   ENDDO
   !
+  !$acc kernels
+  aux(:, :, :) = (0.d0, 0.d0)
+  !$acc end kernels
+  !
   DO nt = 1, ntyp
      IF (upf(nt)%tvanp) THEN
+        !
+        ! count the number of atoms of type nt and allocate sk accordingly
+        !
+        nab = 0
+        DO na = 1, nat
+           IF ( ityp(na) == nt ) nab = nab + 1
+        ENDDO
+        !
+        ALLOCATE( sk(ngm,nab) )
+        !$acc data create(sk)
+        !
+        nb = 0
+        DO na = 1, nat
+           IF ( ityp(na) == nt ) THEN
+              nb = nb + 1
+              !
+              ! Calculate the structure factor for all atoms of type nt
+              !
+              !$acc parallel loop present(eigts1,eigts2,eigts3,mill,eigqts)
+              DO ig = 1, ngm
+                 sk(ig,nb) = eigts1(mill(1,ig),na) * &
+                             eigts2(mill(2,ig),na) * &
+                             eigts3(mill(3,ig),na) * &
+                             eigqts(na)
+              ENDDO
+           ENDIF
+        ENDDO
+        !
         ijh = 0
         DO ih = 1, nh (nt)
            DO jh = ih, nh (nt)
@@ -98,24 +146,21 @@ SUBROUTINE lr_addusddens (npert, dbecsum, drhop)
               CALL qvan2 (ngm, ih, jh, nt, qmod, qgm, ylmk0)
               !
               ijh = ijh + 1
+              nb = 0
               DO na = 1, nat
                  IF (ityp (na) .eq.nt) THEN
+                    nb = nb + 1
                     !
                     ! Calculate the second term in Eq.(36) of the ultrasoft paper.
                     !
                     DO ipert = 1, npert
                        DO is = 1, nspin_mag
+                          dbec = dbecsum(ijh, na, is, ipert)
+                          !$acc parallel loop present(aux, qgm, sk)
                           DO ig = 1, ngm
                              !
-                             ! Calculate the structure factor
-                             !
-                             sk(ig) = eigts1(mill(1,ig),na) * &
-                                      eigts2(mill(2,ig),na) * &
-                                      eigts3(mill(3,ig),na) * &
-                                      eigqts(na)
-                             !
                              aux(ig, is, ipert) = aux(ig, is, ipert) &
-                                + 2.0d0 * qgm(ig) * sk(ig) * dbecsum(ijh,na,is, ipert)
+                                + 2.0d0 * qgm(ig) * sk(ig, nb) * dbec
                              !
                           ENDDO
                        ENDDO
@@ -125,9 +170,14 @@ SUBROUTINE lr_addusddens (npert, dbecsum, drhop)
               ENDDO
            ENDDO
         ENDDO
+        !
+        !$acc end data ! affects only the device-resident sk array
+        DEALLOCATE( sk )
+        !
      ENDIF
   ENDDO
-  !
+  !$acc end data
+  ! aux is copied back to host due to copyout(aux)
   !
   ! Convert aux to real space, and add to the charge density.
   !
@@ -149,11 +199,9 @@ SUBROUTINE lr_addusddens (npert, dbecsum, drhop)
      ENDDO
   ENDDO ! ipert
   !
-  DEALLOCATE (qpg)
   DEALLOCATE (qmod)
   DEALLOCATE (qgm)
   DEALLOCATE (ylmk0)
-  DEALLOCATE (sk)
   DEALLOCATE (aux)
   DEALLOCATE (aux_r)
   !

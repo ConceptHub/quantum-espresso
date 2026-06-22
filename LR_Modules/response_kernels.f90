@@ -77,6 +77,7 @@ SUBROUTINE sternheimer_kernel(first_iter, time_reversed, npert, lrdvpsi, iudvpsi
    USE eqv,                   ONLY : dpsi, dvpsi, evq
    USE apply_dpot_mod,        ONLY : apply_dpot_bands
    USE lr_nc_mag,             ONLY : lr_apply_time_reversal
+   USE incdrhoscf_mod,        ONLY : incdrhoscf, incdrhoscf_nc
    !
    IMPLICIT NONE
    !
@@ -345,6 +346,7 @@ SUBROUTINE sternheimer_kernel_freq(first_iter, time_reversed, npert, lrdvpsi, iu
    USE eqv,                   ONLY : dpsi, dvpsi, evq
    USE apply_dpot_mod,        ONLY : apply_dpot_bands
    USE lr_nc_mag,             ONLY : lr_apply_time_reversal
+   USE incdrhoscf_mod,        ONLY : incdrhoscf, incdrhoscf_nc
    !
    IMPLICIT NONE
    !

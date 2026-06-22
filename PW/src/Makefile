@@ -58,6 +58,7 @@ compute_ux.o \
 Coul_cut_2D.o \
 d_matrix.o \
 data_structure.o \
+diag_direct.o \
 divide_class.o \
 divide_class_so.o \
 divide_et_impera.o \
@@ -80,8 +81,10 @@ ewald.o \
 ewald_dipole.o \
 extfield.o \
 exx_base.o \
-exx_band.o \
 exx.o \
+exx_std.o \
+exx_bp_utils.o \
+exx_bp.o \
 fcp_capacitance.o \
 fcp_dyn_calcavg.o \
 fcp_dyn_printavg.o \
@@ -130,7 +133,6 @@ irreducible_BZ.o \
 iweights.o \
 intersite_V.o \
 init_nsg.o \
-nsg_adj.o \
 start_k.o \
 kpoint_grid.o \
 lchk_tauxk.o \
@@ -178,6 +180,7 @@ plus_u_full.o \
 potinit.o \
 print_clock_pw.o \
 print_ks_energies.o \
+printpot.o \
 punch.o \
 pw_restart_new.o \
 add_qexsd_step.o \
@@ -244,6 +247,7 @@ two_chem.o\
 update_pot.o \
 us_exx.o \
 usnldiag.o \
+v_hubbard.o \
 v_of_rho.o \
 vcsmd.o \
 vcsubs.o \
@@ -283,13 +287,13 @@ PWLIBS += \
   utils_gpu.o \
   oscdft_functions_gpu.o
 
-
-
 QEMODS=../../KS_Solvers/libks_solvers.a ../../dft-d3/libdftd3qe.a $(BASEMODS)
 
-TLDEPS= bindir pwlibs mods libks_solvers dftd3
+# see comments in file tldeps for explanations
+TLDEPS= bindir mods libks_solvers dftd3
+include ../../install/tldeps
 
-all : tldeps pw.x
+all : pw.x
 
 pw.x : $(PWOBJS) libpw.a $(QEMODS)
 	$(LD) $(LDFLAGS) -o $@ \
@@ -301,10 +305,6 @@ pw.x : $(PWOBJS) libpw.a $(QEMODS)
 libpw.a : $(PWLIBS) 
 	$(AR) $(ARFLAGS) $@ $?
 	$(RANLIB) $@
-
-tldeps :
-	if test -n "$(TLDEPS)" ; then \
-	( cd ../.. ; $(MAKE) $(TLDEPS) || exit 1 ) ; fi
 
 clean :
 	- /bin/rm -f *.x *.o *.a *~ *_tmp.f90 *.d *.mod *.i *.L
