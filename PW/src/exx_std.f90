@@ -156,6 +156,7 @@ MODULE exx_std
         ELSE
            ALLOCATE( exxbuff(nrxxs*npol, ibnd_buff_start:ibnd_buff_end, nkqs))
         END IF
+        !$acc enter data create(exxbuff)
       END IF
       !
     ENDIF
@@ -341,6 +342,8 @@ MODULE exx_std
          CALL mp_bcast( exxbuff(:,:,ikq), working_pool(ikq), intra_orthopool_comm ) 
        ENDDO
     ENDIF
+    !
+    !$acc update device(exxbuff)
     !
   END SUBROUTINE exxinit_std
   !
@@ -751,7 +754,7 @@ MODULE exx_std
     ENDIF
     !$acc update device(psi)
     !
-    !$acc data create( rhoc, vc, fac, nl, nl_k, temppsic, result, temppsic_nc, result_nc, result_nc_g) copyin(exxbuff)
+    !$acc data create( rhoc, vc, fac, nl, nl_k, temppsic, result, temppsic_nc, result_nc, result_nc_g) present(exxbuff)
     !
     !$acc parallel loop
     do ig = 1, ngmt 
@@ -1101,7 +1104,7 @@ MODULE exx_std
     ENDIF
     !$acc update device(psi)
     !
-    !$acc data create( rhoc, vc, fac, nl, nl_k, temppsic, result, temppsic_nc, result_nc, result_nc_g) copyin(exxbuff)
+    !$acc data create( rhoc, vc, fac, nl, nl_k, temppsic, result, temppsic_nc, result_nc, result_nc_g) present(exxbuff) 
     !
     !$acc parallel loop
     do ig = 1, ngmt 
@@ -1460,7 +1463,7 @@ MODULE exx_std
     ENDIF
     !$acc update device(psi)
     !
-    !$acc data create(rhoc, vc, fac, temppsic, result, result_g, temppsic_nc, result_nc, result_nc_g) copyin(exxbuff)  
+    !$acc data create(rhoc, vc, fac, temppsic, result, result_g, temppsic_nc, result_nc, result_nc_g) present(exxbuff) 
     !
     LOOP_ON_PSI_BANDS : &
     DO im = 1,m !for each band of psi (the k cycle is outside band)

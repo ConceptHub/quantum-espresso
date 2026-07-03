@@ -132,7 +132,7 @@ MODULE exx
     !
     ! ... set up fft descriptors, including parallel stuff: sticks, planes, etc.
     !
-    IF (negrp == 1 .or. (exx_bgrp_type .eq. EXX_BGRP_BANDS)) THEN
+    IF (negrp == 1 .or. (exx_bgrp_type .ne. EXX_BGRP_PAIRS)) THEN
        !
        ! ... no band parallelization: exx grid is a subgrid of general grid
        !
@@ -231,7 +231,10 @@ MODULE exx
     IF ( ALLOCATED(x_occupation) ) DEALLOCATE( x_occupation )
     IF ( ALLOCATED(x_occupation_d) ) DEALLOCATE( x_occupation_d )
     IF ( ALLOCATED(xkq_collect ) ) DEALLOCATE( xkq_collect  )
-    IF ( ALLOCATED(exxbuff) )      DEALLOCATE( exxbuff )
+    IF ( ALLOCATED(exxbuff) )      THEN
+      !$acc exit data delete(exxbuff)
+      DEALLOCATE( exxbuff )
+    ENDIF
     IF ( ALLOCATED(exxbuff_d) )    DEALLOCATE( exxbuff_d )
     IF ( ALLOCATED(locbuff) )      DEALLOCATE( locbuff )
     IF ( ALLOCATED(locmat) )       DEALLOCATE( locmat )
@@ -371,12 +374,12 @@ MODULE exx
     IF (.NOT. gamma_only) CALL exx_set_symm( dfftt%nr1,  dfftt%nr2,  dfftt%nr3, &
                                              dfftt%nr1x, dfftt%nr2x, dfftt%nr3x )
     !
-    if( exx_bgrp_type .eq. EXX_BGRP_BANDS ) then
-      ! prepare buffers for standard EXX scheme
-      Call exxinit_std( DoLoc )
-    else 
+    if( exx_bgrp_type .eq. EXX_BGRP_PAIRS ) then
       ! prepare buffers for massive EXX scheme (pair parallelism, DFT data transposition)
       Call exxinit_bp()
+    else 
+      ! prepare buffers for standard EXX scheme
+      Call exxinit_std( DoLoc )
     end if
     !
     ! For US/PAW only: compute <beta_I|psi_j,k+q> for the entire 
@@ -491,10 +494,10 @@ MODULE exx
        IF ( lsda ) current_spin = isk(ik)
        ! end setup
        IF ( nks > 1 ) THEN
-          IF ( exx_bgrp_type .eq. EXX_BGRP_BANDS ) THEN
-             CALL get_buffer( psi, nwordwfc, iunwfc, ik )
-          ELSE
+          IF ( exx_bgrp_type .eq. EXX_BGRP_PAIRS ) THEN
              CALL get_buffer( psi, nwordwfc_exx, iunwfc_exx, ik )
+          ELSE
+             CALL get_buffer( psi, nwordwfc, iunwfc, ik )
           END IF
        ELSE
           psi(1:npwx*npol,1:nbnd) = evc(1:npwx*npol,1:nbnd)
@@ -502,10 +505,10 @@ MODULE exx
        !
        IF (okvan) THEN
           ! prepare the |beta> function at k+q
-          IF ( exx_bgrp_type .eq. EXX_BGRP_BANDS ) THEN
-             CALL init_us_2( npw, igk_k(1,ik), xk(:,ik), vkb )
-          ELSE
+          IF ( exx_bgrp_type .eq. EXX_BGRP_PAIRS ) THEN
              CALL init_us_2( npw, igk_exx(1,ik), xk(:,ik), vkb )
+          ELSE
+             CALL init_us_2( npw, igk_k(1,ik), xk(:,ik), vkb )
           END IF
           ! compute <beta_I|psi_j> at this k+q point, for all band and all projectors
           CALL calbec( npw, vkb, psi, becpsi, nbnd )
@@ -530,10 +533,10 @@ MODULE exx
     !
     IF (gamma_only) energy = 2 * energy
     !
-    IF ( exx_bgrp_type .eq. EXX_BGRP_BANDS ) THEN
-       CALL mp_sum( energy, intra_bgrp_comm )
-    ELSE
+    IF ( exx_bgrp_type .eq. EXX_BGRP_PAIRS ) THEN
        CALL mp_sum( energy, intra_egrp_comm )
+    ELSE
+       CALL mp_sum( energy, intra_bgrp_comm )
     END IF
     CALL mp_sum( energy, inter_pool_comm )
     IF (okvan)  CALL deallocate_bec_type( becpsi )
@@ -556,17 +559,17 @@ MODULE exx
     !
     CALL start_clock( 'exxenergy' )
     !
-    IF ( exx_bgrp_type .eq. EXX_BGRP_BANDS ) THEN
-       !
-       exxenergy2 = exxenergy()
-       !
-    ELSE
+    IF ( exx_bgrp_type .eq. EXX_BGRP_PAIRS ) THEN
        !
        IF ( gamma_only ) THEN
           exxenergy2 = exxenergy_bp_gamma()
        ELSE
           exxenergy2 = exxenergy_bp_k()
        ENDIF
+       !
+    ELSE
+       !
+       exxenergy2 = exxenergy()
        !
     END IF
     !
@@ -588,10 +591,10 @@ MODULE exx
     !
     CALL start_clock( 'exx_stress' )
     !
-    IF ( exx_bgrp_type .eq. EXX_BGRP_BANDS ) THEN 
-       exx_stress = exx_stress_std() 
-    ELSE
+    IF ( exx_bgrp_type .eq. EXX_BGRP_PAIRS ) THEN 
        exx_stress = exx_stress_bp() 
+    ELSE
+       exx_stress = exx_stress_std() 
     END IF
     !
     CALL stop_clock( 'exx_stress' )
