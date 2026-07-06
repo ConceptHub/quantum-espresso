@@ -1,18 +1,22 @@
 
-     Program PHONON v.6.5 starts on 21Mar2020 at 18:42:22 
+     Program PHONON v.7.6-dev starts on  6Jul2026 at 10:24:17 
 
      This program is part of the open-source Quantum ESPRESSO suite
      for quantum simulation of materials; please cite
          "P. Giannozzi et al., J. Phys.:Condens. Matter 21 395502 (2009);
          "P. Giannozzi et al., J. Phys.:Condens. Matter 29 465901 (2017);
+         "P. Giannozzi et al., J. Chem. Phys. 152 154105 (2020);
           URL http://www.quantum-espresso.org", 
      in publications or presentations arising from this work. More details at
      http://www.quantum-espresso.org/quote
 
-     Parallel version (MPI), running on     1 processors
+     Parallel version (MPI), running on     4 processors
 
      MPI processes distributed on     1 nodes
-     Fft bands division:     nmany     =       1
+     8003 MiB available memory on the printing compute node when the environment starts
+
+     Waiting for input...
+     Reading input from standard input
 
 
      Dynamical matrices for q-points given in input
@@ -32,8 +36,11 @@
      Reading xml data from directory:
 
      ./aluminum.save/
-     Message from routine qexsd_readschema :
-     input info not found or not readable in xml file
+
+     R & G space division:  proc/nbgrp/npool/nimage =       4
+     Subspace diagonalization in iterative solution of the eigenvalue problem:
+     a serial algorithm will be used
+
 
      IMPORTANT: XC functional enforced from input :
      Exchange-correlation= PZ
@@ -41,13 +48,42 @@
      Any further DFT definition will be discarded
      Please, verify this is what you really want
 
- 
-     G-vector sticks info
+
+     Parallelization info
      --------------------
      sticks:   dense  smooth     PW     G-vecs:    dense   smooth      PW
+     Min          30      30     10                  216      216      45
+     Max          31      31     11                  218      218      46
      Sum         121     121     43                  869      869     181
- 
-     Reading collected, re-writing distributed wavefunctions
+
+     Using Slab Decomposition
+
+     Reading collected, re-writing distributed wavefunctions in ./
+
+     Number and degeneracy of irreps per q-point
+       N         xq(1)         xq(2)         xq(3)   N irreps
+       1   0.000000000   0.000000000   0.000000000       1
+        3
+       2   0.250000000   0.000000000   0.000000000       2
+        1   2
+       3   0.500000000   0.000000000   0.000000000       2
+        1   2
+       4   1.000000000   0.000000000   0.000000000       2
+        2   1
+       5   0.750000000   0.250000000   0.250000000       3
+     No degeneracy
+       6   0.500000000   0.500000000   0.500000000       2
+        2   1
+       7   0.250000000   0.250000000   0.250000000       2
+        1   2
+       8   0.000000000   0.000000000   0.000000000       1
+        3
+       9   0.250000000   0.250000000   0.000000000       3
+     No degeneracy
+      10   0.500000000   0.500000000   0.000000000       3
+     No degeneracy
+
+     Saving dvscf to file. Distribute only q points, not irreducible representations.
 
      Calculation of q =    0.0000000   0.0000000   0.0000000
 
@@ -86,15 +122,15 @@
      Cartesian axes
 
      site n.  atom      mass           positions (alat units)
-        1     Al  26.9800   tau(    1) = (   -0.16667    0.33333    0.50000  )
+        1  Al     26.9800   tau(    1) = (   -0.16667    0.33333    0.50000  )
 
      Computing dynamical matrix for 
                     q = (   0.0000000   0.0000000   0.0000000 )
- 
+
      49 Sym.Ops. (with q -> -q+G )
 
 
-     G cutoff =   85.4897  (    869 G-vectors)     FFT grid: ( 15, 15, 15)
+     G cutoff =   85.4897  (    217 G-vectors)     FFT grid: ( 15, 15, 15)
 
      number of k points=    29  Marzari-Vanderbilt smearing, width (Ry)=  0.0500
 
@@ -111,12 +147,12 @@
 
 
      Atomic displacements:
-     There are   1 irreducible representations
+     There are    1 irreducible representations
 
-     Representation     1      3 modes -T_1u G_15  G_4-  To be done
+     Representation     1      3 modes -  To be done
 
 
-     PHONON       :      0.16s CPU      0.17s WALL
+     PHONON       :      0.04s CPU      0.05s WALL
 
      Fourier interpolating dVscf
      Reading dynamics matrix from file al.elph.dyn1
@@ -126,92 +162,92 @@
      q = (    0.000000000   0.000000000   0.000000000 ) 
 
  **************************************************************************
-     freq (    1) =       0.171312 [THz] =       5.714340 [cm-1]
-     freq (    2) =       0.171312 [THz] =       5.714340 [cm-1]
-     freq (    3) =       0.171312 [THz] =       5.714340 [cm-1]
+     freq (    1) =       0.173088 [THz] =       5.773593 [cm-1]
+     freq (    2) =       0.173088 [THz] =       5.773593 [cm-1]
+     freq (    3) =       0.173088 [THz] =       5.773593 [cm-1]
  **************************************************************************
- 
+
      Gaussian Broadening:   0.020 Ry, ngauss=   0
-     DOS =  2.675809 states/spin/Ry/Unit Cell at Ef=  8.278667 eV
-     double delta at Ef =104.058639
+     DOS =  2.675809 states/spin/Ry/Unit Cell at Ef=  8.278666 eV
+     double delta at Ef =104.058647
      lambda(    1)=  0.0000   gamma=    0.00 GHz
      lambda(    2)=  0.0000   gamma=    0.00 GHz
      lambda(    3)=  0.0000   gamma=    0.00 GHz
- 
+
      Gaussian Broadening:   0.040 Ry, ngauss=   0
-     DOS =  2.703387 states/spin/Ry/Unit Cell at Ef=  8.200081 eV
-     double delta at Ef = 56.350968
+     DOS =  2.703385 states/spin/Ry/Unit Cell at Ef=  8.200080 eV
+     double delta at Ef = 56.350923
      lambda(    1)=  0.0000   gamma=    0.32 GHz
      lambda(    2)=  0.0000   gamma=    0.32 GHz
      lambda(    3)=  0.0000   gamma=    0.32 GHz
- 
+
      Gaussian Broadening:   0.060 Ry, ngauss=   0
-     DOS =  2.781691 states/spin/Ry/Unit Cell at Ef=  8.182007 eV
-     double delta at Ef = 42.846273
+     DOS =  2.781690 states/spin/Ry/Unit Cell at Ef=  8.182006 eV
+     double delta at Ef = 42.846251
      lambda(    1)=  0.0000   gamma=    1.23 GHz
      lambda(    2)=  0.0000   gamma=    1.23 GHz
      lambda(    3)=  0.0000   gamma=    1.23 GHz
- 
+
      Gaussian Broadening:   0.080 Ry, ngauss=   0
-     DOS =  2.793236 states/spin/Ry/Unit Cell at Ef=  8.205919 eV
-     double delta at Ef = 36.753070
+     DOS =  2.793236 states/spin/Ry/Unit Cell at Ef=  8.205918 eV
+     double delta at Ef = 36.753058
      lambda(    1)=  0.0000   gamma=    2.20 GHz
      lambda(    2)=  0.0000   gamma=    2.20 GHz
      lambda(    3)=  0.0000   gamma=    2.20 GHz
- 
+
      Gaussian Broadening:   0.100 Ry, ngauss=   0
-     DOS =  2.781098 states/spin/Ry/Unit Cell at Ef=  8.232637 eV
-     double delta at Ef = 32.865698
+     DOS =  2.781098 states/spin/Ry/Unit Cell at Ef=  8.232636 eV
+     double delta at Ef = 32.865692
      lambda(    1)=  0.0000   gamma=    2.67 GHz
      lambda(    2)=  0.0000   gamma=    2.67 GHz
      lambda(    3)=  0.0000   gamma=    2.67 GHz
- 
+
      Gaussian Broadening:   0.120 Ry, ngauss=   0
-     DOS =  2.753458 states/spin/Ry/Unit Cell at Ef=  8.253288 eV
-     double delta at Ef = 29.857717
+     DOS =  2.753458 states/spin/Ry/Unit Cell at Ef=  8.253287 eV
+     double delta at Ef = 29.857713
      lambda(    1)=  0.0000   gamma=    2.80 GHz
      lambda(    2)=  0.0000   gamma=    2.80 GHz
      lambda(    3)=  0.0000   gamma=    2.80 GHz
- 
+
      Gaussian Broadening:   0.140 Ry, ngauss=   0
-     DOS =  2.719703 states/spin/Ry/Unit Cell at Ef=  8.267116 eV
-     double delta at Ef = 27.504731
+     DOS =  2.719702 states/spin/Ry/Unit Cell at Ef=  8.267115 eV
+     double delta at Ef = 27.504728
      lambda(    1)=  0.0000   gamma=    2.87 GHz
      lambda(    2)=  0.0000   gamma=    2.87 GHz
      lambda(    3)=  0.0000   gamma=    2.87 GHz
- 
+
      Gaussian Broadening:   0.160 Ry, ngauss=   0
-     DOS =  2.693265 states/spin/Ry/Unit Cell at Ef=  8.275899 eV
-     double delta at Ef = 25.729529
+     DOS =  2.693265 states/spin/Ry/Unit Cell at Ef=  8.275898 eV
+     double delta at Ef = 25.729528
      lambda(    1)=  0.0000   gamma=    2.95 GHz
      lambda(    2)=  0.0000   gamma=    2.95 GHz
      lambda(    3)=  0.0000   gamma=    2.95 GHz
- 
+
      Gaussian Broadening:   0.180 Ry, ngauss=   0
-     DOS =  2.678788 states/spin/Ry/Unit Cell at Ef=  8.281626 eV
-     double delta at Ef = 24.395225
+     DOS =  2.678788 states/spin/Ry/Unit Cell at Ef=  8.281625 eV
+     double delta at Ef = 24.395224
      lambda(    1)=  0.0000   gamma=    3.04 GHz
      lambda(    2)=  0.0000   gamma=    3.04 GHz
      lambda(    3)=  0.0000   gamma=    3.04 GHz
- 
+
      Gaussian Broadening:   0.200 Ry, ngauss=   0
-     DOS =  2.674046 states/spin/Ry/Unit Cell at Ef=  8.285693 eV
-     double delta at Ef = 23.360121
+     DOS =  2.674046 states/spin/Ry/Unit Cell at Ef=  8.285691 eV
+     double delta at Ef = 23.360120
      lambda(    1)=  0.0000   gamma=    3.12 GHz
      lambda(    2)=  0.0000   gamma=    3.12 GHz
      lambda(    3)=  0.0000   gamma=    3.12 GHz
 
      Calculation of q =    0.2500000   0.0000000   0.0000000
 
-     Subspace diagonalization in iterative solution of the eigenvalue problem:
-     a serial algorithm will be used
-
- 
-     G-vector sticks info
+     Parallelization info
      --------------------
      sticks:   dense  smooth     PW     G-vecs:    dense   smooth      PW
+     Min          30      30     13                  216      216      64
+     Max          31      31     14                  218      218      65
      Sum         121     121     55                  869      869     259
- 
+
+     Using Slab Decomposition
+
 
      Title: 
      Electron-phonon coefficients for Al using Fourier interpolation of dvscf   
@@ -253,7 +289,7 @@
                 l(2) =   1
 
      atomic species   valence    mass     pseudopotential
-        Al             3.00    26.98000     Al( 1.00)
+     Al                3.00    26.98000     Al( 1.00)
 
      48 Sym. Ops., with inversion, found
 
@@ -262,7 +298,7 @@
    Cartesian axes
 
      site n.     atom                  positions (alat units)
-         1           Al  tau(   1) = (  -0.1666667   0.3333333   0.5000000  )
+         1        Al     tau(   1) = (  -0.1666667   0.3333333   0.5000000  )
 
      number of k points=   200  Marzari-Vanderbilt smearing, width (Ry)=  0.0500
 
@@ -270,7 +306,9 @@
 
      Dense  grid:      869 G-vectors     FFT dimensions: (  15,  15,  15)
 
-     Estimated max dynamical RAM per process >       0.51 MB
+     Estimated max dynamical RAM per process >       0.19 MB
+
+     Estimated total dynamical RAM >       0.77 MB
 
      The potential is recalculated from file :
      ./_ph0/aluminum.q_2/aluminum.save/charge-density
@@ -280,9 +318,9 @@
      Band Structure Calculation
      Davidson diagonalization with overlap
 
-     ethr =  3.33E-10,  avg # of iterations = 13.3
+     ethr =  3.33E-10,  avg # of iterations = 13.4
 
-     total cpu time spent up to now is        2.0 secs
+     total cpu time spent up to now is        0.7 secs
 
      End of band structure calculation
 
@@ -290,7 +328,8 @@
 
      the Fermi energy is     8.1776 ev
 
-     Writing output data file ./_ph0/aluminum.q_2/aluminum.save/
+     Writing config to output data dir ./_ph0/aluminum.q_2/aluminum.save/ :
+     XML data file
 
      Electron-phonon coefficients for Al using Fourier interpolation of dvscf   
 
@@ -327,15 +366,15 @@
      Cartesian axes
 
      site n.  atom      mass           positions (alat units)
-        1     Al  26.9800   tau(    1) = (   -0.16667    0.33333    0.50000  )
+        1  Al     26.9800   tau(    1) = (   -0.16667    0.33333    0.50000  )
 
      Computing dynamical matrix for 
                     q = (   0.2500000   0.0000000   0.0000000 )
- 
+
       8 Sym.Ops. (no q -> -q+G )
 
 
-     G cutoff =   85.4897  (    869 G-vectors)     FFT grid: ( 15, 15, 15)
+     G cutoff =   85.4897  (    218 G-vectors)     FFT grid: ( 15, 15, 15)
 
      number of k points=   200  Marzari-Vanderbilt smearing, width (Ry)=  0.0500
 
@@ -352,14 +391,16 @@
 
 
      Atomic displacements:
-     There are   2 irreducible representations
+     There are    2 irreducible representations
 
-     Representation     1      1 modes -A_1  G_1 D_1  To be done
+     Representation     1      1 modes -  To be done
 
-     Representation     2      2 modes -E    G_5 D_5  To be done
+     Representation     2      2 modes -  To be done
 
 
-     PHONON       :      2.31s CPU      2.41s WALL
+     Message from routine init_vloc:
+     Interpolation table for Vloc re-allocated
+     PHONON       :      0.70s CPU      0.79s WALL
 
      Fourier interpolating dVscf
      Reading dynamics matrix from file al.elph.dyn2
@@ -369,88 +410,92 @@
      q = (    0.250000000   0.000000000   0.000000000 ) 
 
  **************************************************************************
-     freq (    1) =       2.295452 [THz] =      76.568033 [cm-1]
-     freq (    2) =       2.295452 [THz] =      76.568033 [cm-1]
-     freq (    3) =       4.006882 [THz] =     133.655194 [cm-1]
+     freq (    1) =       2.295311 [THz] =      76.563332 [cm-1]
+     freq (    2) =       2.295311 [THz] =      76.563332 [cm-1]
+     freq (    3) =       4.003796 [THz] =     133.552270 [cm-1]
  **************************************************************************
- 
+
      Gaussian Broadening:   0.020 Ry, ngauss=   0
      DOS =  2.675810 states/spin/Ry/Unit Cell at Ef=  8.278657 eV
-     double delta at Ef = 20.425507
-     lambda(    1)=  0.1971   gamma=    2.65 GHz
-     lambda(    2)=  0.1971   gamma=    2.65 GHz
-     lambda(    3)=  0.0284   gamma=    1.17 GHz
- 
+     double delta at Ef = 20.425511
+     lambda(    1)=  0.1972   gamma=    2.65 GHz
+     lambda(    2)=  0.1972   gamma=    2.65 GHz
+     lambda(    3)=  0.0285   gamma=    1.17 GHz
+
      Gaussian Broadening:   0.040 Ry, ngauss=   0
      DOS =  2.703426 states/spin/Ry/Unit Cell at Ef=  8.200073 eV
-     double delta at Ef = 19.334701
+     double delta at Ef = 19.334703
      lambda(    1)=  0.4732   gamma=    6.44 GHz
      lambda(    2)=  0.4732   gamma=    6.44 GHz
-     lambda(    3)=  0.1749   gamma=    7.25 GHz
- 
+     lambda(    3)=  0.1752   gamma=    7.25 GHz
+
      Gaussian Broadening:   0.060 Ry, ngauss=   0
      DOS =  2.781707 states/spin/Ry/Unit Cell at Ef=  8.181999 eV
-     double delta at Ef = 19.823356
-     lambda(    1)=  0.3191   gamma=    4.47 GHz
-     lambda(    2)=  0.3191   gamma=    4.47 GHz
-     lambda(    3)=  0.3083   gamma=   13.15 GHz
- 
+     double delta at Ef = 19.823357
+     lambda(    1)=  0.3192   gamma=    4.47 GHz
+     lambda(    2)=  0.3192   gamma=    4.47 GHz
+     lambda(    3)=  0.3088   gamma=   13.15 GHz
+
      Gaussian Broadening:   0.080 Ry, ngauss=   0
-     DOS =  2.793243 states/spin/Ry/Unit Cell at Ef=  8.205910 eV
+     DOS =  2.793243 states/spin/Ry/Unit Cell at Ef=  8.205911 eV
      double delta at Ef = 19.866604
      lambda(    1)=  0.2745   gamma=    3.86 GHz
      lambda(    2)=  0.2745   gamma=    3.86 GHz
-     lambda(    3)=  0.3493   gamma=   14.96 GHz
- 
+     lambda(    3)=  0.3499   gamma=   14.96 GHz
+
      Gaussian Broadening:   0.100 Ry, ngauss=   0
      DOS =  2.781101 states/spin/Ry/Unit Cell at Ef=  8.232628 eV
-     double delta at Ef = 20.003856
+     double delta at Ef = 20.003857
      lambda(    1)=  0.2810   gamma=    3.93 GHz
      lambda(    2)=  0.2810   gamma=    3.93 GHz
-     lambda(    3)=  0.3604   gamma=   15.37 GHz
- 
+     lambda(    3)=  0.3610   gamma=   15.37 GHz
+
      Gaussian Broadening:   0.120 Ry, ngauss=   0
      DOS =  2.753459 states/spin/Ry/Unit Cell at Ef=  8.253279 eV
      double delta at Ef = 20.043744
-     lambda(    1)=  0.2976   gamma=    4.12 GHz
-     lambda(    2)=  0.2976   gamma=    4.12 GHz
-     lambda(    3)=  0.3623   gamma=   15.29 GHz
- 
+     lambda(    1)=  0.2977   gamma=    4.12 GHz
+     lambda(    2)=  0.2977   gamma=    4.12 GHz
+     lambda(    3)=  0.3629   gamma=   15.30 GHz
+
      Gaussian Broadening:   0.140 Ry, ngauss=   0
      DOS =  2.719703 states/spin/Ry/Unit Cell at Ef=  8.267107 eV
-     double delta at Ef = 19.991055
+     double delta at Ef = 19.991056
      lambda(    1)=  0.3126   gamma=    4.28 GHz
      lambda(    2)=  0.3126   gamma=    4.28 GHz
-     lambda(    3)=  0.3616   gamma=   15.08 GHz
- 
+     lambda(    3)=  0.3622   gamma=   15.08 GHz
+
      Gaussian Broadening:   0.160 Ry, ngauss=   0
      DOS =  2.693266 states/spin/Ry/Unit Cell at Ef=  8.275890 eV
      double delta at Ef = 19.897014
      lambda(    1)=  0.3236   gamma=    4.39 GHz
      lambda(    2)=  0.3236   gamma=    4.39 GHz
-     lambda(    3)=  0.3592   gamma=   14.83 GHz
- 
+     lambda(    3)=  0.3599   gamma=   14.84 GHz
+
      Gaussian Broadening:   0.180 Ry, ngauss=   0
      DOS =  2.678788 states/spin/Ry/Unit Cell at Ef=  8.281617 eV
      double delta at Ef = 19.776351
-     lambda(    1)=  0.3309   gamma=    4.46 GHz
-     lambda(    2)=  0.3309   gamma=    4.46 GHz
-     lambda(    3)=  0.3551   gamma=   14.58 GHz
- 
+     lambda(    1)=  0.3310   gamma=    4.46 GHz
+     lambda(    2)=  0.3310   gamma=    4.46 GHz
+     lambda(    3)=  0.3557   gamma=   14.59 GHz
+
      Gaussian Broadening:   0.200 Ry, ngauss=   0
      DOS =  2.674046 states/spin/Ry/Unit Cell at Ef=  8.285684 eV
      double delta at Ef = 19.625993
      lambda(    1)=  0.3355   gamma=    4.51 GHz
      lambda(    2)=  0.3355   gamma=    4.51 GHz
-     lambda(    3)=  0.3492   gamma=   14.32 GHz
+     lambda(    3)=  0.3498   gamma=   14.32 GHz
 
      Calculation of q =    0.5000000   0.0000000   0.0000000
- 
-     G-vector sticks info
+
+     Parallelization info
      --------------------
      sticks:   dense  smooth     PW     G-vecs:    dense   smooth      PW
+     Min          30      30     13                  216      216      64
+     Max          31      31     14                  218      218      65
      Sum         121     121     55                  869      869     259
- 
+
+     Using Slab Decomposition
+
 
      Title: 
      Electron-phonon coefficients for Al using Fourier interpolation of dvscf   
@@ -492,7 +537,7 @@
                 l(2) =   1
 
      atomic species   valence    mass     pseudopotential
-        Al             3.00    26.98000     Al( 1.00)
+     Al                3.00    26.98000     Al( 1.00)
 
      48 Sym. Ops., with inversion, found
 
@@ -501,7 +546,7 @@
    Cartesian axes
 
      site n.     atom                  positions (alat units)
-         1           Al  tau(   1) = (  -0.1666667   0.3333333   0.5000000  )
+         1        Al     tau(   1) = (  -0.1666667   0.3333333   0.5000000  )
 
      number of k points=   200  Marzari-Vanderbilt smearing, width (Ry)=  0.0500
 
@@ -509,7 +554,9 @@
 
      Dense  grid:      869 G-vectors     FFT dimensions: (  15,  15,  15)
 
-     Estimated max dynamical RAM per process >       0.52 MB
+     Estimated max dynamical RAM per process >       0.19 MB
+
+     Estimated total dynamical RAM >       0.78 MB
 
      The potential is recalculated from file :
      ./_ph0/aluminum.q_3/aluminum.save/charge-density
@@ -519,9 +566,9 @@
      Band Structure Calculation
      Davidson diagonalization with overlap
 
-     ethr =  3.33E-10,  avg # of iterations = 13.3
+     ethr =  3.33E-10,  avg # of iterations = 13.4
 
-     total cpu time spent up to now is        3.9 secs
+     total cpu time spent up to now is        1.4 secs
 
      End of band structure calculation
 
@@ -529,7 +576,8 @@
 
      the Fermi energy is     8.1776 ev
 
-     Writing output data file ./_ph0/aluminum.q_3/aluminum.save/
+     Writing config to output data dir ./_ph0/aluminum.q_3/aluminum.save/ :
+     XML data file
 
      Electron-phonon coefficients for Al using Fourier interpolation of dvscf   
 
@@ -566,15 +614,15 @@
      Cartesian axes
 
      site n.  atom      mass           positions (alat units)
-        1     Al  26.9800   tau(    1) = (   -0.16667    0.33333    0.50000  )
+        1  Al     26.9800   tau(    1) = (   -0.16667    0.33333    0.50000  )
 
      Computing dynamical matrix for 
                     q = (   0.5000000   0.0000000   0.0000000 )
- 
+
       8 Sym.Ops. (no q -> -q+G )
 
 
-     G cutoff =   85.4897  (    869 G-vectors)     FFT grid: ( 15, 15, 15)
+     G cutoff =   85.4897  (    218 G-vectors)     FFT grid: ( 15, 15, 15)
 
      number of k points=   200  Marzari-Vanderbilt smearing, width (Ry)=  0.0500
 
@@ -591,14 +639,14 @@
 
 
      Atomic displacements:
-     There are   2 irreducible representations
+     There are    2 irreducible representations
 
-     Representation     1      1 modes -A_1  G_1 D_1  To be done
+     Representation     1      1 modes -  To be done
 
-     Representation     2      2 modes -E    G_5 D_5  To be done
+     Representation     2      2 modes -  To be done
 
 
-     PHONON       :      4.67s CPU      4.88s WALL
+     PHONON       :      1.46s CPU      1.66s WALL
 
      Fourier interpolating dVscf
      Reading dynamics matrix from file al.elph.dyn3
@@ -608,88 +656,92 @@
      q = (    0.500000000   0.000000000   0.000000000 ) 
 
  **************************************************************************
-     freq (    1) =       4.200411 [THz] =     140.110639 [cm-1]
-     freq (    2) =       4.200411 [THz] =     140.110639 [cm-1]
-     freq (    3) =       6.475305 [THz] =     215.992926 [cm-1]
+     freq (    1) =       4.200357 [THz] =     140.108822 [cm-1]
+     freq (    2) =       4.200357 [THz] =     140.108822 [cm-1]
+     freq (    3) =       6.481418 [THz] =     216.196825 [cm-1]
  **************************************************************************
- 
+
      Gaussian Broadening:   0.020 Ry, ngauss=   0
      DOS =  2.675810 states/spin/Ry/Unit Cell at Ef=  8.278657 eV
      double delta at Ef =  1.280706
      lambda(    1)=  0.0000   gamma=    0.00 GHz
      lambda(    2)=  0.0000   gamma=    0.00 GHz
-     lambda(    3)=  0.0582   gamma=    6.24 GHz
- 
+     lambda(    3)=  0.0581   gamma=    6.24 GHz
+
      Gaussian Broadening:   0.040 Ry, ngauss=   0
      DOS =  2.703426 states/spin/Ry/Unit Cell at Ef=  8.200073 eV
-     double delta at Ef =  7.961468
+     double delta at Ef =  7.961469
      lambda(    1)=  0.0345   gamma=    1.57 GHz
      lambda(    2)=  0.0345   gamma=    1.57 GHz
-     lambda(    3)=  0.2567   gamma=   27.78 GHz
- 
+     lambda(    3)=  0.2562   gamma=   27.79 GHz
+
      Gaussian Broadening:   0.060 Ry, ngauss=   0
      DOS =  2.781707 states/spin/Ry/Unit Cell at Ef=  8.181999 eV
      double delta at Ef = 13.294748
      lambda(    1)=  0.0982   gamma=    4.60 GHz
      lambda(    2)=  0.0982   gamma=    4.60 GHz
-     lambda(    3)=  0.2741   gamma=   30.52 GHz
- 
+     lambda(    3)=  0.2736   gamma=   30.53 GHz
+
      Gaussian Broadening:   0.080 Ry, ngauss=   0
-     DOS =  2.793243 states/spin/Ry/Unit Cell at Ef=  8.205910 eV
+     DOS =  2.793243 states/spin/Ry/Unit Cell at Ef=  8.205911 eV
      double delta at Ef = 15.274766
      lambda(    1)=  0.1284   gamma=    6.04 GHz
      lambda(    2)=  0.1284   gamma=    6.04 GHz
-     lambda(    3)=  0.2682   gamma=   29.99 GHz
- 
+     lambda(    3)=  0.2677   gamma=   30.00 GHz
+
      Gaussian Broadening:   0.100 Ry, ngauss=   0
      DOS =  2.781101 states/spin/Ry/Unit Cell at Ef=  8.232628 eV
      double delta at Ef = 16.049476
      lambda(    1)=  0.1449   gamma=    6.79 GHz
      lambda(    2)=  0.1449   gamma=    6.79 GHz
-     lambda(    3)=  0.2628   gamma=   29.26 GHz
- 
+     lambda(    3)=  0.2623   gamma=   29.27 GHz
+
      Gaussian Broadening:   0.120 Ry, ngauss=   0
      DOS =  2.753459 states/spin/Ry/Unit Cell at Ef=  8.253279 eV
      double delta at Ef = 16.311098
      lambda(    1)=  0.1537   gamma=    7.13 GHz
      lambda(    2)=  0.1537   gamma=    7.13 GHz
-     lambda(    3)=  0.2588   gamma=   28.53 GHz
- 
+     lambda(    3)=  0.2583   gamma=   28.53 GHz
+
      Gaussian Broadening:   0.140 Ry, ngauss=   0
      DOS =  2.719703 states/spin/Ry/Unit Cell at Ef=  8.267107 eV
-     double delta at Ef = 16.374728
+     double delta at Ef = 16.374729
      lambda(    1)=  0.1582   gamma=    7.25 GHz
      lambda(    2)=  0.1582   gamma=    7.25 GHz
-     lambda(    3)=  0.2578   gamma=   28.07 GHz
- 
+     lambda(    3)=  0.2573   gamma=   28.07 GHz
+
      Gaussian Broadening:   0.160 Ry, ngauss=   0
      DOS =  2.693266 states/spin/Ry/Unit Cell at Ef=  8.275890 eV
      double delta at Ef = 16.366754
      lambda(    1)=  0.1603   gamma=    7.27 GHz
      lambda(    2)=  0.1603   gamma=    7.27 GHz
-     lambda(    3)=  0.2586   gamma=   27.89 GHz
- 
+     lambda(    3)=  0.2581   gamma=   27.89 GHz
+
      Gaussian Broadening:   0.180 Ry, ngauss=   0
      DOS =  2.678788 states/spin/Ry/Unit Cell at Ef=  8.281617 eV
      double delta at Ef = 16.332596
      lambda(    1)=  0.1610   gamma=    7.27 GHz
      lambda(    2)=  0.1610   gamma=    7.27 GHz
-     lambda(    3)=  0.2597   gamma=   27.86 GHz
- 
+     lambda(    3)=  0.2593   gamma=   27.86 GHz
+
      Gaussian Broadening:   0.200 Ry, ngauss=   0
      DOS =  2.674046 states/spin/Ry/Unit Cell at Ef=  8.285684 eV
-     double delta at Ef = 16.288343
+     double delta at Ef = 16.288344
      lambda(    1)=  0.1610   gamma=    7.26 GHz
      lambda(    2)=  0.1610   gamma=    7.26 GHz
-     lambda(    3)=  0.2603   gamma=   27.87 GHz
+     lambda(    3)=  0.2599   gamma=   27.88 GHz
 
      Calculation of q =    1.0000000   0.0000000   0.0000000
- 
-     G-vector sticks info
+
+     Parallelization info
      --------------------
      sticks:   dense  smooth     PW     G-vecs:    dense   smooth      PW
+     Min          30      30     15                  216      216      82
+     Max          31      31     16                  218      218      83
      Sum         121     121     61                  869      869     331
- 
+
+     Using Slab Decomposition
+
 
      Title: 
      Electron-phonon coefficients for Al using Fourier interpolation of dvscf   
@@ -731,7 +783,7 @@
                 l(2) =   1
 
      atomic species   valence    mass     pseudopotential
-        Al             3.00    26.98000     Al( 1.00)
+     Al                3.00    26.98000     Al( 1.00)
 
      48 Sym. Ops., with inversion, found
 
@@ -740,7 +792,7 @@
    Cartesian axes
 
      site n.     atom                  positions (alat units)
-         1           Al  tau(   1) = (  -0.1666667   0.3333333   0.5000000  )
+         1        Al     tau(   1) = (  -0.1666667   0.3333333   0.5000000  )
 
      number of k points=   118  Marzari-Vanderbilt smearing, width (Ry)=  0.0500
 
@@ -748,7 +800,9 @@
 
      Dense  grid:      869 G-vectors     FFT dimensions: (  15,  15,  15)
 
-     Estimated max dynamical RAM per process >       0.52 MB
+     Estimated max dynamical RAM per process >       0.20 MB
+
+     Estimated total dynamical RAM >       0.79 MB
 
      The potential is recalculated from file :
      ./_ph0/aluminum.q_4/aluminum.save/charge-density
@@ -758,9 +812,9 @@
      Band Structure Calculation
      Davidson diagonalization with overlap
 
-     ethr =  3.33E-10,  avg # of iterations = 13.1
+     ethr =  3.33E-10,  avg # of iterations = 13.2
 
-     total cpu time spent up to now is        5.1 secs
+     total cpu time spent up to now is        1.8 secs
 
      End of band structure calculation
 
@@ -768,7 +822,8 @@
 
      the Fermi energy is     8.1776 ev
 
-     Writing output data file ./_ph0/aluminum.q_4/aluminum.save/
+     Writing config to output data dir ./_ph0/aluminum.q_4/aluminum.save/ :
+     XML data file
 
      Electron-phonon coefficients for Al using Fourier interpolation of dvscf   
 
@@ -805,15 +860,15 @@
      Cartesian axes
 
      site n.  atom      mass           positions (alat units)
-        1     Al  26.9800   tau(    1) = (   -0.16667    0.33333    0.50000  )
+        1  Al     26.9800   tau(    1) = (   -0.16667    0.33333    0.50000  )
 
      Computing dynamical matrix for 
                     q = (   1.0000000   0.0000000   0.0000000 )
- 
+
      17 Sym.Ops. (with q -> -q+G )
 
 
-     G cutoff =   85.4897  (    869 G-vectors)     FFT grid: ( 15, 15, 15)
+     G cutoff =   85.4897  (    218 G-vectors)     FFT grid: ( 15, 15, 15)
 
      number of k points=   118  Marzari-Vanderbilt smearing, width (Ry)=  0.0500
 
@@ -828,14 +883,14 @@
 
 
      Atomic displacements:
-     There are   2 irreducible representations
+     There are    2 irreducible representations
 
      Representation     1      2 modes -  To be done
 
      Representation     2      1 modes -  To be done
 
 
-     PHONON       :      6.27s CPU      6.54s WALL
+     PHONON       :      1.96s CPU      2.23s WALL
 
      Fourier interpolating dVscf
      Reading dynamics matrix from file al.elph.dyn4
@@ -845,88 +900,92 @@
      q = (    1.000000000   0.000000000   0.000000000 ) 
 
  **************************************************************************
-     freq (    1) =       6.062766 [THz] =     202.232095 [cm-1]
-     freq (    2) =       6.062766 [THz] =     202.232095 [cm-1]
-     freq (    3) =       9.881199 [THz] =     329.601333 [cm-1]
+     freq (    1) =       6.062837 [THz] =     202.234468 [cm-1]
+     freq (    2) =       6.062837 [THz] =     202.234468 [cm-1]
+     freq (    3) =       9.881016 [THz] =     329.595212 [cm-1]
  **************************************************************************
- 
+
      Gaussian Broadening:   0.020 Ry, ngauss=   0
      DOS =  2.675810 states/spin/Ry/Unit Cell at Ef=  8.278657 eV
-     double delta at Ef = 34.425003
-     lambda(    1)=  0.3985   gamma=   37.43 GHz
-     lambda(    2)=  0.3985   gamma=   37.43 GHz
+     double delta at Ef = 34.425004
+     lambda(    1)=  0.3984   gamma=   37.42 GHz
+     lambda(    2)=  0.3984   gamma=   37.42 GHz
      lambda(    3)=  0.0555   gamma=   13.84 GHz
- 
+
      Gaussian Broadening:   0.040 Ry, ngauss=   0
      DOS =  2.703426 states/spin/Ry/Unit Cell at Ef=  8.200073 eV
-     double delta at Ef = 18.410086
+     double delta at Ef = 18.410089
      lambda(    1)=  0.1849   gamma=   17.55 GHz
      lambda(    2)=  0.1849   gamma=   17.55 GHz
      lambda(    3)=  0.1925   gamma=   48.53 GHz
- 
+
      Gaussian Broadening:   0.060 Ry, ngauss=   0
      DOS =  2.781707 states/spin/Ry/Unit Cell at Ef=  8.181999 eV
-     double delta at Ef = 14.910232
+     double delta at Ef = 14.910233
      lambda(    1)=  0.1529   gamma=   14.93 GHz
      lambda(    2)=  0.1529   gamma=   14.93 GHz
      lambda(    3)=  0.1300   gamma=   33.71 GHz
- 
+
      Gaussian Broadening:   0.080 Ry, ngauss=   0
-     DOS =  2.793243 states/spin/Ry/Unit Cell at Ef=  8.205910 eV
-     double delta at Ef = 13.194919
-     lambda(    1)=  0.1297   gamma=   12.71 GHz
-     lambda(    2)=  0.1297   gamma=   12.71 GHz
+     DOS =  2.793243 states/spin/Ry/Unit Cell at Ef=  8.205911 eV
+     double delta at Ef = 13.194920
+     lambda(    1)=  0.1296   gamma=   12.71 GHz
+     lambda(    2)=  0.1296   gamma=   12.71 GHz
      lambda(    3)=  0.1130   gamma=   29.42 GHz
- 
+
      Gaussian Broadening:   0.100 Ry, ngauss=   0
      DOS =  2.781101 states/spin/Ry/Unit Cell at Ef=  8.232628 eV
      double delta at Ef = 12.449424
-     lambda(    1)=  0.1146   gamma=   11.18 GHz
-     lambda(    2)=  0.1146   gamma=   11.18 GHz
+     lambda(    1)=  0.1145   gamma=   11.18 GHz
+     lambda(    2)=  0.1145   gamma=   11.18 GHz
      lambda(    3)=  0.1187   gamma=   30.78 GHz
- 
+
      Gaussian Broadening:   0.120 Ry, ngauss=   0
      DOS =  2.753459 states/spin/Ry/Unit Cell at Ef=  8.253279 eV
-     double delta at Ef = 12.239855
-     lambda(    1)=  0.1071   gamma=   10.36 GHz
-     lambda(    2)=  0.1071   gamma=   10.36 GHz
+     double delta at Ef = 12.239856
+     lambda(    1)=  0.1071   gamma=   10.35 GHz
+     lambda(    2)=  0.1071   gamma=   10.35 GHz
      lambda(    3)=  0.1288   gamma=   33.06 GHz
- 
+
      Gaussian Broadening:   0.140 Ry, ngauss=   0
      DOS =  2.719703 states/spin/Ry/Unit Cell at Ef=  8.267107 eV
-     double delta at Ef = 12.291335
+     double delta at Ef = 12.291336
      lambda(    1)=  0.1047   gamma=   10.00 GHz
      lambda(    2)=  0.1047   gamma=   10.00 GHz
      lambda(    3)=  0.1379   gamma=   34.97 GHz
- 
+
      Gaussian Broadening:   0.160 Ry, ngauss=   0
      DOS =  2.693266 states/spin/Ry/Unit Cell at Ef=  8.275890 eV
      double delta at Ef = 12.455519
-     lambda(    1)=  0.1047   gamma=    9.89 GHz
-     lambda(    2)=  0.1047   gamma=    9.89 GHz
-     lambda(    3)=  0.1448   gamma=   36.37 GHz
- 
+     lambda(    1)=  0.1046   gamma=    9.89 GHz
+     lambda(    2)=  0.1046   gamma=    9.89 GHz
+     lambda(    3)=  0.1448   gamma=   36.36 GHz
+
      Gaussian Broadening:   0.180 Ry, ngauss=   0
      DOS =  2.678788 states/spin/Ry/Unit Cell at Ef=  8.281617 eV
      double delta at Ef = 12.650123
-     lambda(    1)=  0.1053   gamma=    9.90 GHz
-     lambda(    2)=  0.1053   gamma=    9.90 GHz
+     lambda(    1)=  0.1052   gamma=    9.90 GHz
+     lambda(    2)=  0.1052   gamma=    9.90 GHz
      lambda(    3)=  0.1496   gamma=   37.36 GHz
- 
+
      Gaussian Broadening:   0.200 Ry, ngauss=   0
      DOS =  2.674046 states/spin/Ry/Unit Cell at Ef=  8.285684 eV
      double delta at Ef = 12.838575
      lambda(    1)=  0.1059   gamma=    9.94 GHz
      lambda(    2)=  0.1059   gamma=    9.94 GHz
-     lambda(    3)=  0.1528   gamma=   38.09 GHz
+     lambda(    3)=  0.1528   gamma=   38.08 GHz
 
      Calculation of q =    0.7500000   0.2500000   0.2500000
- 
-     G-vector sticks info
+
+     Parallelization info
      --------------------
      sticks:   dense  smooth     PW     G-vecs:    dense   smooth      PW
+     Min          30      30     15                  216      216      82
+     Max          31      31     16                  218      218      83
      Sum         121     121     61                  869      869     331
- 
+
+     Using Slab Decomposition
+
 
      Title: 
      Electron-phonon coefficients for Al using Fourier interpolation of dvscf   
@@ -968,7 +1027,7 @@
                 l(2) =   1
 
      atomic species   valence    mass     pseudopotential
-        Al             3.00    26.98000     Al( 1.00)
+     Al                3.00    26.98000     Al( 1.00)
 
      48 Sym. Ops., with inversion, found
 
@@ -977,7 +1036,7 @@
    Cartesian axes
 
      site n.     atom                  positions (alat units)
-         1           Al  tau(   1) = (  -0.1666667   0.3333333   0.5000000  )
+         1        Al     tau(   1) = (  -0.1666667   0.3333333   0.5000000  )
 
      number of k points=   576  Marzari-Vanderbilt smearing, width (Ry)=  0.0500
 
@@ -985,7 +1044,9 @@
 
      Dense  grid:      869 G-vectors     FFT dimensions: (  15,  15,  15)
 
-     Estimated max dynamical RAM per process >       0.52 MB
+     Estimated max dynamical RAM per process >       0.20 MB
+
+     Estimated total dynamical RAM >       0.79 MB
 
      The potential is recalculated from file :
      ./_ph0/aluminum.q_5/aluminum.save/charge-density
@@ -995,9 +1056,9 @@
      Band Structure Calculation
      Davidson diagonalization with overlap
 
-     ethr =  3.33E-10,  avg # of iterations = 13.5
+     ethr =  3.33E-10,  avg # of iterations = 13.6
 
-     total cpu time spent up to now is       10.6 secs
+     total cpu time spent up to now is        3.8 secs
 
      End of band structure calculation
 
@@ -1005,7 +1066,8 @@
 
      the Fermi energy is     8.1776 ev
 
-     Writing output data file ./_ph0/aluminum.q_5/aluminum.save/
+     Writing config to output data dir ./_ph0/aluminum.q_5/aluminum.save/ :
+     XML data file
 
      Electron-phonon coefficients for Al using Fourier interpolation of dvscf   
 
@@ -1042,15 +1104,15 @@
      Cartesian axes
 
      site n.  atom      mass           positions (alat units)
-        1     Al  26.9800   tau(    1) = (   -0.16667    0.33333    0.50000  )
+        1  Al     26.9800   tau(    1) = (   -0.16667    0.33333    0.50000  )
 
      Computing dynamical matrix for 
                     q = (   0.7500000   0.2500000   0.2500000 )
- 
+
       2 Sym.Ops. (no q -> -q+G )
 
 
-     G cutoff =   85.4897  (    869 G-vectors)     FFT grid: ( 15, 15, 15)
+     G cutoff =   85.4897  (    218 G-vectors)     FFT grid: ( 15, 15, 15)
 
      number of k points=   576  Marzari-Vanderbilt smearing, width (Ry)=  0.0500
 
@@ -1067,16 +1129,16 @@
 
 
      Atomic displacements:
-     There are   3 irreducible representations
+     There are    3 irreducible representations
 
-     Representation     1      1 modes -A'  To be done
+     Representation     1      1 modes -  To be done
 
-     Representation     2      1 modes -A'  To be done
+     Representation     2      1 modes -  To be done
 
-     Representation     3      1 modes -A''  To be done
+     Representation     3      1 modes -  To be done
 
 
-     PHONON       :     11.92s CPU     12.44s WALL
+     PHONON       :      3.79s CPU      4.33s WALL
 
      Fourier interpolating dVscf
      Reading dynamics matrix from file al.elph.dyn5
@@ -1086,74 +1148,74 @@
      q = (    0.750000000   0.250000000   0.250000000 ) 
 
  **************************************************************************
-     freq (    1) =       5.392359 [THz] =     179.869752 [cm-1]
-     freq (    2) =       6.716390 [THz] =     224.034655 [cm-1]
-     freq (    3) =       8.785622 [THz] =     293.056789 [cm-1]
+     freq (    1) =       5.392300 [THz] =     179.867751 [cm-1]
+     freq (    2) =       6.716308 [THz] =     224.031928 [cm-1]
+     freq (    3) =       8.785597 [THz] =     293.055983 [cm-1]
  **************************************************************************
- 
+
      Gaussian Broadening:   0.020 Ry, ngauss=   0
      DOS =  2.675810 states/spin/Ry/Unit Cell at Ef=  8.278657 eV
-     double delta at Ef = 16.984783
+     double delta at Ef = 16.984781
      lambda(    1)=  0.1111   gamma=    8.25 GHz
-     lambda(    2)=  0.1593   gamma=   18.37 GHz
-     lambda(    3)=  0.3725   gamma=   73.48 GHz
- 
+     lambda(    2)=  0.1594   gamma=   18.37 GHz
+     lambda(    3)=  0.3726   gamma=   73.48 GHz
+
      Gaussian Broadening:   0.040 Ry, ngauss=   0
      DOS =  2.703426 states/spin/Ry/Unit Cell at Ef=  8.200073 eV
-     double delta at Ef = 12.925455
+     double delta at Ef = 12.925456
      lambda(    1)=  0.0793   gamma=    5.95 GHz
      lambda(    2)=  0.1038   gamma=   12.08 GHz
      lambda(    3)=  0.2261   gamma=   45.05 GHz
- 
+
      Gaussian Broadening:   0.060 Ry, ngauss=   0
      DOS =  2.781707 states/spin/Ry/Unit Cell at Ef=  8.181999 eV
      double delta at Ef = 14.131085
      lambda(    1)=  0.0875   gamma=    6.76 GHz
      lambda(    2)=  0.1099   gamma=   13.17 GHz
      lambda(    3)=  0.2311   gamma=   47.38 GHz
- 
+
      Gaussian Broadening:   0.080 Ry, ngauss=   0
-     DOS =  2.793243 states/spin/Ry/Unit Cell at Ef=  8.205910 eV
+     DOS =  2.793243 states/spin/Ry/Unit Cell at Ef=  8.205911 eV
      double delta at Ef = 14.167432
      lambda(    1)=  0.0878   gamma=    6.81 GHz
      lambda(    2)=  0.1065   gamma=   12.81 GHz
      lambda(    3)=  0.2189   gamma=   45.06 GHz
- 
+
      Gaussian Broadening:   0.100 Ry, ngauss=   0
      DOS =  2.781101 states/spin/Ry/Unit Cell at Ef=  8.232628 eV
      double delta at Ef = 13.955867
      lambda(    1)=  0.0871   gamma=    6.73 GHz
      lambda(    2)=  0.1039   gamma=   12.45 GHz
      lambda(    3)=  0.2053   gamma=   42.09 GHz
- 
+
      Gaussian Broadening:   0.120 Ry, ngauss=   0
      DOS =  2.753459 states/spin/Ry/Unit Cell at Ef=  8.253279 eV
      double delta at Ef = 13.769271
      lambda(    1)=  0.0871   gamma=    6.66 GHz
      lambda(    2)=  0.1039   gamma=   12.32 GHz
      lambda(    3)=  0.1976   gamma=   40.11 GHz
- 
+
      Gaussian Broadening:   0.140 Ry, ngauss=   0
      DOS =  2.719703 states/spin/Ry/Unit Cell at Ef=  8.267107 eV
      double delta at Ef = 13.674406
-     lambda(    1)=  0.0879   gamma=    6.64 GHz
+     lambda(    1)=  0.0880   gamma=    6.64 GHz
      lambda(    2)=  0.1055   gamma=   12.36 GHz
      lambda(    3)=  0.1947   gamma=   39.02 GHz
- 
+
      Gaussian Broadening:   0.160 Ry, ngauss=   0
      DOS =  2.693266 states/spin/Ry/Unit Cell at Ef=  8.275890 eV
      double delta at Ef = 13.661793
      lambda(    1)=  0.0891   gamma=    6.66 GHz
      lambda(    2)=  0.1075   gamma=   12.47 GHz
      lambda(    3)=  0.1937   gamma=   38.46 GHz
- 
+
      Gaussian Broadening:   0.180 Ry, ngauss=   0
      DOS =  2.678788 states/spin/Ry/Unit Cell at Ef=  8.281617 eV
      double delta at Ef = 13.697478
      lambda(    1)=  0.0902   gamma=    6.71 GHz
      lambda(    2)=  0.1094   gamma=   12.62 GHz
      lambda(    3)=  0.1931   gamma=   38.12 GHz
- 
+
      Gaussian Broadening:   0.200 Ry, ngauss=   0
      DOS =  2.674046 states/spin/Ry/Unit Cell at Ef=  8.285684 eV
      double delta at Ef = 13.753491
@@ -1162,12 +1224,16 @@
      lambda(    3)=  0.1922   gamma=   37.88 GHz
 
      Calculation of q =    0.5000000   0.5000000   0.5000000
- 
-     G-vector sticks info
+
+     Parallelization info
      --------------------
      sticks:   dense  smooth     PW     G-vecs:    dense   smooth      PW
+     Min          30      30     15                  217      217      76
+     Max          31      31     16                  218      218      77
      Sum         121     121     61                  869      869     307
- 
+
+     Using Slab Decomposition
+
 
      Title: 
      Electron-phonon coefficients for Al using Fourier interpolation of dvscf   
@@ -1209,7 +1275,7 @@
                 l(2) =   1
 
      atomic species   valence    mass     pseudopotential
-        Al             3.00    26.98000     Al( 1.00)
+     Al                3.00    26.98000     Al( 1.00)
 
      48 Sym. Ops., with inversion, found
 
@@ -1218,7 +1284,7 @@
    Cartesian axes
 
      site n.     atom                  positions (alat units)
-         1           Al  tau(   1) = (  -0.1666667   0.3333333   0.5000000  )
+         1        Al     tau(   1) = (  -0.1666667   0.3333333   0.5000000  )
 
      number of k points=   130  Marzari-Vanderbilt smearing, width (Ry)=  0.0500
 
@@ -1226,7 +1292,9 @@
 
      Dense  grid:      869 G-vectors     FFT dimensions: (  15,  15,  15)
 
-     Estimated max dynamical RAM per process >       0.52 MB
+     Estimated max dynamical RAM per process >       0.20 MB
+
+     Estimated total dynamical RAM >       0.79 MB
 
      The potential is recalculated from file :
      ./_ph0/aluminum.q_6/aluminum.save/charge-density
@@ -1236,9 +1304,9 @@
      Band Structure Calculation
      Davidson diagonalization with overlap
 
-     ethr =  3.33E-10,  avg # of iterations = 13.8
+     ethr =  3.33E-10,  avg # of iterations = 13.7
 
-     total cpu time spent up to now is       12.0 secs
+     total cpu time spent up to now is        4.3 secs
 
      End of band structure calculation
 
@@ -1246,7 +1314,8 @@
 
      the Fermi energy is     8.1776 ev
 
-     Writing output data file ./_ph0/aluminum.q_6/aluminum.save/
+     Writing config to output data dir ./_ph0/aluminum.q_6/aluminum.save/ :
+     XML data file
 
      Electron-phonon coefficients for Al using Fourier interpolation of dvscf   
 
@@ -1283,15 +1352,15 @@
      Cartesian axes
 
      site n.  atom      mass           positions (alat units)
-        1     Al  26.9800   tau(    1) = (   -0.16667    0.33333    0.50000  )
+        1  Al     26.9800   tau(    1) = (   -0.16667    0.33333    0.50000  )
 
      Computing dynamical matrix for 
                     q = (   0.5000000   0.5000000   0.5000000 )
- 
+
      13 Sym.Ops. (with q -> -q+G )
 
 
-     G cutoff =   85.4897  (    869 G-vectors)     FFT grid: ( 15, 15, 15)
+     G cutoff =   85.4897  (    217 G-vectors)     FFT grid: ( 15, 15, 15)
 
      number of k points=   130  Marzari-Vanderbilt smearing, width (Ry)=  0.0500
 
@@ -1306,14 +1375,14 @@
 
 
      Atomic displacements:
-     There are   2 irreducible representations
+     There are    2 irreducible representations
 
      Representation     1      2 modes -  To be done
 
      Representation     2      1 modes -  To be done
 
 
-     PHONON       :     14.85s CPU     15.49s WALL
+     PHONON       :      4.61s CPU      5.26s WALL
 
      Fourier interpolating dVscf
      Reading dynamics matrix from file al.elph.dyn6
@@ -1323,88 +1392,92 @@
      q = (    0.500000000   0.500000000   0.500000000 ) 
 
  **************************************************************************
-     freq (    1) =       4.438911 [THz] =     148.066119 [cm-1]
-     freq (    2) =       4.438911 [THz] =     148.066119 [cm-1]
-     freq (    3) =       9.422633 [THz] =     314.305203 [cm-1]
+     freq (    1) =       4.438882 [THz] =     148.065177 [cm-1]
+     freq (    2) =       4.438882 [THz] =     148.065177 [cm-1]
+     freq (    3) =       9.422648 [THz] =     314.305694 [cm-1]
  **************************************************************************
- 
+
      Gaussian Broadening:   0.020 Ry, ngauss=   0
      DOS =  2.675810 states/spin/Ry/Unit Cell at Ef=  8.278657 eV
-     double delta at Ef =  1.718168
+     double delta at Ef =  1.718170
      lambda(    1)=  0.0073   gamma=    0.37 GHz
      lambda(    2)=  0.0073   gamma=    0.37 GHz
      lambda(    3)=  0.0302   gamma=    6.84 GHz
- 
+
      Gaussian Broadening:   0.040 Ry, ngauss=   0
      DOS =  2.703426 states/spin/Ry/Unit Cell at Ef=  8.200073 eV
-     double delta at Ef = 10.177916
+     double delta at Ef = 10.177918
      lambda(    1)=  0.0535   gamma=    2.72 GHz
      lambda(    2)=  0.0535   gamma=    2.72 GHz
      lambda(    3)=  0.1353   gamma=   31.01 GHz
- 
+
      Gaussian Broadening:   0.060 Ry, ngauss=   0
      DOS =  2.781707 states/spin/Ry/Unit Cell at Ef=  8.181999 eV
-     double delta at Ef = 14.089272
+     double delta at Ef = 14.089273
      lambda(    1)=  0.0798   gamma=    4.18 GHz
      lambda(    2)=  0.0798   gamma=    4.18 GHz
-     lambda(    3)=  0.1435   gamma=   33.84 GHz
- 
+     lambda(    3)=  0.1435   gamma=   33.85 GHz
+
      Gaussian Broadening:   0.080 Ry, ngauss=   0
-     DOS =  2.793243 states/spin/Ry/Unit Cell at Ef=  8.205910 eV
+     DOS =  2.793243 states/spin/Ry/Unit Cell at Ef=  8.205911 eV
      double delta at Ef = 14.850423
      lambda(    1)=  0.0809   gamma=    4.25 GHz
      lambda(    2)=  0.0809   gamma=    4.25 GHz
-     lambda(    3)=  0.1541   gamma=   36.50 GHz
- 
+     lambda(    3)=  0.1542   gamma=   36.51 GHz
+
      Gaussian Broadening:   0.100 Ry, ngauss=   0
      DOS =  2.781101 states/spin/Ry/Unit Cell at Ef=  8.232628 eV
      double delta at Ef = 14.792267
      lambda(    1)=  0.0778   gamma=    4.07 GHz
      lambda(    2)=  0.0778   gamma=    4.07 GHz
-     lambda(    3)=  0.1636   gamma=   38.58 GHz
- 
+     lambda(    3)=  0.1637   gamma=   38.59 GHz
+
      Gaussian Broadening:   0.120 Ry, ngauss=   0
      DOS =  2.753459 states/spin/Ry/Unit Cell at Ef=  8.253279 eV
      double delta at Ef = 14.545807
      lambda(    1)=  0.0757   gamma=    3.92 GHz
      lambda(    2)=  0.0757   gamma=    3.92 GHz
-     lambda(    3)=  0.1719   gamma=   40.13 GHz
- 
+     lambda(    3)=  0.1720   gamma=   40.14 GHz
+
      Gaussian Broadening:   0.140 Ry, ngauss=   0
      DOS =  2.719703 states/spin/Ry/Unit Cell at Ef=  8.267107 eV
      double delta at Ef = 14.356743
      lambda(    1)=  0.0747   gamma=    3.82 GHz
      lambda(    2)=  0.0747   gamma=    3.82 GHz
-     lambda(    3)=  0.1805   gamma=   41.62 GHz
- 
+     lambda(    3)=  0.1805   gamma=   41.63 GHz
+
      Gaussian Broadening:   0.160 Ry, ngauss=   0
      DOS =  2.693266 states/spin/Ry/Unit Cell at Ef=  8.275890 eV
      double delta at Ef = 14.259440
      lambda(    1)=  0.0741   gamma=    3.76 GHz
      lambda(    2)=  0.0741   gamma=    3.76 GHz
-     lambda(    3)=  0.1882   gamma=   42.97 GHz
- 
+     lambda(    3)=  0.1882   gamma=   42.98 GHz
+
      Gaussian Broadening:   0.180 Ry, ngauss=   0
      DOS =  2.678788 states/spin/Ry/Unit Cell at Ef=  8.281617 eV
      double delta at Ef = 14.224739
      lambda(    1)=  0.0737   gamma=    3.71 GHz
      lambda(    2)=  0.0737   gamma=    3.71 GHz
-     lambda(    3)=  0.1939   gamma=   44.04 GHz
- 
+     lambda(    3)=  0.1939   gamma=   44.05 GHz
+
      Gaussian Broadening:   0.200 Ry, ngauss=   0
      DOS =  2.674046 states/spin/Ry/Unit Cell at Ef=  8.285684 eV
      double delta at Ef = 14.224196
      lambda(    1)=  0.0734   gamma=    3.69 GHz
      lambda(    2)=  0.0734   gamma=    3.69 GHz
-     lambda(    3)=  0.1976   gamma=   44.80 GHz
+     lambda(    3)=  0.1976   gamma=   44.81 GHz
 
      Calculation of q =    0.2500000   0.2500000   0.2500000
- 
-     G-vector sticks info
+
+     Parallelization info
      --------------------
      sticks:   dense  smooth     PW     G-vecs:    dense   smooth      PW
+     Min          30      30     13                  216      216      64
+     Max          31      31     14                  218      218      65
      Sum         121     121     55                  869      869     259
- 
+
+     Using Slab Decomposition
+
 
      Title: 
      Electron-phonon coefficients for Al using Fourier interpolation of dvscf   
@@ -1446,7 +1519,7 @@
                 l(2) =   1
 
      atomic species   valence    mass     pseudopotential
-        Al             3.00    26.98000     Al( 1.00)
+     Al                3.00    26.98000     Al( 1.00)
 
      48 Sym. Ops., with inversion, found
 
@@ -1455,7 +1528,7 @@
    Cartesian axes
 
      site n.     atom                  positions (alat units)
-         1           Al  tau(   1) = (  -0.1666667   0.3333333   0.5000000  )
+         1        Al     tau(   1) = (  -0.1666667   0.3333333   0.5000000  )
 
      number of k points=   240  Marzari-Vanderbilt smearing, width (Ry)=  0.0500
 
@@ -1463,7 +1536,9 @@
 
      Dense  grid:      869 G-vectors     FFT dimensions: (  15,  15,  15)
 
-     Estimated max dynamical RAM per process >       0.52 MB
+     Estimated max dynamical RAM per process >       0.19 MB
+
+     Estimated total dynamical RAM >       0.78 MB
 
      The potential is recalculated from file :
      ./_ph0/aluminum.q_7/aluminum.save/charge-density
@@ -1475,7 +1550,7 @@
 
      ethr =  3.33E-10,  avg # of iterations = 13.8
 
-     total cpu time spent up to now is       14.4 secs
+     total cpu time spent up to now is        5.1 secs
 
      End of band structure calculation
 
@@ -1483,7 +1558,8 @@
 
      the Fermi energy is     8.1776 ev
 
-     Writing output data file ./_ph0/aluminum.q_7/aluminum.save/
+     Writing config to output data dir ./_ph0/aluminum.q_7/aluminum.save/ :
+     XML data file
 
      Electron-phonon coefficients for Al using Fourier interpolation of dvscf   
 
@@ -1520,15 +1596,15 @@
      Cartesian axes
 
      site n.  atom      mass           positions (alat units)
-        1     Al  26.9800   tau(    1) = (   -0.16667    0.33333    0.50000  )
+        1  Al     26.9800   tau(    1) = (   -0.16667    0.33333    0.50000  )
 
      Computing dynamical matrix for 
                     q = (   0.2500000   0.2500000   0.2500000 )
- 
+
       6 Sym.Ops. (no q -> -q+G )
 
 
-     G cutoff =   85.4897  (    869 G-vectors)     FFT grid: ( 15, 15, 15)
+     G cutoff =   85.4897  (    218 G-vectors)     FFT grid: ( 15, 15, 15)
 
      number of k points=   240  Marzari-Vanderbilt smearing, width (Ry)=  0.0500
 
@@ -1545,14 +1621,14 @@
 
 
      Atomic displacements:
-     There are   2 irreducible representations
+     There are    2 irreducible representations
 
-     Representation     1      1 modes -A_1  L_1  To be done
+     Representation     1      1 modes -  To be done
 
-     Representation     2      2 modes -E    L_3  To be done
+     Representation     2      2 modes -  To be done
 
 
-     PHONON       :     17.50s CPU     18.26s WALL
+     PHONON       :      5.45s CPU      6.23s WALL
 
      Fourier interpolating dVscf
      Reading dynamics matrix from file al.elph.dyn7
@@ -1562,88 +1638,92 @@
      q = (    0.250000000   0.250000000   0.250000000 ) 
 
  **************************************************************************
-     freq (    1) =       3.512884 [THz] =     117.177206 [cm-1]
-     freq (    2) =       3.512884 [THz] =     117.177206 [cm-1]
-     freq (    3) =       6.337625 [THz] =     211.400399 [cm-1]
+     freq (    1) =       3.512812 [THz] =     117.174803 [cm-1]
+     freq (    2) =       3.512812 [THz] =     117.174803 [cm-1]
+     freq (    3) =       6.337571 [THz] =     211.398615 [cm-1]
  **************************************************************************
- 
+
      Gaussian Broadening:   0.020 Ry, ngauss=   0
      DOS =  2.675810 states/spin/Ry/Unit Cell at Ef=  8.278657 eV
-     double delta at Ef = 26.430867
+     double delta at Ef = 26.430865
      lambda(    1)=  0.0460   gamma=    1.45 GHz
      lambda(    2)=  0.0460   gamma=    1.45 GHz
      lambda(    3)=  0.3535   gamma=   36.28 GHz
- 
+
      Gaussian Broadening:   0.040 Ry, ngauss=   0
      DOS =  2.703426 states/spin/Ry/Unit Cell at Ef=  8.200073 eV
-     double delta at Ef = 21.429882
+     double delta at Ef = 21.429883
      lambda(    1)=  0.0698   gamma=    2.22 GHz
      lambda(    2)=  0.0698   gamma=    2.22 GHz
-     lambda(    3)=  0.3630   gamma=   37.64 GHz
- 
+     lambda(    3)=  0.3631   gamma=   37.65 GHz
+
      Gaussian Broadening:   0.060 Ry, ngauss=   0
      DOS =  2.781707 states/spin/Ry/Unit Cell at Ef=  8.181999 eV
-     double delta at Ef = 20.494460
+     double delta at Ef = 20.494461
      lambda(    1)=  0.0727   gamma=    2.38 GHz
      lambda(    2)=  0.0727   gamma=    2.38 GHz
-     lambda(    3)=  0.3383   gamma=   36.09 GHz
- 
+     lambda(    3)=  0.3384   gamma=   36.10 GHz
+
      Gaussian Broadening:   0.080 Ry, ngauss=   0
-     DOS =  2.793243 states/spin/Ry/Unit Cell at Ef=  8.205910 eV
-     double delta at Ef = 19.158893
+     DOS =  2.793243 states/spin/Ry/Unit Cell at Ef=  8.205911 eV
+     double delta at Ef = 19.158894
      lambda(    1)=  0.0719   gamma=    2.37 GHz
      lambda(    2)=  0.0719   gamma=    2.37 GHz
      lambda(    3)=  0.3167   gamma=   33.93 GHz
- 
+
      Gaussian Broadening:   0.100 Ry, ngauss=   0
      DOS =  2.781101 states/spin/Ry/Unit Cell at Ef=  8.232628 eV
      double delta at Ef = 18.018277
      lambda(    1)=  0.0726   gamma=    2.38 GHz
      lambda(    2)=  0.0726   gamma=    2.38 GHz
-     lambda(    3)=  0.3023   gamma=   32.25 GHz
- 
+     lambda(    3)=  0.3024   gamma=   32.25 GHz
+
      Gaussian Broadening:   0.120 Ry, ngauss=   0
      DOS =  2.753459 states/spin/Ry/Unit Cell at Ef=  8.253279 eV
      double delta at Ef = 17.200343
      lambda(    1)=  0.0744   gamma=    2.41 GHz
      lambda(    2)=  0.0744   gamma=    2.41 GHz
-     lambda(    3)=  0.2935   gamma=   31.00 GHz
- 
+     lambda(    3)=  0.2936   gamma=   31.01 GHz
+
      Gaussian Broadening:   0.140 Ry, ngauss=   0
      DOS =  2.719703 states/spin/Ry/Unit Cell at Ef=  8.267107 eV
      double delta at Ef = 16.721708
      lambda(    1)=  0.0772   gamma=    2.47 GHz
      lambda(    2)=  0.0772   gamma=    2.47 GHz
-     lambda(    3)=  0.2898   gamma=   30.23 GHz
- 
+     lambda(    3)=  0.2899   gamma=   30.24 GHz
+
      Gaussian Broadening:   0.160 Ry, ngauss=   0
      DOS =  2.693266 states/spin/Ry/Unit Cell at Ef=  8.275890 eV
      double delta at Ef = 16.504692
      lambda(    1)=  0.0805   gamma=    2.56 GHz
      lambda(    2)=  0.0805   gamma=    2.56 GHz
-     lambda(    3)=  0.2890   gamma=   29.86 GHz
- 
+     lambda(    3)=  0.2891   gamma=   29.87 GHz
+
      Gaussian Broadening:   0.180 Ry, ngauss=   0
      DOS =  2.678788 states/spin/Ry/Unit Cell at Ef=  8.281617 eV
      double delta at Ef = 16.445757
-     lambda(    1)=  0.0839   gamma=    2.65 GHz
-     lambda(    2)=  0.0839   gamma=    2.65 GHz
-     lambda(    3)=  0.2894   gamma=   29.73 GHz
- 
+     lambda(    1)=  0.0840   gamma=    2.65 GHz
+     lambda(    2)=  0.0840   gamma=    2.65 GHz
+     lambda(    3)=  0.2894   gamma=   29.74 GHz
+
      Gaussian Broadening:   0.200 Ry, ngauss=   0
      DOS =  2.674046 states/spin/Ry/Unit Cell at Ef=  8.285684 eV
      double delta at Ef = 16.461924
      lambda(    1)=  0.0872   gamma=    2.75 GHz
      lambda(    2)=  0.0872   gamma=    2.75 GHz
-     lambda(    3)=  0.2897   gamma=   29.72 GHz
+     lambda(    3)=  0.2898   gamma=   29.72 GHz
 
      Calculation of q =    0.0000000   0.0000000   0.0000000
- 
-     G-vector sticks info
+
+     Parallelization info
      --------------------
      sticks:   dense  smooth     PW     G-vecs:    dense   smooth      PW
+     Min          30      30     10                  216      216      45
+     Max          31      31     11                  218      218      46
      Sum         121     121     43                  869      869     181
- 
+
+     Using Slab Decomposition
+
 
      Title: 
      Electron-phonon coefficients for Al using Fourier interpolation of dvscf   
@@ -1685,7 +1765,7 @@
                 l(2) =   1
 
      atomic species   valence    mass     pseudopotential
-        Al             3.00    26.98000     Al( 1.00)
+     Al                3.00    26.98000     Al( 1.00)
 
      48 Sym. Ops., with inversion, found
 
@@ -1694,7 +1774,7 @@
    Cartesian axes
 
      site n.     atom                  positions (alat units)
-         1           Al  tau(   1) = (  -0.1666667   0.3333333   0.5000000  )
+         1        Al     tau(   1) = (  -0.1666667   0.3333333   0.5000000  )
 
      number of k points=    29  Marzari-Vanderbilt smearing, width (Ry)=  0.0500
                        cart. coord. in units 2pi/alat
@@ -1730,7 +1810,9 @@
 
      Dense  grid:      869 G-vectors     FFT dimensions: (  15,  15,  15)
 
-     Estimated max dynamical RAM per process >       0.51 MB
+     Estimated max dynamical RAM per process >       0.19 MB
+
+     Estimated total dynamical RAM >       0.77 MB
 
      The potential is recalculated from file :
      ./_ph0/aluminum.q_8/aluminum.save/charge-density
@@ -1740,9 +1822,9 @@
      Band Structure Calculation
      Davidson diagonalization with overlap
 
-     ethr =  3.33E-10,  avg # of iterations = 13.4
+     ethr =  3.33E-10,  avg # of iterations = 13.7
 
-     total cpu time spent up to now is       14.7 secs
+     total cpu time spent up to now is        5.2 secs
 
      End of band structure calculation
 
@@ -1864,7 +1946,8 @@
 
      the Fermi energy is     8.1776 ev
 
-     Writing output data file ./_ph0/aluminum.q_8/aluminum.save/
+     Writing config to output data dir ./_ph0/aluminum.q_8/aluminum.save/ :
+     XML data file
 
      Electron-phonon coefficients for Al using Fourier interpolation of dvscf   
 
@@ -1901,15 +1984,15 @@
      Cartesian axes
 
      site n.  atom      mass           positions (alat units)
-        1     Al  26.9800   tau(    1) = (   -0.16667    0.33333    0.50000  )
+        1  Al     26.9800   tau(    1) = (   -0.16667    0.33333    0.50000  )
 
      Computing dynamical matrix for 
                     q = (   0.0000000   0.0000000   0.0000000 )
- 
+
      49 Sym.Ops. (with q -> -q+G )
 
 
-     G cutoff =   85.4897  (    869 G-vectors)     FFT grid: ( 15, 15, 15)
+     G cutoff =   85.4897  (    217 G-vectors)     FFT grid: ( 15, 15, 15)
 
      number of k points=    29  Marzari-Vanderbilt smearing, width (Ry)=  0.0500
 
@@ -1926,12 +2009,12 @@
 
 
      Atomic displacements:
-     There are   1 irreducible representations
+     There are    1 irreducible representations
 
-     Representation     1      3 modes -T_1u G_15  G_4-  To be done
+     Representation     1      3 modes -  To be done
 
 
-     PHONON       :     18.42s CPU     19.22s WALL
+     PHONON       :      5.72s CPU      6.55s WALL
 
      Fourier interpolating dVscf
      Reading dynamics matrix from file al.elph.dyn8
@@ -1941,88 +2024,92 @@
      q = (    0.000000000   0.000000000   0.000000000 ) 
 
  **************************************************************************
-     freq (    1) =       0.172821 [THz] =       5.764680 [cm-1]
-     freq (    2) =       0.172821 [THz] =       5.764680 [cm-1]
-     freq (    3) =       0.172821 [THz] =       5.764680 [cm-1]
+     freq (    1) =       0.172375 [THz] =       5.749795 [cm-1]
+     freq (    2) =       0.172375 [THz] =       5.749795 [cm-1]
+     freq (    3) =       0.172375 [THz] =       5.749795 [cm-1]
  **************************************************************************
- 
+
      Gaussian Broadening:   0.020 Ry, ngauss=   0
      DOS =  2.675810 states/spin/Ry/Unit Cell at Ef=  8.278657 eV
-     double delta at Ef =104.058472
+     double delta at Ef =104.058471
      lambda(    1)=  0.0000   gamma=    0.00 GHz
      lambda(    2)=  0.0000   gamma=    0.00 GHz
      lambda(    3)=  0.0000   gamma=    0.00 GHz
- 
+
      Gaussian Broadening:   0.040 Ry, ngauss=   0
      DOS =  2.703426 states/spin/Ry/Unit Cell at Ef=  8.200073 eV
-     double delta at Ef = 56.351825
+     double delta at Ef = 56.351829
      lambda(    1)=  0.0000   gamma=    0.32 GHz
      lambda(    2)=  0.0000   gamma=    0.32 GHz
      lambda(    3)=  0.0000   gamma=    0.32 GHz
- 
+
      Gaussian Broadening:   0.060 Ry, ngauss=   0
      DOS =  2.781707 states/spin/Ry/Unit Cell at Ef=  8.181999 eV
-     double delta at Ef = 42.846628
+     double delta at Ef = 42.846631
      lambda(    1)=  0.0000   gamma=    1.23 GHz
      lambda(    2)=  0.0000   gamma=    1.23 GHz
      lambda(    3)=  0.0000   gamma=    1.23 GHz
- 
+
      Gaussian Broadening:   0.080 Ry, ngauss=   0
-     DOS =  2.793243 states/spin/Ry/Unit Cell at Ef=  8.205910 eV
-     double delta at Ef = 36.753205
+     DOS =  2.793243 states/spin/Ry/Unit Cell at Ef=  8.205911 eV
+     double delta at Ef = 36.753207
      lambda(    1)=  0.0000   gamma=    2.20 GHz
      lambda(    2)=  0.0000   gamma=    2.20 GHz
      lambda(    3)=  0.0000   gamma=    2.20 GHz
- 
+
      Gaussian Broadening:   0.100 Ry, ngauss=   0
      DOS =  2.781101 states/spin/Ry/Unit Cell at Ef=  8.232628 eV
-     double delta at Ef = 32.865749
+     double delta at Ef = 32.865750
      lambda(    1)=  0.0000   gamma=    2.67 GHz
      lambda(    2)=  0.0000   gamma=    2.67 GHz
      lambda(    3)=  0.0000   gamma=    2.67 GHz
- 
+
      Gaussian Broadening:   0.120 Ry, ngauss=   0
      DOS =  2.753459 states/spin/Ry/Unit Cell at Ef=  8.253279 eV
-     double delta at Ef = 29.857732
+     double delta at Ef = 29.857733
      lambda(    1)=  0.0000   gamma=    2.80 GHz
      lambda(    2)=  0.0000   gamma=    2.80 GHz
      lambda(    3)=  0.0000   gamma=    2.80 GHz
- 
+
      Gaussian Broadening:   0.140 Ry, ngauss=   0
      DOS =  2.719703 states/spin/Ry/Unit Cell at Ef=  8.267107 eV
      double delta at Ef = 27.504730
      lambda(    1)=  0.0000   gamma=    2.87 GHz
      lambda(    2)=  0.0000   gamma=    2.87 GHz
      lambda(    3)=  0.0000   gamma=    2.87 GHz
- 
+
      Gaussian Broadening:   0.160 Ry, ngauss=   0
      DOS =  2.693266 states/spin/Ry/Unit Cell at Ef=  8.275890 eV
      double delta at Ef = 25.729520
      lambda(    1)=  0.0000   gamma=    2.95 GHz
      lambda(    2)=  0.0000   gamma=    2.95 GHz
      lambda(    3)=  0.0000   gamma=    2.95 GHz
- 
+
      Gaussian Broadening:   0.180 Ry, ngauss=   0
      DOS =  2.678788 states/spin/Ry/Unit Cell at Ef=  8.281617 eV
-     double delta at Ef = 24.395210
+     double delta at Ef = 24.395211
      lambda(    1)=  0.0000   gamma=    3.04 GHz
      lambda(    2)=  0.0000   gamma=    3.04 GHz
      lambda(    3)=  0.0000   gamma=    3.04 GHz
- 
+
      Gaussian Broadening:   0.200 Ry, ngauss=   0
      DOS =  2.674046 states/spin/Ry/Unit Cell at Ef=  8.285684 eV
-     double delta at Ef = 23.360102
+     double delta at Ef = 23.360103
      lambda(    1)=  0.0000   gamma=    3.12 GHz
      lambda(    2)=  0.0000   gamma=    3.12 GHz
      lambda(    3)=  0.0000   gamma=    3.12 GHz
 
      Calculation of q =    0.2500000   0.2500000   0.0000000
- 
-     G-vector sticks info
+
+     Parallelization info
      --------------------
      sticks:   dense  smooth     PW     G-vecs:    dense   smooth      PW
+     Min          30      30     13                  216      216      64
+     Max          31      31     14                  218      218      65
      Sum         121     121     55                  869      869     259
- 
+
+     Using Slab Decomposition
+
 
      Title: 
      Electron-phonon coefficients for Al using Fourier interpolation of dvscf   
@@ -2064,7 +2151,7 @@
                 l(2) =   1
 
      atomic species   valence    mass     pseudopotential
-        Al             3.00    26.98000     Al( 1.00)
+     Al                3.00    26.98000     Al( 1.00)
 
      48 Sym. Ops., with inversion, found
 
@@ -2073,7 +2160,7 @@
    Cartesian axes
 
      site n.     atom                  positions (alat units)
-         1           Al  tau(   1) = (  -0.1666667   0.3333333   0.5000000  )
+         1        Al     tau(   1) = (  -0.1666667   0.3333333   0.5000000  )
 
      number of k points=   328  Marzari-Vanderbilt smearing, width (Ry)=  0.0500
 
@@ -2081,7 +2168,9 @@
 
      Dense  grid:      869 G-vectors     FFT dimensions: (  15,  15,  15)
 
-     Estimated max dynamical RAM per process >       0.52 MB
+     Estimated max dynamical RAM per process >       0.19 MB
+
+     Estimated total dynamical RAM >       0.77 MB
 
      The potential is recalculated from file :
      ./_ph0/aluminum.q_9/aluminum.save/charge-density
@@ -2093,7 +2182,7 @@
 
      ethr =  3.33E-10,  avg # of iterations = 13.4
 
-     total cpu time spent up to now is       17.8 secs
+     total cpu time spent up to now is        6.3 secs
 
      End of band structure calculation
 
@@ -2101,7 +2190,8 @@
 
      the Fermi energy is     8.1776 ev
 
-     Writing output data file ./_ph0/aluminum.q_9/aluminum.save/
+     Writing config to output data dir ./_ph0/aluminum.q_9/aluminum.save/ :
+     XML data file
 
      Electron-phonon coefficients for Al using Fourier interpolation of dvscf   
 
@@ -2138,15 +2228,15 @@
      Cartesian axes
 
      site n.  atom      mass           positions (alat units)
-        1     Al  26.9800   tau(    1) = (   -0.16667    0.33333    0.50000  )
+        1  Al     26.9800   tau(    1) = (   -0.16667    0.33333    0.50000  )
 
      Computing dynamical matrix for 
                     q = (   0.2500000   0.2500000   0.0000000 )
- 
+
       4 Sym.Ops. (no q -> -q+G )
 
 
-     G cutoff =   85.4897  (    869 G-vectors)     FFT grid: ( 15, 15, 15)
+     G cutoff =   85.4897  (    218 G-vectors)     FFT grid: ( 15, 15, 15)
 
      number of k points=   328  Marzari-Vanderbilt smearing, width (Ry)=  0.0500
 
@@ -2163,16 +2253,16 @@
 
 
      Atomic displacements:
-     There are   3 irreducible representations
+     There are    3 irreducible representations
 
-     Representation     1      1 modes -A_1  D_1  S_1  To be done
+     Representation     1      1 modes -  To be done
 
-     Representation     2      1 modes -B_1  D_3  S_3  To be done
+     Representation     2      1 modes -  To be done
 
-     Representation     3      1 modes -B_2  D_4  S_4  To be done
+     Representation     3      1 modes -  To be done
 
 
-     PHONON       :     21.58s CPU     22.48s WALL
+     PHONON       :      6.75s CPU      7.71s WALL
 
      Fourier interpolating dVscf
      Reading dynamics matrix from file al.elph.dyn9
@@ -2182,74 +2272,74 @@
      q = (    0.250000000   0.250000000   0.000000000 ) 
 
  **************************************************************************
-     freq (    1) =       3.022844 [THz] =     100.831228 [cm-1]
-     freq (    2) =       3.330076 [THz] =     111.079394 [cm-1]
-     freq (    3) =       5.522148 [THz] =     184.199023 [cm-1]
+     freq (    1) =       3.022721 [THz] =     100.827124 [cm-1]
+     freq (    2) =       3.329983 [THz] =     111.076286 [cm-1]
+     freq (    3) =       5.523483 [THz] =     184.243562 [cm-1]
  **************************************************************************
- 
+
      Gaussian Broadening:   0.020 Ry, ngauss=   0
      DOS =  2.675810 states/spin/Ry/Unit Cell at Ef=  8.278657 eV
      double delta at Ef = 20.055744
      lambda(    1)=  0.0284   gamma=    0.66 GHz
      lambda(    2)=  0.0649   gamma=    1.84 GHz
-     lambda(    3)=  0.7787   gamma=   60.67 GHz
- 
+     lambda(    3)=  0.7785   gamma=   60.69 GHz
+
      Gaussian Broadening:   0.040 Ry, ngauss=   0
      DOS =  2.703426 states/spin/Ry/Unit Cell at Ef=  8.200073 eV
-     double delta at Ef = 18.372730
+     double delta at Ef = 18.372732
      lambda(    1)=  0.0578   gamma=    1.36 GHz
-     lambda(    2)=  0.1148   gamma=    3.29 GHz
-     lambda(    3)=  0.4600   gamma=   36.21 GHz
- 
+     lambda(    2)=  0.1149   gamma=    3.29 GHz
+     lambda(    3)=  0.4598   gamma=   36.22 GHz
+
      Gaussian Broadening:   0.060 Ry, ngauss=   0
      DOS =  2.781707 states/spin/Ry/Unit Cell at Ef=  8.181999 eV
-     double delta at Ef = 18.934984
+     double delta at Ef = 18.934985
      lambda(    1)=  0.0608   gamma=    1.48 GHz
      lambda(    2)=  0.1601   gamma=    4.72 GHz
-     lambda(    3)=  0.3551   gamma=   28.76 GHz
- 
+     lambda(    3)=  0.3550   gamma=   28.77 GHz
+
      Gaussian Broadening:   0.080 Ry, ngauss=   0
-     DOS =  2.793243 states/spin/Ry/Unit Cell at Ef=  8.205910 eV
-     double delta at Ef = 18.371978
+     DOS =  2.793243 states/spin/Ry/Unit Cell at Ef=  8.205911 eV
+     double delta at Ef = 18.371979
      lambda(    1)=  0.0627   gamma=    1.53 GHz
      lambda(    2)=  0.1809   gamma=    5.35 GHz
-     lambda(    3)=  0.3095   gamma=   25.17 GHz
- 
+     lambda(    3)=  0.3094   gamma=   25.18 GHz
+
      Gaussian Broadening:   0.100 Ry, ngauss=   0
      DOS =  2.781101 states/spin/Ry/Unit Cell at Ef=  8.232628 eV
      double delta at Ef = 18.036860
      lambda(    1)=  0.0657   gamma=    1.59 GHz
      lambda(    2)=  0.1917   gamma=    5.65 GHz
-     lambda(    3)=  0.2945   gamma=   23.85 GHz
- 
+     lambda(    3)=  0.2944   gamma=   23.85 GHz
+
      Gaussian Broadening:   0.120 Ry, ngauss=   0
      DOS =  2.753459 states/spin/Ry/Unit Cell at Ef=  8.253279 eV
      double delta at Ef = 17.830958
      lambda(    1)=  0.0686   gamma=    1.65 GHz
      lambda(    2)=  0.1982   gamma=    5.78 GHz
-     lambda(    3)=  0.2911   gamma=   23.34 GHz
- 
+     lambda(    3)=  0.2910   gamma=   23.35 GHz
+
      Gaussian Broadening:   0.140 Ry, ngauss=   0
      DOS =  2.719703 states/spin/Ry/Unit Cell at Ef=  8.267107 eV
      double delta at Ef = 17.718582
      lambda(    1)=  0.0718   gamma=    1.70 GHz
      lambda(    2)=  0.2033   gamma=    5.85 GHz
-     lambda(    3)=  0.2923   gamma=   23.15 GHz
- 
+     lambda(    3)=  0.2923   gamma=   23.16 GHz
+
      Gaussian Broadening:   0.160 Ry, ngauss=   0
      DOS =  2.693266 states/spin/Ry/Unit Cell at Ef=  8.275890 eV
      double delta at Ef = 17.683107
      lambda(    1)=  0.0751   gamma=    1.77 GHz
      lambda(    2)=  0.2073   gamma=    5.91 GHz
-     lambda(    3)=  0.2946   gamma=   23.11 GHz
- 
+     lambda(    3)=  0.2945   gamma=   23.11 GHz
+
      Gaussian Broadening:   0.180 Ry, ngauss=   0
      DOS =  2.678788 states/spin/Ry/Unit Cell at Ef=  8.281617 eV
      double delta at Ef = 17.686639
      lambda(    1)=  0.0783   gamma=    1.83 GHz
      lambda(    2)=  0.2101   gamma=    5.96 GHz
-     lambda(    3)=  0.2962   gamma=   23.10 GHz
- 
+     lambda(    3)=  0.2961   gamma=   23.11 GHz
+
      Gaussian Broadening:   0.200 Ry, ngauss=   0
      DOS =  2.674046 states/spin/Ry/Unit Cell at Ef=  8.285684 eV
      double delta at Ef = 17.692563
@@ -2258,12 +2348,16 @@
      lambda(    3)=  0.2962   gamma=   23.07 GHz
 
      Calculation of q =    0.5000000   0.5000000   0.0000000
- 
-     G-vector sticks info
+
+     Parallelization info
      --------------------
      sticks:   dense  smooth     PW     G-vecs:    dense   smooth      PW
+     Min          30      30     15                  217      217      76
+     Max          31      31     16                  218      218      77
      Sum         121     121     61                  869      869     307
- 
+
+     Using Slab Decomposition
+
 
      Title: 
      Electron-phonon coefficients for Al using Fourier interpolation of dvscf   
@@ -2305,7 +2399,7 @@
                 l(2) =   1
 
      atomic species   valence    mass     pseudopotential
-        Al             3.00    26.98000     Al( 1.00)
+     Al                3.00    26.98000     Al( 1.00)
 
      48 Sym. Ops., with inversion, found
 
@@ -2314,7 +2408,7 @@
    Cartesian axes
 
      site n.     atom                  positions (alat units)
-         1           Al  tau(   1) = (  -0.1666667   0.3333333   0.5000000  )
+         1        Al     tau(   1) = (  -0.1666667   0.3333333   0.5000000  )
 
      number of k points=   328  Marzari-Vanderbilt smearing, width (Ry)=  0.0500
 
@@ -2322,7 +2416,9 @@
 
      Dense  grid:      869 G-vectors     FFT dimensions: (  15,  15,  15)
 
-     Estimated max dynamical RAM per process >       0.52 MB
+     Estimated max dynamical RAM per process >       0.20 MB
+
+     Estimated total dynamical RAM >       0.78 MB
 
      The potential is recalculated from file :
      ./_ph0/aluminum.q_10/aluminum.save/charge-density
@@ -2332,9 +2428,9 @@
      Band Structure Calculation
      Davidson diagonalization with overlap
 
-     ethr =  3.33E-10,  avg # of iterations = 13.6
+     ethr =  3.33E-10,  avg # of iterations = 13.4
 
-     total cpu time spent up to now is       20.9 secs
+     total cpu time spent up to now is        7.4 secs
 
      End of band structure calculation
 
@@ -2342,7 +2438,8 @@
 
      the Fermi energy is     8.1776 ev
 
-     Writing output data file ./_ph0/aluminum.q_10/aluminum.save/
+     Writing config to output data dir ./_ph0/aluminum.q_10/aluminum.save/ :
+     XML data file
 
      Electron-phonon coefficients for Al using Fourier interpolation of dvscf   
 
@@ -2379,15 +2476,15 @@
      Cartesian axes
 
      site n.  atom      mass           positions (alat units)
-        1     Al  26.9800   tau(    1) = (   -0.16667    0.33333    0.50000  )
+        1  Al     26.9800   tau(    1) = (   -0.16667    0.33333    0.50000  )
 
      Computing dynamical matrix for 
                     q = (   0.5000000   0.5000000   0.0000000 )
- 
+
       4 Sym.Ops. (no q -> -q+G )
 
 
-     G cutoff =   85.4897  (    869 G-vectors)     FFT grid: ( 15, 15, 15)
+     G cutoff =   85.4897  (    217 G-vectors)     FFT grid: ( 15, 15, 15)
 
      number of k points=   328  Marzari-Vanderbilt smearing, width (Ry)=  0.0500
 
@@ -2404,16 +2501,16 @@
 
 
      Atomic displacements:
-     There are   3 irreducible representations
+     There are    3 irreducible representations
 
-     Representation     1      1 modes -A_1  D_1  S_1  To be done
+     Representation     1      1 modes -  To be done
 
-     Representation     2      1 modes -B_1  D_3  S_3  To be done
+     Representation     2      1 modes -  To be done
 
-     Representation     3      1 modes -B_2  D_4  S_4  To be done
+     Representation     3      1 modes -  To be done
 
 
-     PHONON       :     25.52s CPU     26.58s WALL
+     PHONON       :      7.96s CPU      9.10s WALL
 
      Fourier interpolating dVscf
      Reading dynamics matrix from file al.elph.dyn10
@@ -2423,162 +2520,162 @@
      q = (    0.500000000   0.500000000   0.000000000 ) 
 
  **************************************************************************
-     freq (    1) =       4.864101 [THz] =     162.248937 [cm-1]
-     freq (    2) =       6.528749 [THz] =     217.775611 [cm-1]
-     freq (    3) =       8.467445 [THz] =     282.443559 [cm-1]
+     freq (    1) =       4.864032 [THz] =     162.246643 [cm-1]
+     freq (    2) =       6.528716 [THz] =     217.774531 [cm-1]
+     freq (    3) =       8.465688 [THz] =     282.384949 [cm-1]
  **************************************************************************
- 
+
      Gaussian Broadening:   0.020 Ry, ngauss=   0
      DOS =  2.675810 states/spin/Ry/Unit Cell at Ef=  8.278657 eV
-     double delta at Ef = 40.569273
+     double delta at Ef = 40.569275
      lambda(    1)=  0.1200   gamma=    7.26 GHz
      lambda(    2)=  0.1985   gamma=   21.62 GHz
-     lambda(    3)=  0.9122   gamma=  167.11 GHz
- 
+     lambda(    3)=  0.9126   gamma=  167.12 GHz
+
      Gaussian Broadening:   0.040 Ry, ngauss=   0
      DOS =  2.703426 states/spin/Ry/Unit Cell at Ef=  8.200073 eV
-     double delta at Ef = 22.157373
+     double delta at Ef = 22.157375
      lambda(    1)=  0.0585   gamma=    3.58 GHz
      lambda(    2)=  0.1787   gamma=   19.66 GHz
-     lambda(    3)=  0.3653   gamma=   67.61 GHz
- 
+     lambda(    3)=  0.3654   gamma=   67.61 GHz
+
      Gaussian Broadening:   0.060 Ry, ngauss=   0
      DOS =  2.781707 states/spin/Ry/Unit Cell at Ef=  8.181999 eV
-     double delta at Ef = 18.361264
+     double delta at Ef = 18.361265
      lambda(    1)=  0.0477   gamma=    3.00 GHz
      lambda(    2)=  0.1601   gamma=   18.13 GHz
-     lambda(    3)=  0.2452   gamma=   46.69 GHz
- 
+     lambda(    3)=  0.2453   gamma=   46.70 GHz
+
      Gaussian Broadening:   0.080 Ry, ngauss=   0
-     DOS =  2.793243 states/spin/Ry/Unit Cell at Ef=  8.205910 eV
-     double delta at Ef = 16.418327
+     DOS =  2.793243 states/spin/Ry/Unit Cell at Ef=  8.205911 eV
+     double delta at Ef = 16.418328
      lambda(    1)=  0.0422   gamma=    2.66 GHz
      lambda(    2)=  0.1482   gamma=   16.85 GHz
-     lambda(    3)=  0.2041   gamma=   39.03 GHz
- 
+     lambda(    3)=  0.2042   gamma=   39.04 GHz
+
      Gaussian Broadening:   0.100 Ry, ngauss=   0
      DOS =  2.781101 states/spin/Ry/Unit Cell at Ef=  8.232628 eV
      double delta at Ef = 15.413854
      lambda(    1)=  0.0395   gamma=    2.48 GHz
      lambda(    2)=  0.1442   gamma=   16.32 GHz
-     lambda(    3)=  0.1906   gamma=   36.29 GHz
- 
+     lambda(    3)=  0.1907   gamma=   36.29 GHz
+
      Gaussian Broadening:   0.120 Ry, ngauss=   0
      DOS =  2.753459 states/spin/Ry/Unit Cell at Ef=  8.253279 eV
      double delta at Ef = 14.878508
      lambda(    1)=  0.0390   gamma=    2.43 GHz
      lambda(    2)=  0.1427   gamma=   15.99 GHz
-     lambda(    3)=  0.1871   gamma=   35.27 GHz
- 
+     lambda(    3)=  0.1872   gamma=   35.27 GHz
+
      Gaussian Broadening:   0.140 Ry, ngauss=   0
      DOS =  2.719703 states/spin/Ry/Unit Cell at Ef=  8.267107 eV
      double delta at Ef = 14.573333
      lambda(    1)=  0.0395   gamma=    2.43 GHz
      lambda(    2)=  0.1420   gamma=   15.72 GHz
-     lambda(    3)=  0.1866   gamma=   34.75 GHz
- 
+     lambda(    3)=  0.1867   gamma=   34.75 GHz
+
      Gaussian Broadening:   0.160 Ry, ngauss=   0
      DOS =  2.693266 states/spin/Ry/Unit Cell at Ef=  8.275890 eV
      double delta at Ef = 14.414003
      lambda(    1)=  0.0405   gamma=    2.46 GHz
      lambda(    2)=  0.1418   gamma=   15.54 GHz
-     lambda(    3)=  0.1867   gamma=   34.43 GHz
- 
+     lambda(    3)=  0.1868   gamma=   34.43 GHz
+
      Gaussian Broadening:   0.180 Ry, ngauss=   0
      DOS =  2.678788 states/spin/Ry/Unit Cell at Ef=  8.281617 eV
      double delta at Ef = 14.350015
      lambda(    1)=  0.0415   gamma=    2.51 GHz
      lambda(    2)=  0.1418   gamma=   15.46 GHz
-     lambda(    3)=  0.1866   gamma=   34.22 GHz
- 
+     lambda(    3)=  0.1867   gamma=   34.23 GHz
+
      Gaussian Broadening:   0.200 Ry, ngauss=   0
      DOS =  2.674046 states/spin/Ry/Unit Cell at Ef=  8.285684 eV
      double delta at Ef = 14.342522
      lambda(    1)=  0.0425   gamma=    2.57 GHz
      lambda(    2)=  0.1419   gamma=   15.45 GHz
-     lambda(    3)=  0.1862   gamma=   34.09 GHz
- 
-     init_run     :      0.07s CPU      0.07s WALL (       9 calls)
-     electrons    :     19.81s CPU     20.56s WALL (       9 calls)
+     lambda(    3)=  0.1863   gamma=   34.09 GHz
+
+     init_run     :      0.03s CPU      0.03s WALL (       9 calls)
+     electrons    :      6.33s CPU      7.24s WALL (       9 calls)
 
      Called by init_run:
      wfcinit      :      0.00s CPU      0.00s WALL (       9 calls)
-     potinit      :      0.01s CPU      0.00s WALL (       9 calls)
-     hinit0       :      0.04s CPU      0.04s WALL (       9 calls)
+     potinit      :      0.00s CPU      0.00s WALL (       9 calls)
+     hinit0       :      0.01s CPU      0.01s WALL (       9 calls)
 
      Called by electrons:
-     c_bands      :     19.79s CPU     20.54s WALL (       9 calls)
+     c_bands      :      6.31s CPU      7.22s WALL (       9 calls)
      v_of_rho     :      0.00s CPU      0.00s WALL (      10 calls)
 
      Called by c_bands:
-     init_us_2    :      0.10s CPU      0.13s WALL (    6061 calls)
-     cegterg      :     18.24s CPU     18.86s WALL (    2237 calls)
-
-     Called by sum_band:
+     init_us_2    :      0.04s CPU      0.05s WALL (    6061 calls)
+     cegterg      :      5.84s CPU      6.68s WALL (    2258 calls)
 
      Called by *egterg:
-     cdiaghg      :      3.56s CPU      3.66s WALL (   31113 calls)
-     h_psi        :     13.99s CPU     14.43s WALL (   33350 calls)
-     g_psi        :      0.17s CPU      0.21s WALL (   28964 calls)
+     cdiaghg      :      1.78s CPU      2.03s WALL (   31206 calls)
+     h_psi        :      3.55s CPU      4.07s WALL (   33464 calls)
+     g_psi        :      0.07s CPU      0.08s WALL (   29057 calls)
 
      Called by h_psi:
-     h_psi:calbec :      0.25s CPU      0.31s WALL (   33350 calls)
-     vloc_psi     :     13.39s CPU     13.69s WALL (   33350 calls)
-     add_vuspsi   :      0.20s CPU      0.23s WALL (   33350 calls)
+     h_psi:calbec :      0.16s CPU      0.19s WALL (   33464 calls)
+     vloc_psi     :      3.15s CPU      3.61s WALL (   33464 calls)
+     add_vuspsi   :      0.05s CPU      0.06s WALL (   33464 calls)
 
      General routines
-     calbec       :      0.21s CPU      0.26s WALL (   37822 calls)
+     calbec       :      0.12s CPU      0.14s WALL (   37936 calls)
      fft          :      0.01s CPU      0.01s WALL (     120 calls)
-     ffts         :      0.17s CPU      0.15s WALL (    3354 calls)
-     fftw         :     15.70s CPU     15.85s WALL (  362466 calls)
-     davcio       :      0.05s CPU      0.11s WALL (   10696 calls)
- 
+     ffts         :      0.04s CPU      0.04s WALL (    3354 calls)
+     fftw         :      2.99s CPU      3.45s WALL (  363166 calls)
+     davcio       :      0.02s CPU      0.03s WALL (   10696 calls)
+
      Parallel routines
- 
-     PHONON       :     26.43s CPU     27.53s WALL
+
+     PHONON       :      8.22s CPU      9.39s WALL
 
      INITIALIZATION: 
-     phq_setup    :      0.03s CPU      0.04s WALL (      10 calls)
-     phq_init     :      0.07s CPU      0.09s WALL (      10 calls)
- 
-     phq_init     :      0.07s CPU      0.09s WALL (      10 calls)
+     phq_setup    :      0.01s CPU      0.01s WALL (      10 calls)
+     phq_init     :      0.03s CPU      0.04s WALL (      10 calls)
+
+     phq_init     :      0.03s CPU      0.04s WALL (      10 calls)
      init_vloc    :      0.00s CPU      0.00s WALL (      10 calls)
-     init_us_1    :      0.02s CPU      0.02s WALL (      10 calls)
- 
- 
- 
- 
-     dvqpsi_us    :      2.24s CPU      2.29s WALL (    3354 calls)
- 
-     dvqpsi_us    :      2.24s CPU      2.29s WALL (    3354 calls)
-     dvqpsi_us_on :      0.10s CPU      0.10s WALL (    3354 calls)
- 
- 
-     h_psi        :     13.99s CPU     14.43s WALL (   33350 calls)
- 
-     h_psi        :     13.99s CPU     14.43s WALL (   33350 calls)
-     add_vuspsi   :      0.20s CPU      0.23s WALL (   33350 calls)
- 
- 
- 
+     init_us_1    :      0.00s CPU      0.00s WALL (      10 calls)
+     init_us_2    :      0.04s CPU      0.05s WALL (    6061 calls)
+     com_dvloc    :      0.06s CPU      0.07s WALL (    3354 calls)
+
+     dvqpsi_us    :      0.55s CPU      0.65s WALL (    3354 calls)
+     dvqpsi_us_on :      0.06s CPU      0.07s WALL (    3354 calls)
+
+     add_vuspsi   :      0.05s CPU      0.06s WALL (   33464 calls)
+
+
       Fourier interpolation of dVscf
-     dvscf_r2q    :      0.04s CPU      0.05s WALL (      10 calls)
-     dvscf_davcio :      0.01s CPU      0.02s WALL (     810 calls)
+     dvscf_r2q    :      0.02s CPU      0.03s WALL (      10 calls)
+     dvscf_davcio :      0.01s CPU      0.01s WALL (     810 calls)
      dvscf_scatgr :      0.01s CPU      0.01s WALL (     810 calls)
      dvscf_bare   :      0.00s CPU      0.00s WALL (      10 calls)
- 
-      General routines
-     calbec       :      0.21s CPU      0.26s WALL (   37822 calls)
-     fft          :      0.01s CPU      0.01s WALL (     120 calls)
-     ffts         :      0.17s CPU      0.15s WALL (    3354 calls)
-     fftw         :     15.70s CPU     15.85s WALL (  362466 calls)
-     davcio       :      0.05s CPU      0.11s WALL (   10696 calls)
- 
- 
-     PHONON       :     26.43s CPU     27.53s WALL
 
- 
-   This run was terminated on:  18:42:49  21Mar2020            
+      Electron-phonon coupling
+     elphon       :      1.29s CPU      1.52s WALL (      10 calls)
+     elphel       :      1.27s CPU      1.49s WALL (      21 calls)
+
+      General routines
+     calbec       :      0.12s CPU      0.14s WALL (   37936 calls)
+     fft          :      0.01s CPU      0.01s WALL (     120 calls)
+     ffts         :      0.04s CPU      0.04s WALL (    3354 calls)
+     fftw         :      2.99s CPU      3.45s WALL (  363166 calls)
+     davcio       :      0.02s CPU      0.03s WALL (   10696 calls)
+
+      Additional routines
+     h_psi_bgrp   :      3.60s CPU      4.13s WALL (   33464 calls)
+     h_psi        :      3.55s CPU      4.07s WALL (   33464 calls)
+     h_psi:pot    :      3.47s CPU      3.98s WALL (   33464 calls)
+     h_psi:calbec :      0.16s CPU      0.19s WALL (   33464 calls)
+
+
+     PHONON       :      8.22s CPU      9.39s WALL
+
+
+   This run was terminated on:  10:24:26   6Jul2026            
 
 =------------------------------------------------------------------------------=
    JOB DONE.

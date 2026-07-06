@@ -1,22 +1,32 @@
 
-     Program PHONON v.6.5 starts on  9Apr2020 at 16:53:21 
+     Program PHONON v.7.6-dev starts on  6Jul2026 at 10:27:36 
 
      This program is part of the open-source Quantum ESPRESSO suite
      for quantum simulation of materials; please cite
          "P. Giannozzi et al., J. Phys.:Condens. Matter 21 395502 (2009);
          "P. Giannozzi et al., J. Phys.:Condens. Matter 29 465901 (2017);
+         "P. Giannozzi et al., J. Chem. Phys. 152 154105 (2020);
           URL http://www.quantum-espresso.org", 
      in publications or presentations arising from this work. More details at
      http://www.quantum-espresso.org/quote
 
-     Parallel version (MPI), running on     1 processors
+     Parallel version (MPI), running on     4 processors
 
      MPI processes distributed on     1 nodes
-     Fft bands division:     nmany     =       1
+     8190 MiB available memory on the printing compute node when the environment starts
+
+     Waiting for input...
+     Reading input from standard input
 
      Reading xml data from directory:
 
      ./diam.save/
+
+     R & G space division:  proc/nbgrp/npool/nimage =       4
+     Subspace diagonalization in iterative solution of the eigenvalue problem:
+     a serial algorithm will be used
+
+     file C.UPF: wavefunction(s)  3d renormalized
 
      IMPORTANT: XC functional enforced from input :
      Exchange-correlation= PZ
@@ -24,14 +34,17 @@
      Any further DFT definition will be discarded
      Please, verify this is what you really want
 
-               file C.UPF: wavefunction(s)  3d renormalized
- 
-     G-vector sticks info
+
+     Parallelization info
      --------------------
      sticks:   dense  smooth     PW     G-vecs:    dense   smooth      PW
+     Min          30      30     10                  222      222      45
+     Max          31      31     11                  225      225      46
      Sum         121     121     43                  893      893     181
- 
-     Reading collected, re-writing distributed wavefunctions
+
+     Using Slab Decomposition
+
+     Reading collected, re-writing distributed wavefunctions in ./
 
 
      Dynamical matrices for ( 2, 2, 2)  uniform grid of q-points
@@ -45,6 +58,25 @@
        6   1.000000000   0.000000000   0.000000000
        7   0.000000000   0.000000000  -1.000000000
        8   0.500000000  -0.500000000  -0.500000000
+
+     Number and degeneracy of irreps per q-point
+       N         xq(1)         xq(2)         xq(3)   N irreps
+       1   0.000000000   0.000000000   0.000000000       6
+     No degeneracy
+       2   0.500000000  -0.500000000   0.500000000       6
+     No degeneracy
+       3  -0.500000000  -0.500000000  -0.500000000       6
+     No degeneracy
+       4   0.000000000  -1.000000000   0.000000000       6
+     No degeneracy
+       5   0.500000000   0.500000000  -0.500000000       6
+     No degeneracy
+       6   1.000000000   0.000000000   0.000000000       6
+     No degeneracy
+       7   0.000000000   0.000000000  -1.000000000       6
+     No degeneracy
+       8   0.500000000  -0.500000000  -0.500000000       6
+     No degeneracy
 
      Calculation of q =    0.0000000   0.0000000   0.0000000
 
@@ -83,15 +115,15 @@
      Cartesian axes
 
      site n.  atom      mass           positions (alat units)
-        1     C   12.0108   tau(    1) = (    0.00000    0.00000    0.00000  )
-        2     C   12.0108   tau(    2) = (    0.25000    0.25000    0.25000  )
+        1  C      12.0108   tau(    1) = (    0.00000    0.00000    0.00000  )
+        2  C      12.0108   tau(    2) = (    0.25000    0.25000    0.25000  )
 
      Computing dynamical matrix for 
                     q = (   0.0000000   0.0000000   0.0000000 )
- 
+
      No symmetry!
 
-     G cutoff =   89.3442  (    893 G-vectors)     FFT grid: ( 15, 15, 15)
+     G cutoff =   89.3442  (    223 G-vectors)     FFT grid: ( 15, 15, 15)
      number of k points=     5
 
      PseudoPot. # 1 for C  read from file:
@@ -109,20 +141,20 @@
      Atomic displacements:
      There are    6 irreducible representations
 
-     Representation     1      1 modes -A  To be done
+     Representation     1      1 modes -  To be done
 
-     Representation     2      1 modes -A  To be done
+     Representation     2      1 modes -  To be done
 
-     Representation     3      1 modes -A  To be done
+     Representation     3      1 modes -  To be done
 
-     Representation     4      1 modes -A  To be done
+     Representation     4      1 modes -  To be done
 
-     Representation     5      1 modes -A  To be done
+     Representation     5      1 modes -  To be done
 
-     Representation     6      1 modes -A  To be done
+     Representation     6      1 modes -  To be done
 
 
-     PHONON       :      0.18s CPU      0.19s WALL
+     PHONON       :      0.04s CPU      0.05s WALL
 
      Fourier interpolating dVscf
  
@@ -141,15 +173,15 @@
 
      Calculation of q =    0.5000000  -0.5000000   0.5000000
 
-     Subspace diagonalization in iterative solution of the eigenvalue problem:
-     a serial algorithm will be used
-
- 
-     G-vector sticks info
+     Parallelization info
      --------------------
      sticks:   dense  smooth     PW     G-vecs:    dense   smooth      PW
+     Min          30      30     13                  222      222      64
+     Max          31      31     14                  225      225      65
      Sum         121     121     55                  893      893     259
- 
+
+     Using Slab Decomposition
+
 
      Title: 
      --                                                                         
@@ -161,7 +193,7 @@
      number of atoms/cell      =            2
      number of atomic types    =            1
      number of electrons       =         8.00
-     number of Kohn-Sham states=           12
+     number of Kohn-Sham states=            9
      kinetic-energy cutoff     =      20.0000  Ry
      charge density cutoff     =      80.0000  Ry
      Exchange-correlation= PZ
@@ -191,7 +223,7 @@
                 l(2) =   1
 
      atomic species   valence    mass     pseudopotential
-        C              4.00    12.01078     C ( 1.00)
+     C                 4.00    12.01078     C ( 1.00)
 
      No symmetry found
 
@@ -200,8 +232,8 @@
    Cartesian axes
 
      site n.     atom                  positions (alat units)
-         1           C   tau(   1) = (   0.0000000   0.0000000   0.0000000  )
-         2           C   tau(   2) = (   0.2500000   0.2500000   0.2500000  )
+         1        C      tau(   1) = (   0.0000000   0.0000000   0.0000000  )
+         2        C      tau(   2) = (   0.2500000   0.2500000   0.2500000  )
 
      number of k points=    10
                        cart. coord. in units 2pi/alat
@@ -218,7 +250,9 @@
 
      Dense  grid:      893 G-vectors     FFT dimensions: (  15,  15,  15)
 
-     Estimated max dynamical RAM per process >       0.72 MB
+     Estimated max dynamical RAM per process >       0.29 MB
+
+     Estimated total dynamical RAM >       1.17 MB
 
      The potential is recalculated from file :
      ./_ph0/diam.q_2/diam.save/charge-density
@@ -228,65 +262,63 @@
      Band Structure Calculation
      Davidson diagonalization with overlap
 
-     ethr =  1.25E-10,  avg # of iterations =  9.3
+     ethr =  1.25E-10,  avg # of iterations =  9.8
 
-     total cpu time spent up to now is        0.2 secs
+     total cpu time spent up to now is        0.1 secs
 
      End of band structure calculation
 
           k = 0.0000 0.0000 0.0000 (   113 PWs)   bands (ev):
 
     -8.0860  14.5913  14.5913  14.5913  21.1053  21.1053  21.1053  27.9252
-    33.4232  41.1368  41.1368  42.0957
+    33.4232
 
           k = 0.5000-0.5000 0.5000 (   108 PWs)   bands (ev):
 
     -1.9534   0.4090  12.1030  12.1030  23.3597  23.6479  23.6479  31.2485
-    37.7491  40.4997  41.8216  41.8216
+    37.7491
 
           k =-0.5000 0.5000 0.5000 (   108 PWs)   bands (ev):
 
     -1.9534   0.4090  12.1030  12.1030  23.3597  23.6479  23.6479  31.2485
-    37.7491  40.4997  41.8216  41.8216
+    37.7491
 
           k = 0.0000 0.0000 1.0000 (   116 PWs)   bands (ev):
 
      1.1083   1.1084   7.9790   7.9790  18.8846  18.8846  33.5555  33.5555
-    40.0060  40.0061  47.6415  47.6415
+    40.0060
 
           k =-0.2000 0.4000 0.0000 (   114 PWs)   bands (ev):
 
     -6.1846   9.4596  10.1142  12.8472  21.1390  24.8888  25.5630  27.3838
-    35.0764  36.6902  39.8244  46.2100
+    35.0764
 
           k = 0.3000-0.1000 0.5000 (   109 PWs)   bands (ev):
 
     -4.7787   6.4465   9.2899  11.9410  22.3934  25.0148  26.8974  27.8120
-    36.3178  36.9922  40.9972  45.5423
+    36.3178
 
           k = 0.8000 0.6000 0.2000 (   109 PWs)   bands (ev):
 
     -0.6653   2.2573   6.9099   9.0459  22.1283  26.2937  28.4784  30.6782
-    34.3063  40.9929  42.6057  45.6154
+    34.3063
 
           k = 1.3000 0.1000 0.7000 (   108 PWs)   bands (ev):
 
      0.0551   2.2800   5.4225   9.5851  20.5475  27.9869  29.5633  30.4407
-    34.0734  39.8483  42.2224  48.2379
+    34.0734
 
           k = 0.3000-0.1000-0.5000 (   109 PWs)   bands (ev):
 
     -4.7787   6.4465   9.2899  11.9410  22.3934  25.0148  26.8974  27.8120
-    36.3178  36.9922  40.9972  45.5423
+    36.3178
 
           k = 0.8000-0.6000 0.0000 (   109 PWs)   bands (ev):
 
      0.4733   2.7787   4.6645   8.5459  21.8142  27.5917  28.9597  30.0471
-    34.5070  39.8683  42.9070  48.8261
+    34.5070
 
      highest occupied, lowest unoccupied level (ev):    14.5913   21.1053
-
-     Writing output data file ./_ph0/diam.q_2/diam.save/
 
      --                                                                         
 
@@ -323,15 +355,15 @@
      Cartesian axes
 
      site n.  atom      mass           positions (alat units)
-        1     C   12.0108   tau(    1) = (    0.00000    0.00000    0.00000  )
-        2     C   12.0108   tau(    2) = (    0.25000    0.25000    0.25000  )
+        1  C      12.0108   tau(    1) = (    0.00000    0.00000    0.00000  )
+        2  C      12.0108   tau(    2) = (    0.25000    0.25000    0.25000  )
 
      Computing dynamical matrix for 
                     q = (   0.5000000  -0.5000000   0.5000000 )
- 
+
      No symmetry!
 
-     G cutoff =   89.3442  (    893 G-vectors)     FFT grid: ( 15, 15, 15)
+     G cutoff =   89.3442  (    223 G-vectors)     FFT grid: ( 15, 15, 15)
      number of k points=    10
 
      PseudoPot. # 1 for C  read from file:
@@ -349,20 +381,22 @@
      Atomic displacements:
      There are    6 irreducible representations
 
-     Representation     1      1 modes -A  To be done
+     Representation     1      1 modes -  To be done
 
-     Representation     2      1 modes -A  To be done
+     Representation     2      1 modes -  To be done
 
-     Representation     3      1 modes -A  To be done
+     Representation     3      1 modes -  To be done
 
-     Representation     4      1 modes -A  To be done
+     Representation     4      1 modes -  To be done
 
-     Representation     5      1 modes -A  To be done
+     Representation     5      1 modes -  To be done
 
-     Representation     6      1 modes -A  To be done
+     Representation     6      1 modes -  To be done
 
 
-     PHONON       :      0.48s CPU      0.51s WALL
+     Message from routine init_vloc:
+     Interpolation table for Vloc re-allocated
+     PHONON       :      0.11s CPU      0.14s WALL
 
      Fourier interpolating dVscf
  
@@ -375,12 +409,16 @@
      AHC e-ph calculation done
 
      Calculation of q =   -0.5000000  -0.5000000  -0.5000000
- 
-     G-vector sticks info
+
+     Parallelization info
      --------------------
      sticks:   dense  smooth     PW     G-vecs:    dense   smooth      PW
+     Min          30      30     10                  222      222      45
+     Max          31      31     11                  225      225      46
      Sum         121     121     43                  893      893     181
- 
+
+     Using Slab Decomposition
+
 
      Title: 
      --                                                                         
@@ -392,7 +430,7 @@
      number of atoms/cell      =            2
      number of atomic types    =            1
      number of electrons       =         8.00
-     number of Kohn-Sham states=           12
+     number of Kohn-Sham states=            9
      kinetic-energy cutoff     =      20.0000  Ry
      charge density cutoff     =      80.0000  Ry
      Exchange-correlation= PZ
@@ -422,7 +460,7 @@
                 l(2) =   1
 
      atomic species   valence    mass     pseudopotential
-        C              4.00    12.01078     C ( 1.00)
+     C                 4.00    12.01078     C ( 1.00)
 
      No symmetry found
 
@@ -431,8 +469,8 @@
    Cartesian axes
 
      site n.     atom                  positions (alat units)
-         1           C   tau(   1) = (   0.0000000   0.0000000   0.0000000  )
-         2           C   tau(   2) = (   0.2500000   0.2500000   0.2500000  )
+         1        C      tau(   1) = (   0.0000000   0.0000000   0.0000000  )
+         2        C      tau(   2) = (   0.2500000   0.2500000   0.2500000  )
 
      number of k points=    10
                        cart. coord. in units 2pi/alat
@@ -449,7 +487,9 @@
 
      Dense  grid:      893 G-vectors     FFT dimensions: (  15,  15,  15)
 
-     Estimated max dynamical RAM per process >       0.72 MB
+     Estimated max dynamical RAM per process >       0.29 MB
+
+     Estimated total dynamical RAM >       1.17 MB
 
      The potential is recalculated from file :
      ./_ph0/diam.q_3/diam.save/charge-density
@@ -459,65 +499,63 @@
      Band Structure Calculation
      Davidson diagonalization with overlap
 
-     ethr =  1.25E-10,  avg # of iterations =  9.1
+     ethr =  1.25E-10,  avg # of iterations =  9.3
 
-     total cpu time spent up to now is        0.4 secs
+     total cpu time spent up to now is        0.1 secs
 
      End of band structure calculation
 
           k = 0.0000 0.0000 0.0000 (   113 PWs)   bands (ev):
 
     -8.0860  14.5913  14.5913  14.5913  21.1053  21.1053  21.1053  27.9252
-    33.4232  41.1368  41.1368  42.0957
+    33.4232
 
           k =-0.5000-0.5000-0.5000 (   108 PWs)   bands (ev):
 
     -1.9534   0.4090  12.1030  12.1030  23.3597  23.6479  23.6479  31.2485
-    37.7491  40.4997  41.8216  41.8216
+    37.7491
 
           k =-0.5000 0.5000 0.5000 (   108 PWs)   bands (ev):
 
     -1.9534   0.4090  12.1030  12.1030  23.3597  23.6479  23.6479  31.2485
-    37.7491  40.4997  41.8216  41.8216
+    37.7491
 
           k =-1.0000 0.0000 0.0000 (   116 PWs)   bands (ev):
 
      1.1083   1.1084   7.9790   7.9790  18.8846  18.8846  33.5555  33.5555
-    40.0060  40.0061  47.6415  47.6415
+    40.0060
 
           k =-0.2000 0.4000 0.0000 (   114 PWs)   bands (ev):
 
     -6.1846   9.4596  10.1142  12.8472  21.1390  24.8888  25.5630  27.3838
-    35.0764  36.6902  39.8244  46.2100
+    35.0764
 
           k =-0.7000-0.1000-0.5000 (   110 PWs)   bands (ev):
 
     -1.2865   3.0416   6.3905   9.6105  22.8531  25.6492  29.0916  30.9527
-    33.2430  38.8351  42.6368  46.7969
+    33.2430
 
           k = 0.8000 0.6000 0.2000 (   109 PWs)   bands (ev):
 
     -0.6653   2.2573   6.9099   9.0459  22.1283  26.2937  28.4784  30.6782
-    34.3063  40.9929  42.6057  45.6154
+    34.3063
 
           k = 0.3000 0.1000-0.3000 (   112 PWs)   bands (ev):
 
     -6.2589   8.4365  11.0897  13.4632  23.0078  23.6616  24.0133  29.2465
-    34.9116  36.0591  38.4573  43.1432
+    34.9116
 
           k = 0.3000-0.1000-0.5000 (   109 PWs)   bands (ev):
 
     -4.7787   6.4465   9.2899  11.9410  22.3934  25.0148  26.8974  27.8120
-    36.3178  36.9922  40.9972  45.5423
+    36.3178
 
           k =-0.2000-0.6000-1.0000 (   109 PWs)   bands (ev):
 
     -0.7869   3.9651   5.8103   7.8061  23.9895  24.6473  27.0548  31.8774
-    35.4645  39.5608  44.1273  47.8877
+    35.4645
 
      highest occupied, lowest unoccupied level (ev):    14.5913   21.1053
-
-     Writing output data file ./_ph0/diam.q_3/diam.save/
 
      --                                                                         
 
@@ -554,15 +592,15 @@
      Cartesian axes
 
      site n.  atom      mass           positions (alat units)
-        1     C   12.0108   tau(    1) = (    0.00000    0.00000    0.00000  )
-        2     C   12.0108   tau(    2) = (    0.25000    0.25000    0.25000  )
+        1  C      12.0108   tau(    1) = (    0.00000    0.00000    0.00000  )
+        2  C      12.0108   tau(    2) = (    0.25000    0.25000    0.25000  )
 
      Computing dynamical matrix for 
                     q = (  -0.5000000  -0.5000000  -0.5000000 )
- 
+
      No symmetry!
 
-     G cutoff =   89.3442  (    893 G-vectors)     FFT grid: ( 15, 15, 15)
+     G cutoff =   89.3442  (    223 G-vectors)     FFT grid: ( 15, 15, 15)
      number of k points=    10
 
      PseudoPot. # 1 for C  read from file:
@@ -580,20 +618,20 @@
      Atomic displacements:
      There are    6 irreducible representations
 
-     Representation     1      1 modes -A  To be done
+     Representation     1      1 modes -  To be done
 
-     Representation     2      1 modes -A  To be done
+     Representation     2      1 modes -  To be done
 
-     Representation     3      1 modes -A  To be done
+     Representation     3      1 modes -  To be done
 
-     Representation     4      1 modes -A  To be done
+     Representation     4      1 modes -  To be done
 
-     Representation     5      1 modes -A  To be done
+     Representation     5      1 modes -  To be done
 
-     Representation     6      1 modes -A  To be done
+     Representation     6      1 modes -  To be done
 
 
-     PHONON       :      0.77s CPU      0.81s WALL
+     PHONON       :      0.18s CPU      0.22s WALL
 
      Fourier interpolating dVscf
  
@@ -606,12 +644,16 @@
      AHC e-ph calculation done
 
      Calculation of q =    0.0000000  -1.0000000   0.0000000
- 
-     G-vector sticks info
+
+     Parallelization info
      --------------------
      sticks:   dense  smooth     PW     G-vecs:    dense   smooth      PW
+     Min          30      30     13                  222      222      57
+     Max          31      31     14                  225      225      58
      Sum         121     121     55                  893      893     229
- 
+
+     Using Slab Decomposition
+
 
      Title: 
      --                                                                         
@@ -623,7 +665,7 @@
      number of atoms/cell      =            2
      number of atomic types    =            1
      number of electrons       =         8.00
-     number of Kohn-Sham states=           12
+     number of Kohn-Sham states=            9
      kinetic-energy cutoff     =      20.0000  Ry
      charge density cutoff     =      80.0000  Ry
      Exchange-correlation= PZ
@@ -653,7 +695,7 @@
                 l(2) =   1
 
      atomic species   valence    mass     pseudopotential
-        C              4.00    12.01078     C ( 1.00)
+     C                 4.00    12.01078     C ( 1.00)
 
      No symmetry found
 
@@ -662,8 +704,8 @@
    Cartesian axes
 
      site n.     atom                  positions (alat units)
-         1           C   tau(   1) = (   0.0000000   0.0000000   0.0000000  )
-         2           C   tau(   2) = (   0.2500000   0.2500000   0.2500000  )
+         1        C      tau(   1) = (   0.0000000   0.0000000   0.0000000  )
+         2        C      tau(   2) = (   0.2500000   0.2500000   0.2500000  )
 
      number of k points=    10
                        cart. coord. in units 2pi/alat
@@ -680,7 +722,9 @@
 
      Dense  grid:      893 G-vectors     FFT dimensions: (  15,  15,  15)
 
-     Estimated max dynamical RAM per process >       0.72 MB
+     Estimated max dynamical RAM per process >       0.29 MB
+
+     Estimated total dynamical RAM >       1.17 MB
 
      The potential is recalculated from file :
      ./_ph0/diam.q_4/diam.save/charge-density
@@ -690,65 +734,63 @@
      Band Structure Calculation
      Davidson diagonalization with overlap
 
-     ethr =  1.25E-10,  avg # of iterations =  9.1
+     ethr =  1.25E-10,  avg # of iterations =  9.5
 
-     total cpu time spent up to now is        0.6 secs
+     total cpu time spent up to now is        0.2 secs
 
      End of band structure calculation
 
           k = 0.0000 0.0000 0.0000 (   113 PWs)   bands (ev):
 
     -8.0860  14.5913  14.5913  14.5913  21.1053  21.1053  21.1053  27.9252
-    33.4232  41.1368  41.1368  42.0957
+    33.4232
 
           k = 0.0000-1.0000 0.0000 (   116 PWs)   bands (ev):
 
      1.1083   1.1084   7.9790   7.9790  18.8846  18.8846  33.5555  33.5555
-    40.0060  40.0061  47.6415  47.6415
+    40.0060
 
           k =-0.5000 0.5000 0.5000 (   108 PWs)   bands (ev):
 
     -1.9534   0.4090  12.1030  12.1030  23.3597  23.6479  23.6479  31.2485
-    37.7491  40.4997  41.8216  41.8216
+    37.7491
 
           k =-0.5000-0.5000 0.5000 (   108 PWs)   bands (ev):
 
     -1.9534   0.4090  12.1030  12.1030  23.3597  23.6479  23.6479  31.2485
-    37.7491  40.4997  41.8216  41.8216
+    37.7491
 
           k =-0.2000 0.4000 0.0000 (   114 PWs)   bands (ev):
 
     -6.1846   9.4596  10.1142  12.8472  21.1390  24.8888  25.5630  27.3838
-    35.0764  36.6902  39.8244  46.2100
+    35.0764
 
           k =-0.2000-0.6000 0.0000 (   112 PWs)   bands (ev):
 
     -4.3103   7.2986   8.5335  10.1018  20.4152  24.1144  27.5476  29.5464
-    37.2228  38.2238  43.4295  49.2078
+    37.2228
 
           k = 0.8000 0.6000 0.2000 (   109 PWs)   bands (ev):
 
     -0.6653   2.2573   6.9099   9.0459  22.1283  26.2937  28.4784  30.6782
-    34.3063  40.9929  42.6057  45.6154
+    34.3063
 
           k = 0.8000-0.4000 0.2000 (   109 PWs)   bands (ev):
 
     -0.6653   2.2573   6.9099   9.0459  22.1283  26.2937  28.4784  30.6782
-    34.3063  40.9929  42.6057  45.6154
+    34.3063
 
           k = 0.3000-0.1000-0.5000 (   109 PWs)   bands (ev):
 
     -4.7787   6.4465   9.2899  11.9410  22.3934  25.0148  26.8974  27.8120
-    36.3178  36.9922  40.9972  45.5423
+    36.3178
 
           k = 0.3000-1.1000-0.5000 (   110 PWs)   bands (ev):
 
     -1.2865   3.0416   6.3905   9.6105  22.8531  25.6492  29.0916  30.9527
-    33.2430  38.8351  42.6368  46.7969
+    33.2430
 
      highest occupied, lowest unoccupied level (ev):    14.5913   21.1053
-
-     Writing output data file ./_ph0/diam.q_4/diam.save/
 
      --                                                                         
 
@@ -785,15 +827,15 @@
      Cartesian axes
 
      site n.  atom      mass           positions (alat units)
-        1     C   12.0108   tau(    1) = (    0.00000    0.00000    0.00000  )
-        2     C   12.0108   tau(    2) = (    0.25000    0.25000    0.25000  )
+        1  C      12.0108   tau(    1) = (    0.00000    0.00000    0.00000  )
+        2  C      12.0108   tau(    2) = (    0.25000    0.25000    0.25000  )
 
      Computing dynamical matrix for 
                     q = (   0.0000000  -1.0000000   0.0000000 )
- 
+
      No symmetry!
 
-     G cutoff =   89.3442  (    893 G-vectors)     FFT grid: ( 15, 15, 15)
+     G cutoff =   89.3442  (    223 G-vectors)     FFT grid: ( 15, 15, 15)
      number of k points=    10
 
      PseudoPot. # 1 for C  read from file:
@@ -811,20 +853,20 @@
      Atomic displacements:
      There are    6 irreducible representations
 
-     Representation     1      1 modes -A  To be done
+     Representation     1      1 modes -  To be done
 
-     Representation     2      1 modes -A  To be done
+     Representation     2      1 modes -  To be done
 
-     Representation     3      1 modes -A  To be done
+     Representation     3      1 modes -  To be done
 
-     Representation     4      1 modes -A  To be done
+     Representation     4      1 modes -  To be done
 
-     Representation     5      1 modes -A  To be done
+     Representation     5      1 modes -  To be done
 
-     Representation     6      1 modes -A  To be done
+     Representation     6      1 modes -  To be done
 
 
-     PHONON       :      1.06s CPU      1.11s WALL
+     PHONON       :      0.25s CPU      0.29s WALL
 
      Fourier interpolating dVscf
  
@@ -837,12 +879,16 @@
      AHC e-ph calculation done
 
      Calculation of q =    0.5000000   0.5000000  -0.5000000
- 
-     G-vector sticks info
+
+     Parallelization info
      --------------------
      sticks:   dense  smooth     PW     G-vecs:    dense   smooth      PW
+     Min          30      30     13                  222      222      70
+     Max          31      31     14                  225      225      71
      Sum         121     121     55                  893      893     283
- 
+
+     Using Slab Decomposition
+
 
      Title: 
      --                                                                         
@@ -854,7 +900,7 @@
      number of atoms/cell      =            2
      number of atomic types    =            1
      number of electrons       =         8.00
-     number of Kohn-Sham states=           12
+     number of Kohn-Sham states=            9
      kinetic-energy cutoff     =      20.0000  Ry
      charge density cutoff     =      80.0000  Ry
      Exchange-correlation= PZ
@@ -884,7 +930,7 @@
                 l(2) =   1
 
      atomic species   valence    mass     pseudopotential
-        C              4.00    12.01078     C ( 1.00)
+     C                 4.00    12.01078     C ( 1.00)
 
      No symmetry found
 
@@ -893,8 +939,8 @@
    Cartesian axes
 
      site n.     atom                  positions (alat units)
-         1           C   tau(   1) = (   0.0000000   0.0000000   0.0000000  )
-         2           C   tau(   2) = (   0.2500000   0.2500000   0.2500000  )
+         1        C      tau(   1) = (   0.0000000   0.0000000   0.0000000  )
+         2        C      tau(   2) = (   0.2500000   0.2500000   0.2500000  )
 
      number of k points=    10
                        cart. coord. in units 2pi/alat
@@ -911,7 +957,9 @@
 
      Dense  grid:      893 G-vectors     FFT dimensions: (  15,  15,  15)
 
-     Estimated max dynamical RAM per process >       0.72 MB
+     Estimated max dynamical RAM per process >       0.29 MB
+
+     Estimated total dynamical RAM >       1.17 MB
 
      The potential is recalculated from file :
      ./_ph0/diam.q_5/diam.save/charge-density
@@ -921,65 +969,63 @@
      Band Structure Calculation
      Davidson diagonalization with overlap
 
-     ethr =  1.25E-10,  avg # of iterations =  9.1
+     ethr =  1.25E-10,  avg # of iterations =  9.6
 
-     total cpu time spent up to now is        0.8 secs
+     total cpu time spent up to now is        0.2 secs
 
      End of band structure calculation
 
           k = 0.0000 0.0000 0.0000 (   113 PWs)   bands (ev):
 
     -8.0860  14.5913  14.5913  14.5913  21.1053  21.1053  21.1053  27.9252
-    33.4232  41.1368  41.1368  42.0957
+    33.4232
 
           k = 0.5000 0.5000-0.5000 (   108 PWs)   bands (ev):
 
     -1.9534   0.4090  12.1030  12.1030  23.3597  23.6479  23.6479  31.2485
-    37.7491  40.4997  41.8216  41.8216
+    37.7491
 
           k =-0.5000 0.5000 0.5000 (   108 PWs)   bands (ev):
 
     -1.9534   0.4090  12.1030  12.1030  23.3597  23.6479  23.6479  31.2485
-    37.7491  40.4997  41.8216  41.8216
+    37.7491
 
           k = 0.0000 1.0000 0.0000 (   116 PWs)   bands (ev):
 
      1.1083   1.1084   7.9790   7.9790  18.8846  18.8846  33.5555  33.5555
-    40.0060  40.0061  47.6415  47.6415
+    40.0060
 
           k =-0.2000 0.4000 0.0000 (   114 PWs)   bands (ev):
 
     -6.1846   9.4596  10.1142  12.8472  21.1390  24.8888  25.5630  27.3838
-    35.0764  36.6902  39.8244  46.2100
+    35.0764
 
           k = 0.3000 0.9000-0.5000 (   110 PWs)   bands (ev):
 
     -1.2865   3.0416   6.3905   9.6105  22.8531  25.6492  29.0916  30.9527
-    33.2430  38.8351  42.6368  46.7969
+    33.2430
 
           k = 0.8000 0.6000 0.2000 (   109 PWs)   bands (ev):
 
     -0.6653   2.2573   6.9099   9.0459  22.1283  26.2937  28.4784  30.6782
-    34.3063  40.9929  42.6057  45.6154
+    34.3063
 
           k = 1.3000 1.1000-0.3000 (   111 PWs)   bands (ev):
 
     -2.5975   4.7566   7.6230   9.1921  21.5183  25.0588  27.3051  30.6949
-    36.8389  39.0779  43.7840  46.9400
+    36.8389
 
           k = 0.3000-0.1000-0.5000 (   109 PWs)   bands (ev):
 
     -4.7787   6.4465   9.2899  11.9410  22.3934  25.0148  26.8974  27.8120
-    36.3178  36.9922  40.9972  45.5423
+    36.3178
 
           k = 0.8000 0.4000-1.0000 (   112 PWs)   bands (ev):
 
     -4.3103   7.2986   8.5335  10.1018  20.4152  24.1144  27.5476  29.5464
-    37.2228  38.2238  43.4295  49.2078
+    37.2228
 
      highest occupied, lowest unoccupied level (ev):    14.5913   21.1053
-
-     Writing output data file ./_ph0/diam.q_5/diam.save/
 
      --                                                                         
 
@@ -1016,15 +1062,15 @@
      Cartesian axes
 
      site n.  atom      mass           positions (alat units)
-        1     C   12.0108   tau(    1) = (    0.00000    0.00000    0.00000  )
-        2     C   12.0108   tau(    2) = (    0.25000    0.25000    0.25000  )
+        1  C      12.0108   tau(    1) = (    0.00000    0.00000    0.00000  )
+        2  C      12.0108   tau(    2) = (    0.25000    0.25000    0.25000  )
 
      Computing dynamical matrix for 
                     q = (   0.5000000   0.5000000  -0.5000000 )
- 
+
      No symmetry!
 
-     G cutoff =   89.3442  (    893 G-vectors)     FFT grid: ( 15, 15, 15)
+     G cutoff =   89.3442  (    223 G-vectors)     FFT grid: ( 15, 15, 15)
      number of k points=    10
 
      PseudoPot. # 1 for C  read from file:
@@ -1042,20 +1088,20 @@
      Atomic displacements:
      There are    6 irreducible representations
 
-     Representation     1      1 modes -A  To be done
+     Representation     1      1 modes -  To be done
 
-     Representation     2      1 modes -A  To be done
+     Representation     2      1 modes -  To be done
 
-     Representation     3      1 modes -A  To be done
+     Representation     3      1 modes -  To be done
 
-     Representation     4      1 modes -A  To be done
+     Representation     4      1 modes -  To be done
 
-     Representation     5      1 modes -A  To be done
+     Representation     5      1 modes -  To be done
 
-     Representation     6      1 modes -A  To be done
+     Representation     6      1 modes -  To be done
 
 
-     PHONON       :      1.30s CPU      1.37s WALL
+     PHONON       :      0.31s CPU      0.36s WALL
 
      Fourier interpolating dVscf
  
@@ -1068,12 +1114,16 @@
      AHC e-ph calculation done
 
      Calculation of q =    1.0000000   0.0000000   0.0000000
- 
-     G-vector sticks info
+
+     Parallelization info
      --------------------
      sticks:   dense  smooth     PW     G-vecs:    dense   smooth      PW
+     Min          30      30     15                  222      222      82
+     Max          31      31     16                  225      225      83
      Sum         121     121     61                  893      893     331
- 
+
+     Using Slab Decomposition
+
 
      Title: 
      --                                                                         
@@ -1085,7 +1135,7 @@
      number of atoms/cell      =            2
      number of atomic types    =            1
      number of electrons       =         8.00
-     number of Kohn-Sham states=           12
+     number of Kohn-Sham states=            9
      kinetic-energy cutoff     =      20.0000  Ry
      charge density cutoff     =      80.0000  Ry
      Exchange-correlation= PZ
@@ -1115,7 +1165,7 @@
                 l(2) =   1
 
      atomic species   valence    mass     pseudopotential
-        C              4.00    12.01078     C ( 1.00)
+     C                 4.00    12.01078     C ( 1.00)
 
      No symmetry found
 
@@ -1124,8 +1174,8 @@
    Cartesian axes
 
      site n.     atom                  positions (alat units)
-         1           C   tau(   1) = (   0.0000000   0.0000000   0.0000000  )
-         2           C   tau(   2) = (   0.2500000   0.2500000   0.2500000  )
+         1        C      tau(   1) = (   0.0000000   0.0000000   0.0000000  )
+         2        C      tau(   2) = (   0.2500000   0.2500000   0.2500000  )
 
      number of k points=    10
                        cart. coord. in units 2pi/alat
@@ -1142,7 +1192,9 @@
 
      Dense  grid:      893 G-vectors     FFT dimensions: (  15,  15,  15)
 
-     Estimated max dynamical RAM per process >       0.72 MB
+     Estimated max dynamical RAM per process >       0.29 MB
+
+     Estimated total dynamical RAM >       1.17 MB
 
      The potential is recalculated from file :
      ./_ph0/diam.q_6/diam.save/charge-density
@@ -1152,65 +1204,63 @@
      Band Structure Calculation
      Davidson diagonalization with overlap
 
-     ethr =  1.25E-10,  avg # of iterations =  9.2
+     ethr =  1.25E-10,  avg # of iterations =  9.5
 
-     total cpu time spent up to now is        1.0 secs
+     total cpu time spent up to now is        0.3 secs
 
      End of band structure calculation
 
           k = 0.0000 0.0000 0.0000 (   113 PWs)   bands (ev):
 
     -8.0860  14.5913  14.5913  14.5913  21.1053  21.1053  21.1053  27.9252
-    33.4232  41.1368  41.1368  42.0957
+    33.4232
 
           k = 1.0000 0.0000 0.0000 (   116 PWs)   bands (ev):
 
      1.1083   1.1084   7.9790   7.9790  18.8846  18.8846  33.5555  33.5555
-    40.0060  40.0061  47.6415  47.6415
+    40.0060
 
           k =-0.5000 0.5000 0.5000 (   108 PWs)   bands (ev):
 
     -1.9534   0.4090  12.1030  12.1030  23.3597  23.6479  23.6479  31.2485
-    37.7491  40.4997  41.8216  41.8216
+    37.7491
 
           k = 0.5000 0.5000 0.5000 (   108 PWs)   bands (ev):
 
     -1.9534   0.4090  12.1030  12.1030  23.3597  23.6479  23.6479  31.2485
-    37.7491  40.4997  41.8216  41.8216
+    37.7491
 
           k =-0.2000 0.4000 0.0000 (   114 PWs)   bands (ev):
 
     -6.1846   9.4596  10.1142  12.8472  21.1390  24.8888  25.5630  27.3838
-    35.0764  36.6902  39.8244  46.2100
+    35.0764
 
           k = 0.8000 0.4000 0.0000 (   109 PWs)   bands (ev):
 
     -0.7869   3.9651   5.8103   7.8061  23.9895  24.6473  27.0548  31.8774
-    35.4645  39.5608  44.1273  47.8877
+    35.4645
 
           k = 0.8000 0.6000 0.2000 (   109 PWs)   bands (ev):
 
     -0.6653   2.2573   6.9099   9.0459  22.1283  26.2937  28.4784  30.6782
-    34.3063  40.9929  42.6057  45.6154
+    34.3063
 
           k = 1.8000 0.6000 0.2000 (   113 PWs)   bands (ev):
 
     -3.9549   5.4006   9.6599  10.0695  20.7032  25.9598  27.5226  27.6682
-    37.4416  38.2849  43.5605  44.5595
+    37.4416
 
           k = 0.3000-0.1000-0.5000 (   109 PWs)   bands (ev):
 
     -4.7787   6.4465   9.2899  11.9410  22.3934  25.0148  26.8974  27.8120
-    36.3178  36.9922  40.9972  45.5423
+    36.3178
 
           k = 1.3000-0.1000-0.5000 (   110 PWs)   bands (ev):
 
     -1.2865   3.0416   6.3905   9.6105  22.8531  25.6492  29.0916  30.9527
-    33.2430  38.8351  42.6368  46.7969
+    33.2430
 
      highest occupied, lowest unoccupied level (ev):    14.5913   21.1053
-
-     Writing output data file ./_ph0/diam.q_6/diam.save/
 
      --                                                                         
 
@@ -1247,15 +1297,15 @@
      Cartesian axes
 
      site n.  atom      mass           positions (alat units)
-        1     C   12.0108   tau(    1) = (    0.00000    0.00000    0.00000  )
-        2     C   12.0108   tau(    2) = (    0.25000    0.25000    0.25000  )
+        1  C      12.0108   tau(    1) = (    0.00000    0.00000    0.00000  )
+        2  C      12.0108   tau(    2) = (    0.25000    0.25000    0.25000  )
 
      Computing dynamical matrix for 
                     q = (   1.0000000   0.0000000   0.0000000 )
- 
+
      No symmetry!
 
-     G cutoff =   89.3442  (    893 G-vectors)     FFT grid: ( 15, 15, 15)
+     G cutoff =   89.3442  (    223 G-vectors)     FFT grid: ( 15, 15, 15)
      number of k points=    10
 
      PseudoPot. # 1 for C  read from file:
@@ -1273,20 +1323,20 @@
      Atomic displacements:
      There are    6 irreducible representations
 
-     Representation     1      1 modes -A  To be done
+     Representation     1      1 modes -  To be done
 
-     Representation     2      1 modes -A  To be done
+     Representation     2      1 modes -  To be done
 
-     Representation     3      1 modes -A  To be done
+     Representation     3      1 modes -  To be done
 
-     Representation     4      1 modes -A  To be done
+     Representation     4      1 modes -  To be done
 
-     Representation     5      1 modes -A  To be done
+     Representation     5      1 modes -  To be done
 
-     Representation     6      1 modes -A  To be done
+     Representation     6      1 modes -  To be done
 
 
-     PHONON       :      1.54s CPU      1.62s WALL
+     PHONON       :      0.37s CPU      0.43s WALL
 
      Fourier interpolating dVscf
  
@@ -1299,12 +1349,16 @@
      AHC e-ph calculation done
 
      Calculation of q =    0.0000000   0.0000000  -1.0000000
- 
-     G-vector sticks info
+
+     Parallelization info
      --------------------
      sticks:   dense  smooth     PW     G-vecs:    dense   smooth      PW
+     Min          30      30     13                  222      222      64
+     Max          31      31     14                  225      225      65
      Sum         121     121     55                  893      893     259
- 
+
+     Using Slab Decomposition
+
 
      Title: 
      --                                                                         
@@ -1316,7 +1370,7 @@
      number of atoms/cell      =            2
      number of atomic types    =            1
      number of electrons       =         8.00
-     number of Kohn-Sham states=           12
+     number of Kohn-Sham states=            9
      kinetic-energy cutoff     =      20.0000  Ry
      charge density cutoff     =      80.0000  Ry
      Exchange-correlation= PZ
@@ -1346,7 +1400,7 @@
                 l(2) =   1
 
      atomic species   valence    mass     pseudopotential
-        C              4.00    12.01078     C ( 1.00)
+     C                 4.00    12.01078     C ( 1.00)
 
      No symmetry found
 
@@ -1355,8 +1409,8 @@
    Cartesian axes
 
      site n.     atom                  positions (alat units)
-         1           C   tau(   1) = (   0.0000000   0.0000000   0.0000000  )
-         2           C   tau(   2) = (   0.2500000   0.2500000   0.2500000  )
+         1        C      tau(   1) = (   0.0000000   0.0000000   0.0000000  )
+         2        C      tau(   2) = (   0.2500000   0.2500000   0.2500000  )
 
      number of k points=    10
                        cart. coord. in units 2pi/alat
@@ -1373,7 +1427,9 @@
 
      Dense  grid:      893 G-vectors     FFT dimensions: (  15,  15,  15)
 
-     Estimated max dynamical RAM per process >       0.72 MB
+     Estimated max dynamical RAM per process >       0.29 MB
+
+     Estimated total dynamical RAM >       1.17 MB
 
      The potential is recalculated from file :
      ./_ph0/diam.q_7/diam.save/charge-density
@@ -1383,65 +1439,63 @@
      Band Structure Calculation
      Davidson diagonalization with overlap
 
-     ethr =  1.25E-10,  avg # of iterations =  9.1
+     ethr =  1.25E-10,  avg # of iterations = 10.4
 
-     total cpu time spent up to now is        1.2 secs
+     total cpu time spent up to now is        0.3 secs
 
      End of band structure calculation
 
           k = 0.0000 0.0000 0.0000 (   113 PWs)   bands (ev):
 
     -8.0860  14.5913  14.5913  14.5913  21.1053  21.1053  21.1053  27.9252
-    33.4232  41.1368  41.1368  42.0957
+    33.4232
 
           k = 0.0000 0.0000-1.0000 (   116 PWs)   bands (ev):
 
      1.1083   1.1084   7.9790   7.9790  18.8846  18.8846  33.5555  33.5555
-    40.0060  40.0061  47.6415  47.6415
+    40.0060
 
           k =-0.5000 0.5000 0.5000 (   108 PWs)   bands (ev):
 
     -1.9534   0.4090  12.1030  12.1030  23.3597  23.6479  23.6479  31.2485
-    37.7491  40.4997  41.8216  41.8216
+    37.7491
 
           k =-0.5000 0.5000-0.5000 (   108 PWs)   bands (ev):
 
     -1.9534   0.4090  12.1030  12.1030  23.3597  23.6479  23.6479  31.2485
-    37.7491  40.4997  41.8216  41.8216
+    37.7491
 
           k =-0.2000 0.4000 0.0000 (   114 PWs)   bands (ev):
 
     -6.1846   9.4596  10.1142  12.8472  21.1390  24.8888  25.5630  27.3838
-    35.0764  36.6902  39.8244  46.2100
+    35.0764
 
           k =-0.2000 0.4000-1.0000 (   109 PWs)   bands (ev):
 
      0.4733   2.7787   4.6645   8.5459  21.8142  27.5917  28.9597  30.0471
-    34.5070  39.8683  42.9070  48.8261
+    34.5070
 
           k = 0.8000 0.6000 0.2000 (   109 PWs)   bands (ev):
 
     -0.6653   2.2573   6.9099   9.0459  22.1283  26.2937  28.4784  30.6782
-    34.3063  40.9929  42.6057  45.6154
+    34.3063
 
           k = 0.8000 0.6000-0.8000 (   107 PWs)   bands (ev):
 
     -5.7913   7.3534  11.6584  12.6145  21.9733  24.7717  25.0598  28.7852
-    36.0364  36.4726  39.8810  42.1387
+    36.0364
 
           k = 0.3000-0.1000-0.5000 (   109 PWs)   bands (ev):
 
     -4.7787   6.4465   9.2899  11.9410  22.3934  25.0148  26.8974  27.8120
-    36.3178  36.9922  40.9972  45.5423
+    36.3178
 
           k = 0.3000-0.1000-1.5000 (   109 PWs)   bands (ev):
 
     -4.7787   6.4465   9.2899  11.9410  22.3934  25.0148  26.8974  27.8120
-    36.3178  36.9922  40.9972  45.5423
+    36.3178
 
      highest occupied, lowest unoccupied level (ev):    14.5913   21.1053
-
-     Writing output data file ./_ph0/diam.q_7/diam.save/
 
      --                                                                         
 
@@ -1478,15 +1532,15 @@
      Cartesian axes
 
      site n.  atom      mass           positions (alat units)
-        1     C   12.0108   tau(    1) = (    0.00000    0.00000    0.00000  )
-        2     C   12.0108   tau(    2) = (    0.25000    0.25000    0.25000  )
+        1  C      12.0108   tau(    1) = (    0.00000    0.00000    0.00000  )
+        2  C      12.0108   tau(    2) = (    0.25000    0.25000    0.25000  )
 
      Computing dynamical matrix for 
                     q = (   0.0000000   0.0000000  -1.0000000 )
- 
+
      No symmetry!
 
-     G cutoff =   89.3442  (    893 G-vectors)     FFT grid: ( 15, 15, 15)
+     G cutoff =   89.3442  (    223 G-vectors)     FFT grid: ( 15, 15, 15)
      number of k points=    10
 
      PseudoPot. # 1 for C  read from file:
@@ -1504,20 +1558,20 @@
      Atomic displacements:
      There are    6 irreducible representations
 
-     Representation     1      1 modes -A  To be done
+     Representation     1      1 modes -  To be done
 
-     Representation     2      1 modes -A  To be done
+     Representation     2      1 modes -  To be done
 
-     Representation     3      1 modes -A  To be done
+     Representation     3      1 modes -  To be done
 
-     Representation     4      1 modes -A  To be done
+     Representation     4      1 modes -  To be done
 
-     Representation     5      1 modes -A  To be done
+     Representation     5      1 modes -  To be done
 
-     Representation     6      1 modes -A  To be done
+     Representation     6      1 modes -  To be done
 
 
-     PHONON       :      1.78s CPU      1.87s WALL
+     PHONON       :      0.43s CPU      0.50s WALL
 
      Fourier interpolating dVscf
  
@@ -1530,12 +1584,16 @@
      AHC e-ph calculation done
 
      Calculation of q =    0.5000000  -0.5000000  -0.5000000
- 
-     G-vector sticks info
+
+     Parallelization info
      --------------------
      sticks:   dense  smooth     PW     G-vecs:    dense   smooth      PW
+     Min          30      30     13                  222      222      64
+     Max          31      31     14                  225      225      65
      Sum         121     121     55                  893      893     259
- 
+
+     Using Slab Decomposition
+
 
      Title: 
      --                                                                         
@@ -1547,7 +1605,7 @@
      number of atoms/cell      =            2
      number of atomic types    =            1
      number of electrons       =         8.00
-     number of Kohn-Sham states=           12
+     number of Kohn-Sham states=            9
      kinetic-energy cutoff     =      20.0000  Ry
      charge density cutoff     =      80.0000  Ry
      Exchange-correlation= PZ
@@ -1577,7 +1635,7 @@
                 l(2) =   1
 
      atomic species   valence    mass     pseudopotential
-        C              4.00    12.01078     C ( 1.00)
+     C                 4.00    12.01078     C ( 1.00)
 
      No symmetry found
 
@@ -1586,8 +1644,8 @@
    Cartesian axes
 
      site n.     atom                  positions (alat units)
-         1           C   tau(   1) = (   0.0000000   0.0000000   0.0000000  )
-         2           C   tau(   2) = (   0.2500000   0.2500000   0.2500000  )
+         1        C      tau(   1) = (   0.0000000   0.0000000   0.0000000  )
+         2        C      tau(   2) = (   0.2500000   0.2500000   0.2500000  )
 
      number of k points=    10
                        cart. coord. in units 2pi/alat
@@ -1604,7 +1662,9 @@
 
      Dense  grid:      893 G-vectors     FFT dimensions: (  15,  15,  15)
 
-     Estimated max dynamical RAM per process >       0.72 MB
+     Estimated max dynamical RAM per process >       0.29 MB
+
+     Estimated total dynamical RAM >       1.17 MB
 
      The potential is recalculated from file :
      ./_ph0/diam.q_8/diam.save/charge-density
@@ -1614,65 +1674,63 @@
      Band Structure Calculation
      Davidson diagonalization with overlap
 
-     ethr =  1.25E-10,  avg # of iterations =  8.8
+     ethr =  1.25E-10,  avg # of iterations =  9.7
 
-     total cpu time spent up to now is        1.4 secs
+     total cpu time spent up to now is        0.4 secs
 
      End of band structure calculation
 
           k = 0.0000 0.0000 0.0000 (   113 PWs)   bands (ev):
 
     -8.0860  14.5913  14.5913  14.5913  21.1053  21.1053  21.1053  27.9252
-    33.4232  41.1368  41.1368  42.0957
+    33.4232
 
           k = 0.5000-0.5000-0.5000 (   108 PWs)   bands (ev):
 
     -1.9534   0.4090  12.1030  12.1030  23.3597  23.6479  23.6479  31.2485
-    37.7491  40.4997  41.8216  41.8216
+    37.7491
 
           k =-0.5000 0.5000 0.5000 (   108 PWs)   bands (ev):
 
     -1.9534   0.4090  12.1030  12.1030  23.3597  23.6479  23.6479  31.2485
-    37.7491  40.4997  41.8216  41.8216
+    37.7491
 
           k = 0.0000 0.0000 0.0000 (   113 PWs)   bands (ev):
 
     -8.0860  14.5913  14.5913  14.5913  21.1053  21.1053  21.1053  27.9252
-    33.4232  41.1368  41.1368  42.0957
+    33.4232
 
           k =-0.2000 0.4000 0.0000 (   114 PWs)   bands (ev):
 
     -6.1846   9.4596  10.1142  12.8472  21.1390  24.8888  25.5630  27.3838
-    35.0764  36.6902  39.8244  46.2100
+    35.0764
 
           k = 0.3000-0.1000-0.5000 (   109 PWs)   bands (ev):
 
     -4.7787   6.4465   9.2899  11.9410  22.3934  25.0148  26.8974  27.8120
-    36.3178  36.9922  40.9972  45.5423
+    36.3178
 
           k = 0.8000 0.6000 0.2000 (   109 PWs)   bands (ev):
 
     -0.6653   2.2573   6.9099   9.0459  22.1283  26.2937  28.4784  30.6782
-    34.3063  40.9929  42.6057  45.6154
+    34.3063
 
           k = 1.3000 0.1000-0.3000 (   111 PWs)   bands (ev):
 
     -2.5975   4.7566   7.6230   9.1921  21.5183  25.0588  27.3051  30.6949
-    36.8389  39.0779  43.7840  46.9400
+    36.8389
 
           k = 0.3000-0.1000-0.5000 (   109 PWs)   bands (ev):
 
     -4.7787   6.4465   9.2899  11.9410  22.3934  25.0148  26.8974  27.8120
-    36.3178  36.9922  40.9972  45.5423
+    36.3178
 
           k = 0.8000-0.6000-1.0000 (   114 PWs)   bands (ev):
 
     -6.1846   9.4596  10.1142  12.8472  21.1390  24.8888  25.5630  27.3838
-    35.0764  36.6902  39.8244  46.2100
+    35.0764
 
      highest occupied, lowest unoccupied level (ev):    14.5913   21.1053
-
-     Writing output data file ./_ph0/diam.q_8/diam.save/
 
      --                                                                         
 
@@ -1709,15 +1767,15 @@
      Cartesian axes
 
      site n.  atom      mass           positions (alat units)
-        1     C   12.0108   tau(    1) = (    0.00000    0.00000    0.00000  )
-        2     C   12.0108   tau(    2) = (    0.25000    0.25000    0.25000  )
+        1  C      12.0108   tau(    1) = (    0.00000    0.00000    0.00000  )
+        2  C      12.0108   tau(    2) = (    0.25000    0.25000    0.25000  )
 
      Computing dynamical matrix for 
                     q = (   0.5000000  -0.5000000  -0.5000000 )
- 
+
      No symmetry!
 
-     G cutoff =   89.3442  (    893 G-vectors)     FFT grid: ( 15, 15, 15)
+     G cutoff =   89.3442  (    223 G-vectors)     FFT grid: ( 15, 15, 15)
      number of k points=    10
 
      PseudoPot. # 1 for C  read from file:
@@ -1735,20 +1793,20 @@
      Atomic displacements:
      There are    6 irreducible representations
 
-     Representation     1      1 modes -A  To be done
+     Representation     1      1 modes -  To be done
 
-     Representation     2      1 modes -A  To be done
+     Representation     2      1 modes -  To be done
 
-     Representation     3      1 modes -A  To be done
+     Representation     3      1 modes -  To be done
 
-     Representation     4      1 modes -A  To be done
+     Representation     4      1 modes -  To be done
 
-     Representation     5      1 modes -A  To be done
+     Representation     5      1 modes -  To be done
 
-     Representation     6      1 modes -A  To be done
+     Representation     6      1 modes -  To be done
 
 
-     PHONON       :      2.02s CPU      2.12s WALL
+     PHONON       :      0.49s CPU      0.57s WALL
 
      Fourier interpolating dVscf
  
@@ -1759,88 +1817,94 @@
      Computing ahc_gkk for ik =        4
      Computing ahc_gkk for ik =        5
      AHC e-ph calculation done
- 
-     init_run     :      0.13s CPU      0.13s WALL (       7 calls)
-     electrons    :      1.16s CPU      1.18s WALL (       7 calls)
+
+     init_run     :      0.04s CPU      0.04s WALL (       7 calls)
+     electrons    :      0.28s CPU      0.31s WALL (       7 calls)
 
      Called by init_run:
      wfcinit      :      0.00s CPU      0.00s WALL (       7 calls)
      potinit      :      0.00s CPU      0.00s WALL (       7 calls)
-     hinit0       :      0.12s CPU      0.12s WALL (       7 calls)
+     hinit0       :      0.04s CPU      0.04s WALL (       7 calls)
 
      Called by electrons:
-     c_bands      :      1.16s CPU      1.18s WALL (       7 calls)
+     c_bands      :      0.28s CPU      0.31s WALL (       7 calls)
      v_of_rho     :      0.00s CPU      0.00s WALL (       8 calls)
 
      Called by c_bands:
-     init_us_2    :      0.01s CPU      0.01s WALL (     350 calls)
-     cegterg      :      1.00s CPU      1.02s WALL (      70 calls)
-
-     Called by sum_band:
+     init_us_2    :      0.00s CPU      0.00s WALL (     350 calls)
+     cegterg      :      0.23s CPU      0.26s WALL (      70 calls)
 
      Called by *egterg:
-     cdiaghg      :      0.31s CPU      0.32s WALL (     707 calls)
-     h_psi        :      0.71s CPU      0.74s WALL (     777 calls)
-     g_psi        :      0.01s CPU      0.01s WALL (     637 calls)
+     cdiaghg      :      0.09s CPU      0.10s WALL (     748 calls)
+     h_psi        :      0.15s CPU      0.17s WALL (     818 calls)
+     g_psi        :      0.00s CPU      0.00s WALL (     678 calls)
 
      Called by h_psi:
-     h_psi:calbec :      0.01s CPU      0.01s WALL (     777 calls)
-     vloc_psi     :      0.69s CPU      0.71s WALL (     777 calls)
-     add_vuspsi   :      0.01s CPU      0.01s WALL (     777 calls)
+     h_psi:calbec :      0.01s CPU      0.01s WALL (     818 calls)
+     vloc_psi     :      0.14s CPU      0.15s WALL (     818 calls)
+     add_vuspsi   :      0.00s CPU      0.00s WALL (     818 calls)
 
      General routines
-     calbec       :      0.01s CPU      0.01s WALL (     937 calls)
-     fft          :      0.01s CPU      0.02s WALL (     168 calls)
-     ffts         :      0.01s CPU      0.01s WALL (     240 calls)
-     fftw         :      0.97s CPU      0.98s WALL (   22400 calls)
-     davcio       :      0.01s CPU      0.04s WALL (    2621 calls)
- 
+     calbec       :      0.00s CPU      0.01s WALL (     978 calls)
+     fft          :      0.01s CPU      0.01s WALL (     168 calls)
+     ffts         :      0.00s CPU      0.00s WALL (     240 calls)
+     fftw         :      0.15s CPU      0.17s WALL (   18284 calls)
+     davcio       :      0.01s CPU      0.02s WALL (    1296 calls)
+
      Parallel routines
- 
-     PHONON       :      2.08s CPU      2.18s WALL
+
+     PHONON       :      0.51s CPU      0.59s WALL
 
      INITIALIZATION: 
-     phq_setup    :      0.04s CPU      0.04s WALL (       8 calls)
-     phq_init     :      0.03s CPU      0.03s WALL (       8 calls)
- 
-     phq_init     :      0.03s CPU      0.03s WALL (       8 calls)
-     init_vloc    :      0.00s CPU      0.00s WALL (       8 calls)
-     init_us_1    :      0.05s CPU      0.05s WALL (       8 calls)
- 
- 
- 
- 
-     dvqpsi_us    :      0.30s CPU      0.31s WALL (     240 calls)
- 
-     dvqpsi_us    :      0.30s CPU      0.31s WALL (     240 calls)
-     dvqpsi_us_on :      0.01s CPU      0.01s WALL (     240 calls)
- 
- 
-     h_psi        :      0.71s CPU      0.74s WALL (     777 calls)
- 
-     h_psi        :      0.71s CPU      0.74s WALL (     777 calls)
-     add_vuspsi   :      0.01s CPU      0.01s WALL (     777 calls)
- 
- 
- 
-      Fourier interpolation of dVscf
-     dvscf_r2q    :      0.06s CPU      0.08s WALL (       8 calls)
-     dvscf_davcio :      0.01s CPU      0.03s WALL (    1296 calls)
-     dvscf_scatgr :      0.02s CPU      0.02s WALL (    1296 calls)
-     dvscf_bare   :      0.00s CPU      0.00s WALL (       8 calls)
- 
-      General routines
-     calbec       :      0.01s CPU      0.01s WALL (     937 calls)
-     fft          :      0.01s CPU      0.02s WALL (     168 calls)
-     ffts         :      0.01s CPU      0.01s WALL (     240 calls)
-     fftw         :      0.97s CPU      0.98s WALL (   22400 calls)
-     davcio       :      0.01s CPU      0.04s WALL (    2621 calls)
- 
- 
-     PHONON       :      2.08s CPU      2.18s WALL
+     phq_setup    :      0.00s CPU      0.01s WALL (       8 calls)
+     phq_init     :      0.00s CPU      0.00s WALL (       8 calls)
 
- 
-   This run was terminated on:  16:53:23   9Apr2020            
+     phq_init     :      0.00s CPU      0.00s WALL (       8 calls)
+     init_vloc    :      0.00s CPU      0.00s WALL (       8 calls)
+     init_us_1    :      0.00s CPU      0.00s WALL (       8 calls)
+     init_us_2    :      0.00s CPU      0.00s WALL (     350 calls)
+     com_dvloc    :      0.00s CPU      0.00s WALL (     240 calls)
+
+     dvqpsi_us    :      0.05s CPU      0.06s WALL (     240 calls)
+     dvqpsi_us_on :      0.01s CPU      0.01s WALL (     240 calls)
+
+     add_vuspsi   :      0.00s CPU      0.00s WALL (     818 calls)
+
+
+      Fourier interpolation of dVscf
+     dvscf_r2q    :      0.03s CPU      0.04s WALL (       8 calls)
+     dvscf_davcio :      0.01s CPU      0.02s WALL (    1296 calls)
+     dvscf_scatgr :      0.01s CPU      0.02s WALL (    1296 calls)
+     dvscf_bare   :      0.00s CPU      0.00s WALL (       8 calls)
+
+      Electron-phonon coupling
+     elphon       :      0.11s CPU      0.14s WALL (       8 calls)
+     elphel       :      0.08s CPU      0.10s WALL (      48 calls)
+
+      El-ph coupling for electron self-energy
+     ahc_elph     :      0.01s CPU      0.02s WALL (       8 calls)
+     ahc_dw       :      0.00s CPU      0.00s WALL (       5 calls)
+     ahc_gkk      :      0.00s CPU      0.00s WALL (      40 calls)
+     ahc_gauge    :      0.01s CPU      0.01s WALL (      40 calls)
+
+      General routines
+     calbec       :      0.00s CPU      0.01s WALL (     978 calls)
+     fft          :      0.01s CPU      0.01s WALL (     168 calls)
+     ffts         :      0.00s CPU      0.00s WALL (     240 calls)
+     fftw         :      0.15s CPU      0.17s WALL (   18284 calls)
+     davcio       :      0.01s CPU      0.02s WALL (    1296 calls)
+
+      Additional routines
+     h_psi_bgrp   :      0.15s CPU      0.17s WALL (     818 calls)
+     h_psi        :      0.15s CPU      0.17s WALL (     818 calls)
+     h_psi:pot    :      0.15s CPU      0.16s WALL (     818 calls)
+     h_psi:calbec :      0.01s CPU      0.01s WALL (     818 calls)
+
+
+     PHONON       :      0.51s CPU      0.59s WALL
+
+
+   This run was terminated on:  10:27:37   6Jul2026            
 
 =------------------------------------------------------------------------------=
    JOB DONE.
