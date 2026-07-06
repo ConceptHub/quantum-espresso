@@ -23,7 +23,10 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 REF_RAW=$(grep -oP "version_number\s*=\s*'\K[^']+" include/qe_version.h)
-REF_BASE=${REF_RAW%-dev}
+# Strip any pre-release marker (-dev, -rc1, _rc2, rc2, -beta, whatever
+# literal happens to be in use -- with or without a '-'/'_' separator)
+# to get the bare X.Y[.Z] base.
+REF_BASE=$(sed -E 's/[-_]?[a-zA-Z].*//' <<< "$REF_RAW")
 
 status=0
 status_build=0
@@ -31,9 +34,16 @@ status_docs=0
 status_notes=0
 section=
 
+# Compares only the bare X.Y[.Z] base -- any pre-release marker (on either
+# side) is ignored, since most of these locations can't carry one at all
+# (CMake's project(VERSION ...) is numeric-only) or shouldn't by
+# convention (docs/release-notes describe a released version, never an
+# RC candidate).
 check() {
   local label=$1 value=$2
-  if [ "$value" = "$REF_BASE" ] || [ "$value" = "$REF_RAW" ]; then
+  local value_base
+  value_base=$(sed -E 's/[-_]?[a-zA-Z].*//' <<< "$value")
+  if [ "$value_base" = "$REF_BASE" ]; then
     printf '  [OK]      %-45s %s\n' "$label" "$value"
   else
     printf '  [DIFFERS] %-45s %-12s (expected %s)\n' "$label" "$value" "$REF_BASE"
@@ -46,7 +56,7 @@ check() {
   fi
 }
 
-echo "Reference (include/qe_version.h): $REF_RAW   [base: $REF_BASE]"
+echo "Reference (include/qe_version.h): $REF_RAW   [base: $REF_BASE]   (pre-release markers are ignored in all comparisons)"
 echo
 
 section=build
@@ -54,11 +64,11 @@ echo "Build system (must match to keep package metadata correct):"
 cmake_v=$(grep -A3 '^project(qe' CMakeLists.txt | grep -oP 'VERSION\s+\K[0-9.]+' | head -1 || echo '?')
 check "CMakeLists.txt (project VERSION)" "$cmake_v"
 
-ac_v=$(grep -oP 'AC_INIT\(ESPRESSO,\s*\K[0-9.]+' install/configure.ac || echo '?')
+ac_v=$(grep -oP 'AC_INIT\(ESPRESSO,\s*\K[^,\s]+' install/configure.ac || echo '?')
 check "install/configure.ac (AC_INIT)" "$ac_v"
 
 if [ -f configure ]; then
-  cfg_v=$(grep -oP "PACKAGE_VERSION='\K[0-9.]+" configure || echo '?')
+  cfg_v=$(grep -oP "PACKAGE_VERSION='\K[^']+" configure || echo '?')
   check "configure (generated -- regenerate, don't hand-edit)" "$cfg_v"
 fi
 
