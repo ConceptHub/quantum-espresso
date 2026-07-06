@@ -1,0 +1,71 @@
+#!/bin/bash
+#
+# Report every hardcoded QE version string next to include/qe_version.h,
+# the single source of truth, so drift is visible before a release.
+# See dev-tools/version-update-checklist.md for the full rationale and
+# which locations are supposed to be manual vs automatic.
+#
+# NOT checked here: EPW/src/epw.f90. Its version_number is maintained
+# independently by the EPW group and is intentionally decoupled from the
+# QE suite version -- it is out of scope by design, not an oversight.
+#
+# Usage: dev-tools/check_versions.sh
+# Exit status: 0 if everything matches include/qe_version.h, 1 otherwise.
+
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+REF_RAW=$(grep -oP "version_number\s*=\s*'\K[^']+" include/qe_version.h)
+REF_BASE=${REF_RAW%-dev}
+
+status=0
+
+check() {
+  local label=$1 value=$2
+  if [ "$value" = "$REF_BASE" ] || [ "$value" = "$REF_RAW" ]; then
+    printf '  [OK]      %-45s %s\n' "$label" "$value"
+  else
+    printf '  [DIFFERS] %-45s %-12s (expected %s)\n' "$label" "$value" "$REF_BASE"
+    status=1
+  fi
+}
+
+echo "Reference (include/qe_version.h): $REF_RAW   [base: $REF_BASE]"
+echo
+
+echo "Build system (must match to keep package metadata correct):"
+cmake_v=$(grep -A3 '^project(qe' CMakeLists.txt | grep -oP 'VERSION\s+\K[0-9.]+' | head -1 || echo '?')
+check "CMakeLists.txt (project VERSION)" "$cmake_v"
+
+ac_v=$(grep -oP 'AC_INIT\(ESPRESSO,\s*\K[0-9.]+' install/configure.ac || echo '?')
+check "install/configure.ac (AC_INIT)" "$ac_v"
+
+if [ -f configure ]; then
+  cfg_v=$(grep -oP "PACKAGE_VERSION='\K[0-9.]+" configure || echo '?')
+  check "configure (generated -- regenerate, don't hand-edit)" "$cfg_v"
+fi
+
+echo
+echo "Documentation (\\def\\version{...}, intentionally hand-maintained --"
+echo "reported for visibility before a release, not auto-fixed):"
+while IFS=: read -r file _line content; do
+  file=${file#./}
+  value=$(sed -E 's/.*\\def\\version\{([^}]*)\}.*/\1/' <<< "$content")
+  check "$file" "$value"
+done < <(grep -rn '\\def\\version{' --include='*.tex' . 2>/dev/null \
+           | grep -vE '/(test-suite|external|build[^/]*|GUI/QE-modes)/')
+
+echo
+echo "Release notes (checks only that the top section's version label matches"
+echo "include/qe_version.h -- does NOT check that its content is complete):"
+notes_v=$(grep -oP '[0-9]+\.[0-9]+(\.[0-9]+)?' Doc/release-notes | head -1 || echo '?')
+check "Doc/release-notes (top entry label)" "$notes_v"
+echo
+
+if [ "$status" -eq 0 ]; then
+  echo "All checked locations match include/qe_version.h."
+else
+  echo "Some locations differ from include/qe_version.h -- see dev-tools/version-update-checklist.md."
+fi
+
+exit "$status"
