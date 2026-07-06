@@ -21,7 +21,7 @@ subroutine el_config &
   !
   use kinds, only: dp
   use ld1_parameters
-  use upf_utils, only : spdf_to_l
+  use upf_utils, only : spdf_to_l, capital
   implicit none
   ! input: electronic configuration
   character(len=*), intent(in):: config
@@ -129,12 +129,13 @@ do n=nwfc+1,nwf
    if (nn(n) <= 0 .or. nn(n) > 7) &
   &    call errore('el_config','wrong main quantum number',n)
 
-   ll(n) = spdf_to_l(config(start(n)+1:start(n)+1))
+   curr = config(start(n)+1:start(n)+1)
+   ll(n) = spdf_to_l(curr)
    if (ll(n) == -1) call errore('el_config','l not found:'//curr,n)
    if (ll(n).ge.nn(n)) call errore('el_config', &
        &              'main/angular quantum number mismatch',n)
 
-   el(n)=prev//curr
+   el(n)=prev//capital(curr)
 
    if (start(n)+2 > finish(n))  &
    &   call errore('el_config','no occupancy field?',n)
