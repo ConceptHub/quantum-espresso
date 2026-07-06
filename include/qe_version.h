@@ -7,4 +7,4 @@
 !
 ! global version number
 !
-CHARACTER (LEN=10) :: version_number = '7.6-dev'
+CHARACTER (LEN=10) :: version_number = '7.6rc2'

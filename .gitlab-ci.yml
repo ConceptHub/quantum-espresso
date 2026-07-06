@@ -97,18 +97,9 @@ docs:helpdoc-strict:
       - "**/INPUT_*.xml"
 
 
-# Soft check: reports version strings (CMakeLists.txt, configure.ac,
-# Doc/*.tex, ...) that have drifted from include/qe_version.h. Informational
-# only -- allow_failure keeps this from blocking merges; see
-# dev-tools/version-update-checklist.md for what to do about a failure.
-docs:version-consistency:
-  tags: [gitlab-org-docker]
-  image: ubuntu:24.04
-  allow_failure: true
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-    - if: '$CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "develop"'
-  script:
-    - ./dev-tools/check_versions.sh
-
+# Soft, non-blocking check that version strings (CMakeLists.txt,
+# configure.ac, Doc/*.tex, Doc/release-notes, ...) haven't drifted from
+# include/qe_version.h -- see dev-tools/version-update-checklist.md.
+include:
+  - local: '.gitlab-ci-version-consistency.yml'
 

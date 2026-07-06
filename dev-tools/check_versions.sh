@@ -11,6 +11,13 @@
 #
 # Usage: dev-tools/check_versions.sh
 # Exit status: 0 if everything matches include/qe_version.h, 1 otherwise.
+#
+# Besides the human-readable report on stdout, this writes a small
+# machine-readable status file (default: .version-check-status, override
+# with $VERSION_CHECK_STATUS_FILE) with one PASS/FAIL line per section --
+# BUILD_STATUS, DOCS_STATUS, NOTES_STATUS -- so CI can run this script
+# once and have separate jobs report on each section without re-running
+# the checks.
 
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -19,6 +26,10 @@ REF_RAW=$(grep -oP "version_number\s*=\s*'\K[^']+" include/qe_version.h)
 REF_BASE=${REF_RAW%-dev}
 
 status=0
+status_build=0
+status_docs=0
+status_notes=0
+section=
 
 check() {
   local label=$1 value=$2
@@ -27,12 +38,18 @@ check() {
   else
     printf '  [DIFFERS] %-45s %-12s (expected %s)\n' "$label" "$value" "$REF_BASE"
     status=1
+    case "$section" in
+      build) status_build=1 ;;
+      docs)  status_docs=1 ;;
+      notes) status_notes=1 ;;
+    esac
   fi
 }
 
 echo "Reference (include/qe_version.h): $REF_RAW   [base: $REF_BASE]"
 echo
 
+section=build
 echo "Build system (must match to keep package metadata correct):"
 cmake_v=$(grep -A3 '^project(qe' CMakeLists.txt | grep -oP 'VERSION\s+\K[0-9.]+' | head -1 || echo '?')
 check "CMakeLists.txt (project VERSION)" "$cmake_v"
@@ -45,6 +62,7 @@ if [ -f configure ]; then
   check "configure (generated -- regenerate, don't hand-edit)" "$cfg_v"
 fi
 
+section=docs
 echo
 echo "Documentation (\\def\\version{...}, intentionally hand-maintained --"
 echo "reported for visibility before a release, not auto-fixed):"
@@ -55,12 +73,21 @@ while IFS=: read -r file _line content; do
 done < <(grep -rn '\\def\\version{' --include='*.tex' . 2>/dev/null \
            | grep -vE '/(test-suite|external|build[^/]*|GUI/QE-modes)/')
 
+section=notes
 echo
 echo "Release notes (checks only that the top section's version label matches"
 echo "include/qe_version.h -- does NOT check that its content is complete):"
 notes_v=$(grep -oP '[0-9]+\.[0-9]+(\.[0-9]+)?' Doc/release-notes | head -1 || echo '?')
 check "Doc/release-notes (top entry label)" "$notes_v"
 echo
+section=
+
+STATUS_FILE=${VERSION_CHECK_STATUS_FILE:-.version-check-status}
+{
+  echo "BUILD_STATUS=$status_build"
+  echo "DOCS_STATUS=$status_docs"
+  echo "NOTES_STATUS=$status_notes"
+} > "$STATUS_FILE"
 
 if [ "$status" -eq 0 ]; then
   echo "All checked locations match include/qe_version.h."
