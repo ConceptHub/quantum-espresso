@@ -585,15 +585,28 @@ subroutine get_u_delta_u(u, delta_u, q_point)
   !!
   real(dp), allocatable :: kernel_of_g(:,:), kernel_of_gq(:,:)
   complex(dp), allocatable :: temp_u(:,:), temp_delta_u(:,:)
-  complex(dp) :: loc_u(Nqs), loc_du(Nqs)
+  complex(dp), allocatable :: buf_u(:,:), res_u(:,:)
+  complex(dp) :: loc_du(Nqs)
+  integer, allocatable :: ig_buf(:)
   real(dp) :: gmod, gqmod
-  integer :: last_g, g_i, q1_i, q2_i, count, i_grid, final_g, ig    !! Index variables
+  integer :: last_g, g_i, q1_i, q2_i, count, i_grid, final_g, ig
+  integer :: ng_shell, k, sh_size, max_shell
   
   !! -------------------------------------------------------------------------------------------------
   !! Allocate variables
   !!  
   allocate( kernel_of_g(Nqs, Nqs), kernel_of_gq(Nqs, Nqs) )
   allocate( temp_u(dfftp%nnr, Nqs), temp_delta_u(dfftp%nnr, Nqs) )
+
+  sh_size = 0; max_shell = 0
+  do g_i = 1, ngm
+     if (g_i > 1 .and. igtongl(g_i) /= igtongl(g_i-1)) then
+        max_shell = max(max_shell, sh_size); sh_size = 0
+     end if
+     sh_size = sh_size + 1
+  end do
+  max_shell = max(max_shell, sh_size)
+  allocate( buf_u(Nqs, max_shell), res_u(Nqs, max_shell), ig_buf(max_shell) )
 
   temp_u(:,:) = (0.0D0, 0.0D0)
   temp_delta_u(:,:) = (0.0D0, 0.0D0)
@@ -611,27 +624,45 @@ subroutine get_u_delta_u(u, delta_u, q_point)
   !!
   !! Integrate in reciprocal space
   !!
-  last_g = -1 
+  last_g = -1
+  ng_shell = 0
 
   do g_i = 1, ngm
-    
+
      if ( igtongl(g_i) .ne. last_g) then
+        !! Flush accumulated shell into temp_u via a single ZGEMM
+        if (ng_shell > 0) then
+           CALL ZGEMM('N','N', Nqs, ng_shell, Nqs, (1.0_dp,0.0_dp), &
+                      kernel_of_g, Nqs, buf_u, Nqs, (0.0_dp,0.0_dp), res_u, Nqs)
+           do k = 1, ng_shell
+              temp_u(ig_buf(k), :) = temp_u(ig_buf(k), :) + res_u(:, k)
+           end do
+           ng_shell = 0
+        end if
         gmod = sqrt(gl(igtongl(g_i))) * tpiba
         call interpolate_kernel(gmod, kernel_of_g)
         last_g = igtongl(g_i)
-
      end if
-    
+
+     ig = dfftp%nl(g_i)
+     ng_shell           = ng_shell + 1
+     buf_u(:, ng_shell) = u(ig, :)
+     ig_buf(ng_shell)   = ig
+
      gqmod = sqrt( (g(1,g_i)+q_point(1))**2 + (g(2,g_i)+q_point(2))**2 + (g(3,g_i)+q_point(3))**2 )*tpiba
      call interpolate_kernel(gqmod, kernel_of_gq)
- 
-     ig = dfftp%nl(g_i)
-     loc_u(:)  = u(ig, :)
      loc_du(:) = delta_u(ig, :)
-     temp_u(ig,:)       = temp_u(ig,:)       + MATMUL(kernel_of_g,  loc_u)
      temp_delta_u(ig,:) = temp_delta_u(ig,:) + MATMUL(kernel_of_gq, loc_du)
 
   end do
+  !! Flush the last shell
+  if (ng_shell > 0) then
+     CALL ZGEMM('N','N', Nqs, ng_shell, Nqs, (1.0_dp,0.0_dp), &
+                kernel_of_g, Nqs, buf_u, Nqs, (0.0_dp,0.0_dp), res_u, Nqs)
+     do k = 1, ng_shell
+        temp_u(ig_buf(k), :) = temp_u(ig_buf(k), :) + res_u(:, k)
+     end do
+  end if
 
   if (gamma_only) then
     temp_u(dfftp%nlm(:),:) = CONJG(temp_u(dfftp%nl(:),:))
@@ -652,6 +683,7 @@ subroutine get_u_delta_u(u, delta_u, q_point)
   delta_u(:,:) = temp_delta_u(:,:)
     
   deallocate(temp_u, temp_delta_u, kernel_of_g, kernel_of_gq)
+  deallocate(buf_u, res_u, ig_buf)
      
   !! -----------------------------------------------------------------------------------------------
   
