@@ -208,8 +208,7 @@ SUBROUTINE pimd_get_amas_and_nat
   amas(:) = 0.0
   mtot=0.0
   DO iat=1,natMD
-     print *,"iat",iat,"natMD",natMD
-     write(*, *) "iat",iat,"natMD",natMD
+     !write(*, *) "iat",iat,"natMD",natMD
      amas(iat)=amass(ityp(iat))*10000.d0/5.48579909065d0
      mtot=mtot+amas(iat)
      ion_name(iat)=atm(ityp(iat))
