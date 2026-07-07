@@ -247,8 +247,8 @@ subroutine get_delta_v(rho, drho, nspin, q_point, delta_v)
 
     CALL get_u_delta_u(u, delta_u, q_point)
 
-    do i_grid = 1,dfftp%nnr
-        do P_i = 1, Nqs
+    do P_i = 1, Nqs
+        do i_grid = 1, dfftp%nnr
             delta_v(i_grid) = delta_v(i_grid) + &
                               delta_u(i_grid, P_i) * b1(i_grid, P_i) + &
                               u(i_grid, P_i) * b2(i_grid, P_i)
@@ -276,9 +276,9 @@ subroutine get_delta_v(rho, drho, nspin, q_point, delta_v)
     h2t(:) = (0.0D0, 0.0D0)
 
     !! Derivatives were saved in the first loop; no kernel calls needed here.
-    do i_grid = 1, dfftp%nnr
-        if (total_rho(i_grid) < epsr) cycle
-        do P_i = 1, Nqs
+    do P_i = 1, Nqs
+        do i_grid = 1, dfftp%nnr
+            if (total_rho(i_grid) < epsr) cycle
             h1t(i_grid) = h1t(i_grid) + delta_u(i_grid,P_i)*dtheta_dgradn_save(i_grid,P_i) + &
                           u(i_grid,P_i)*h1part2_save(i_grid,P_i)
             h2t(i_grid) = h2t(i_grid) + u(i_grid,P_i)*dtheta_dgradn_save(i_grid,P_i)
@@ -381,18 +381,17 @@ end subroutine get_delta_v
     real(dp), INTENT(OUT)    :: gmod, theta, dtheta_dn, dtheta_dgradn, d2theta_dn2, dn_dtheta_dgradn, dgradn_dtheta_dgradn
     complex(dp), INTENT(OUT) :: gradn_graddeltan
 
-    real(dp) :: y(Nqs), d2P_dq02, dP_dq0, P
-    character(len=70) :: fn
+    real(dp) :: d2P_dq02, dP_dq0, P, y_qlow, y_qhi
 
-    y = 0.0D0
-    y(P_i) = 1.0D0
+    y_qlow = MERGE(1.0_dp, 0.0_dp, q_low == P_i)
+    y_qhi  = MERGE(1.0_dp, 0.0_dp, q_hi  == P_i)
 
     !!
     !! P_alpha and derivatives | Num. Recip. Fortran 2nd Ed. p.108
     !!
     d2P_dq02 = a*d2y_dx2(P_i,q_low) + b*d2y_dx2(P_i,q_hi)
-    dP_dq0 = (y(q_hi) - y(q_low))/dq - e*d2y_dx2(P_i,q_low) + f*d2y_dx2(P_i,q_hi)
-    P = a*y(q_low) + b*y(q_hi) + c*d2y_dx2(P_i,q_low) + d*d2y_dx2(P_i,q_hi)
+    dP_dq0 = (y_qhi - y_qlow)/dq - e*d2y_dx2(P_i,q_low) + f*d2y_dx2(P_i,q_hi)
+    P = a*y_qlow + b*y_qhi + c*d2y_dx2(P_i,q_low) + d*d2y_dx2(P_i,q_hi)
           
     !!
     !! Thetas
