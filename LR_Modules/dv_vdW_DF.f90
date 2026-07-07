@@ -586,10 +586,11 @@ subroutine get_u_delta_u(u, delta_u, q_point)
   !!
   !! Valirables
   !!
-  real(dp), allocatable :: kernel_of_g(:,:), kernel_of_gq(:,:)   
+  real(dp), allocatable :: kernel_of_g(:,:), kernel_of_gq(:,:)
   complex(dp), allocatable :: temp_u(:,:), temp_delta_u(:,:)
+  complex(dp) :: loc_u(Nqs), loc_du(Nqs)
   real(dp) :: gmod, gqmod
-  integer :: last_g, g_i, q1_i, q2_i, count, i_grid, final_g    !! Index variables
+  integer :: last_g, g_i, q1_i, q2_i, count, i_grid, final_g, ig    !! Index variables
   
   !! -------------------------------------------------------------------------------------------------
   !! Allocate variables
@@ -627,17 +628,11 @@ subroutine get_u_delta_u(u, delta_u, q_point)
      gqmod = sqrt( (g(1,g_i)+q_point(1))**2 + (g(2,g_i)+q_point(2))**2 + (g(3,g_i)+q_point(3))**2 )*tpiba
      call interpolate_kernel(gqmod, kernel_of_gq)
  
-     !! Loop over alpha
-     do q2_i = 1, Nqs
-        !! Sum over beta
-        do q1_i = 1, Nqs
-        
-           temp_u(dfftp%nl(g_i), q2_i) = temp_u(dfftp%nl(g_i), q2_i) + kernel_of_g(q2_i,q1_i)*u(dfftp%nl(g_i), q1_i)
-       
-           temp_delta_u(dfftp%nl(g_i), q2_i) = temp_delta_u(dfftp%nl(g_i), q2_i) + &
-                                        kernel_of_gq(q2_i,q1_i)*delta_u(dfftp%nl(g_i), q1_i)
-        end do
-     end do
+     ig = dfftp%nl(g_i)
+     loc_u(:)  = u(ig, :)
+     loc_du(:) = delta_u(ig, :)
+     temp_u(ig,:)       = temp_u(ig,:)       + MATMUL(kernel_of_g,  loc_u)
+     temp_delta_u(ig,:) = temp_delta_u(ig,:) + MATMUL(kernel_of_gq, loc_du)
 
   end do
 
