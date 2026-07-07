@@ -458,7 +458,7 @@ end subroutine get_delta_v
   real(dp)                   :: kF, r_s, sqrt_r_s, gc                     !! Intermediate variables needed to get q and q0
   real(dp)                   :: LDA_1, LDA_2, exponent, gmod              !!
  
-  real(dp)                   :: expTemp1, expTemp2
+  real(dp)                   :: expTemp2, x_qcut, pw
   real(dp)                   :: dLDA_1_dn_n, dLDA_2_dn_n, d2LDA_1_dn2_n2, d2LDA_2_dn2_n2 
   
   !                                                                       !! Needed by dq0_drho and dq0_dgradrho by the chain rule.
@@ -515,22 +515,19 @@ end subroutine get_delta_v
 
      exponent = 0.0D0
      dq0_dq(i_grid) = 0.0D0
-     expTemp1 = 0.0D0
      expTemp2 = 0.0D0
-
+     x_qcut = q(i_grid)/q_cut
+     pw = 1.0_dp
      do index = 1, m_cut
-        
-        exponent = exponent + ( (q(i_grid)/q_cut)**index)/index
-        dq0_dq(i_grid) = dq0_dq(i_grid) + ( (q(i_grid)/q_cut)**(index-1))
-        
-        expTemp1 = expTemp1 + ( (q(i_grid)/q_cut)**(index-1))
-        expTemp2 = expTemp2 + ( ((index-1)/q_cut)*(q(i_grid)/q_cut)**(index-2))
-        
+        exponent           = exponent + pw*x_qcut/index
+        dq0_dq(i_grid)     = dq0_dq(i_grid) + pw
+        expTemp2           = expTemp2 + real(index-1,dp)*pw/(q_cut*x_qcut)
+        pw                 = pw*x_qcut
      end do
-     
+
      q0(i_grid) = q_cut*(1.0D0 - exp(-exponent))
+     d2q0_dq2(i_grid) = expTemp2*exp(-exponent) - (dq0_dq(i_grid)**2)*(1.0D0/q_cut)*exp(-exponent)
      dq0_dq(i_grid) = dq0_dq(i_grid) * exp(-exponent)
-     d2q0_dq2(i_grid) = expTemp2*exp(-exponent) - (expTemp1**2)*(1.0D0/q_cut)*exp(-exponent)
    
      dLDA_1_dn_n    = -8.0D0*pi/9.0D0 * LDA_A*LDA_a1*r_s
      d2LDA_1_dn2_n2 =  32.0D0*pi/27.0D0 * LDA_A*LDA_a1*r_s
