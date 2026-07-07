@@ -109,9 +109,11 @@ subroutine get_delta_v(rho, drho, nspin, q_point, delta_v)
 
     !! -------------------------------------------------------------------------
     !! Terms for the delta_h part
-    !! -------------------------------------------------------------------------        
+    !! -------------------------------------------------------------------------
     complex(dp) :: h1, h1part2
     complex(dp), allocatable :: h1t(:), h2t(:)
+    real(dp),    allocatable :: dtheta_dgradn_save(:,:)
+    complex(dp), allocatable :: h1part2_save(:,:)
 
     !! -------------------------------------------------------------------------
     !! For the interpolation
@@ -150,9 +152,10 @@ subroutine get_delta_v(rho, drho, nspin, q_point, delta_v)
     allocate(dq0_dq(dfftp%nnr), d2q0_dq2(dfftp%nnr))
     allocate(dq_dn_n(dfftp%nnr), dn_dq_dn_n_n(dfftp%nnr), dq_dgradn_n_gmod(dfftp%nnr))
 
-    !! Local variables 
+    !! Local variables
     allocate(b1(dfftp%nnr, Nqs), b2(dfftp%nnr, Nqs))
     allocate(u(dfftp%nnr, Nqs), delta_u(dfftp%nnr, Nqs))
+    allocate(dtheta_dgradn_save(dfftp%nnr, Nqs), h1part2_save(dfftp%nnr, Nqs))
 
     !! -------------------------------------------------------------------------
     !! Zero all values
@@ -168,6 +171,8 @@ subroutine get_delta_v(rho, drho, nspin, q_point, delta_v)
     b2(:,:) = 0.0D0
     u(:,:) = (0.0D0, 0.0D0)
     delta_u(:,:) = (0.0D0, 0.0D0)
+    dtheta_dgradn_save(:,:) = 0.0D0
+    h1part2_save(:,:) = (0.0D0, 0.0D0)
 
     ! Empty the output vector    
     delta_v(:) = (0.0D0, 0.0_DP)
@@ -227,10 +232,15 @@ subroutine get_delta_v(rho, drho, nspin, q_point, delta_v)
           !! Here gradn_graddeltan IS complex, the cast is automatic
           delta_u(i_grid, P_i) =  dtheta_dn*drho(i_grid,1) +  dtheta_dgradn*gradn_graddeltan
 
+          !! Save derivatives needed for the h-term loop below
+          dtheta_dgradn_save(i_grid, P_i) = dtheta_dgradn
+          h1part2_save(i_grid, P_i) = dn_dtheta_dgradn*(drho(i_grid,1)/total_rho(i_grid)) + &
+                                       dgradn_dtheta_dgradn*(gradn_graddeltan/total_rho(i_grid))
+
         end do
-        
+
     end do
-  
+
     !! -------------------------------------------------------------------------
     !! Delta u part
     !! -------------------------------------------------------------------------
@@ -265,28 +275,14 @@ subroutine get_delta_v(rho, drho, nspin, q_point, delta_v)
     h1t(:) = (0.0D0, 0.0D0)
     h2t(:) = (0.0D0, 0.0D0)
 
-    do i_grid = 1,dfftp%nnr
-
-        CALL get_abcdef (q0, i_grid, q_hi, q_low, dq, a,b,c,d,e,f )
- 
+    !! Derivatives were saved in the first loop; no kernel calls needed here.
+    do i_grid = 1, dfftp%nnr
+        if (total_rho(i_grid) < epsr) cycle
         do P_i = 1, Nqs
-         
-          if (total_rho(i_grid) < epsr) cycle
- 
-          CALL get_thetas_exentended( q_hi, q_low, dq, a,b,c,d,e,f, P_i, i_grid, &   ! Input
-                                      gmod, gradn_graddeltan,                    &   ! Output
-                                      theta, dtheta_dn, dtheta_dgradn,           &   ! Output - first derivatives
-                                      d2theta_dn2, dn_dtheta_dgradn, dgradn_dtheta_dgradn, .false., total_rho) ! Output - second derivatives
-          !!
-          !! Terms nedded later
-          !!
-          h1part2 = dn_dtheta_dgradn*(drho(i_grid,1)/total_rho(i_grid)) + dgradn_dtheta_dgradn*(gradn_graddeltan/total_rho(i_grid))
-          
-          h1t(i_grid) = h1t(i_grid) + delta_u(i_grid,P_i)*dtheta_dgradn + u(i_grid,P_i)*h1part2
-          h2t(i_grid) = h2t(i_grid) + u(i_grid,P_i)*dtheta_dgradn
-        
+            h1t(i_grid) = h1t(i_grid) + delta_u(i_grid,P_i)*dtheta_dgradn_save(i_grid,P_i) + &
+                          u(i_grid,P_i)*h1part2_save(i_grid,P_i)
+            h2t(i_grid) = h2t(i_grid) + u(i_grid,P_i)*dtheta_dgradn_save(i_grid,P_i)
         end do
-
     end do
 
     !! --------------------------------------------------------------------------------------------- 
@@ -325,6 +321,7 @@ subroutine get_delta_v(rho, drho, nspin, q_point, delta_v)
     deallocate(h1t, h2t)
     deallocate(delta_h_aux, delta_h)
     deallocate(u, delta_u)
+    deallocate(dtheta_dgradn_save, h1part2_save)
  
 end subroutine get_delta_v
 
