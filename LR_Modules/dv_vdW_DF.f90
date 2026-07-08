@@ -584,6 +584,7 @@ subroutine get_u_delta_u(u, delta_u, q_point)
   !! Valirables
   !!
   real(dp), allocatable :: kernel_of_g(:,:), kernel_of_gq(:,:)
+  complex(dp), allocatable :: ckernel_of_g(:,:)
   complex(dp), allocatable :: temp_u(:,:), temp_delta_u(:,:)
   complex(dp), allocatable :: buf_u(:,:), res_u(:,:)
   complex(dp) :: loc_du(Nqs)
@@ -591,11 +592,11 @@ subroutine get_u_delta_u(u, delta_u, q_point)
   real(dp) :: gmod, gqmod
   integer :: last_g, g_i, q1_i, q2_i, count, i_grid, final_g, ig
   integer :: ng_shell, k, sh_size, max_shell
-  
+
   !! -------------------------------------------------------------------------------------------------
   !! Allocate variables
-  !!  
-  allocate( kernel_of_g(Nqs, Nqs), kernel_of_gq(Nqs, Nqs) )
+  !!
+  allocate( kernel_of_g(Nqs, Nqs), kernel_of_gq(Nqs, Nqs), ckernel_of_g(Nqs, Nqs) )
   allocate( temp_u(dfftp%nnr, Nqs), temp_delta_u(dfftp%nnr, Nqs) )
 
   sh_size = 0; max_shell = 0
@@ -633,7 +634,7 @@ subroutine get_u_delta_u(u, delta_u, q_point)
         !! Flush accumulated shell into temp_u via a single ZGEMM
         if (ng_shell > 0) then
            CALL ZGEMM('N','N', Nqs, ng_shell, Nqs, (1.0_dp,0.0_dp), &
-                      kernel_of_g, Nqs, buf_u, Nqs, (0.0_dp,0.0_dp), res_u, Nqs)
+                      ckernel_of_g, Nqs, buf_u, Nqs, (0.0_dp,0.0_dp), res_u, Nqs)
            do k = 1, ng_shell
               temp_u(ig_buf(k), :) = temp_u(ig_buf(k), :) + res_u(:, k)
            end do
@@ -641,6 +642,7 @@ subroutine get_u_delta_u(u, delta_u, q_point)
         end if
         gmod = sqrt(gl(igtongl(g_i))) * tpiba
         call interpolate_kernel(gmod, kernel_of_g)
+        ckernel_of_g(:,:) = kernel_of_g(:,:)
         last_g = igtongl(g_i)
      end if
 
@@ -658,7 +660,7 @@ subroutine get_u_delta_u(u, delta_u, q_point)
   !! Flush the last shell
   if (ng_shell > 0) then
      CALL ZGEMM('N','N', Nqs, ng_shell, Nqs, (1.0_dp,0.0_dp), &
-                kernel_of_g, Nqs, buf_u, Nqs, (0.0_dp,0.0_dp), res_u, Nqs)
+                ckernel_of_g, Nqs, buf_u, Nqs, (0.0_dp,0.0_dp), res_u, Nqs)
      do k = 1, ng_shell
         temp_u(ig_buf(k), :) = temp_u(ig_buf(k), :) + res_u(:, k)
      end do
@@ -682,7 +684,7 @@ subroutine get_u_delta_u(u, delta_u, q_point)
   u(:,:) = temp_u(:,:)
   delta_u(:,:) = temp_delta_u(:,:)
     
-  deallocate(temp_u, temp_delta_u, kernel_of_g, kernel_of_gq)
+  deallocate(temp_u, temp_delta_u, kernel_of_g, kernel_of_gq, ckernel_of_g)
   deallocate(buf_u, res_u, ig_buf)
      
   !! -----------------------------------------------------------------------------------------------
