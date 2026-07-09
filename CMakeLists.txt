@@ -14,7 +14,7 @@ if(POLICY CMP0144)
 endif()
 
 project(qe
-    VERSION 7.6
+    VERSION 8.0
     DESCRIPTION "ESPRESSO: opEn-Source Package for Research in Electronic Structure, Simulation, and Optimization"
     LANGUAGES Fortran C)
 
