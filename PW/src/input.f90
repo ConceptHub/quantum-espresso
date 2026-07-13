@@ -2228,7 +2228,7 @@ SUBROUTINE exx_iosys ( ecutwfc, ecutrho )
 !    Call errore('input', 'exx_type = bands on GPU not present in this version (use exx_type = band_pairs)',1)
 !#endif
   case("bands_outer")
-    if(gamma_only) CALL errore('input','exx_type = bands_outer at gamma not yet implemented',1)
+    !if(gamma_only) CALL errore('input','exx_type = bands_outer at gamma not yet implemented',1)
     exx_bgrp_type = EXX_BGRP_EXBTC
     write(stdout, '(/,5x,"Exact exchange outer batching size: ",I4/)' ) batchsize 
   case("bands_inner")

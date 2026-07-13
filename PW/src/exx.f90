@@ -406,7 +406,8 @@ MODULE exx
     USE uspp,           ONLY : okvan
     USE paw_variables,  ONLY : okpaw
     USE wvfct,          ONLY : nbnd
-    USE exx_std,        ONLY : vexx_std_gamma, vexx_std_k_inner, vexx_std_k_outer, vexx_std_k_one
+    USE exx_std,        ONLY : vexx_std_gamma_one, vexx_std_gamma_outer, &
+                               vexx_std_k_inner, vexx_std_k_outer, vexx_std_k_one
     USE exx_bp,         ONLY : vexx_bp
     !
     IMPLICIT NONE
@@ -431,18 +432,23 @@ MODULE exx
     !
     if(exx_bgrp_type .eq. EXX_BGRP_BANDS) then
        if (gamma_only ) then
-          Call vexx_std_gamma(lda, n, m, psi, hpsi, becpsi )
+          Call vexx_std_gamma_one(lda, n, m, psi, hpsi, becpsi )
        else
           Call vexx_std_k_one(lda, n, m, psi, hpsi, becpsi )
        end if 
     elseif(exx_bgrp_type .eq. EXX_BGRP_EXBTC) then
-       Call vexx_std_k_outer(lda, n, m, psi, hpsi, becpsi )
+       if (gamma_only ) then
+          Call vexx_std_gamma_outer(lda, n, m, psi, hpsi, becpsi )
+       else
+          Call vexx_std_k_outer(lda, n, m, psi, hpsi, becpsi )
+       end if 
     elseif(exx_bgrp_type .eq. EXX_BGRP_INBTC) then
+       if(gamma_only) Call errore('vexx', 'gama_only with bands_inner NYI', 2)
        Call vexx_std_k_inner(lda, n, m, psi, hpsi, becpsi )
     elseif(exx_bgrp_type .eq. EXX_BGRP_PAIRS) then
        Call vexx_bp(lda, n, m, psi, hpsi, becpsi )
     else
-       CALL errore( 'vexx','Wrong exx_bgrp_type in vexx', 2 )
+       CALL errore( 'vexx','Wrong exx_bgrp_type in vexx', 3 )
     end if 
     !
     CALL stop_clock( 'vexx' )
