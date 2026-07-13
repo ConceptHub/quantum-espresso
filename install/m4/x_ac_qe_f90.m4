@@ -130,10 +130,12 @@ arm:armflang )
             try_fflags="-O0 -g"
         fi
         try_fflags_nomain=""
+        try_fflags_openmp="-mp"
         try_f90flags="\$(FFLAGS) -cpp"
         try_fflags_noopt="-O0 -g"
         try_dflags="$try_dflags -D_AOCC"
         try_ldflags=""
+        try_ldflags_openmp="-mp"
         ;;
 # from now on: likely obsolete cases
 x86_64:nagfor* )

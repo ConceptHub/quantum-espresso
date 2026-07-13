@@ -38,10 +38,14 @@ else
     
     *:flang )
 	    #
-            # AOCC: assume -lblis -lflame without testing 
+            # AOCC: assume -lblis[-mt] -lflame without testing 
 	    #
             unset ac_cv_search_dgemm # clear cached value
-            blas_libs="-lblis -lflame"
+            if test "$use_openmp" -eq 1 ; then
+               blas_libs="-lblis-mt -lflame"
+            else
+               blas_libs="-lblis -lflame"
+            fi
             have_blas=1
             have_aocl=1
             ;;

@@ -4465,10 +4465,12 @@ arm:armflang )
             try_fflags="-O0 -g"
         fi
         try_fflags_nomain=""
+        try_fflags_openmp="-mp"
         try_f90flags="\$(FFLAGS) -cpp"
         try_fflags_noopt="-O0 -g"
         try_dflags="$try_dflags -D_AOCC"
         try_ldflags=""
+        try_ldflags_openmp="-mp"
         ;;
 # from now on: likely obsolete cases
 x86_64:nagfor* )
@@ -4945,10 +4947,14 @@ else
 
     *:flang )
 	    #
-            # AOCC: assume -lblis -lflame without testing
+            # AOCC: assume -lblis[-mt] -lflame without testing
 	    #
             unset ac_cv_search_dgemm # clear cached value
-            blas_libs="-lblis -lflame"
+            if test "$use_openmp" -eq 1 ; then
+               blas_libs="-lblis-mt -lflame"
+            else
+               blas_libs="-lblis -lflame"
+            fi
             have_blas=1
             have_aocl=1
             ;;
