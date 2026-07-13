@@ -13,6 +13,7 @@
                         nbnd = 8
     exxdiv_treatment='gygi-baldereschi'
     x_gamma_extrapolation = .true.
+!civn
          exx_type = "bands"
  /
  &ELECTRONS

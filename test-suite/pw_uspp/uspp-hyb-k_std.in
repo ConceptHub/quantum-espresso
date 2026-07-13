@@ -7,6 +7,7 @@
     input_dft='pbe0', nqx1=2, nqx2=2, nqx3=2, 
     exxdiv_treatment='gygi-baldereschi'
     x_gamma_extrapolation = .true.
+!civn
     exx_type = "bands"
  /
  &electrons

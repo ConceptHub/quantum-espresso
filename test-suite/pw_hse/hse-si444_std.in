@@ -8,6 +8,7 @@
     input_dft='hse', nqx1=4, nqx2=4, nqx3=4, 
     exxdiv_treatment='gygi-baldereschi'
     x_gamma_extrapolation = .true.
+!civn
     exx_type = "bands"
  /
  &electrons

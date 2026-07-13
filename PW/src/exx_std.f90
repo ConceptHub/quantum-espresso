@@ -398,6 +398,7 @@ MODULE exx_std
     LOGICAL :: l_fft_singleband
     INTEGER :: ngmt
     !
+print *, '@vexx_std_gamma'
     ngmt = dfftt%ngm
     ALLOCATE( fac(ngmt) )
     nrxxs= dfftt%nnr
@@ -754,7 +755,7 @@ MODULE exx_std
     ENDIF
     !$acc update device(psi)
     !
-    !$acc data create( rhoc, vc, fac, nl, nl_k, temppsic, result, temppsic_nc, result_nc, result_nc_g) present(exxbuff)
+    !$acc data create( rhoc, vc, fac, nl, nl_k, temppsic, result, temppsic_nc, result_nc, result_nc_g) copy(hpsi) present(exxbuff)
     !
     !$acc parallel loop
     do ig = 1, ngmt 
@@ -1105,7 +1106,7 @@ MODULE exx_std
     ENDIF
     !$acc update device(psi)
     !
-    !$acc data create( rhoc, vc, fac, nl, nl_k, temppsic, result, temppsic_nc, result_nc, result_nc_g) present(exxbuff) 
+    !$acc data create( rhoc, vc, fac, nl, nl_k, temppsic, result, temppsic_nc, result_nc, result_nc_g) copy(hpsi) present(exxbuff) 
     !
     !$acc parallel loop
     do ig = 1, ngmt 
@@ -1421,6 +1422,7 @@ MODULE exx_std
     INTEGER :: ngmt
     REAL(DP) :: x_occ
     !
+print *, '@vexx_std_k_one'
     ngmt = dfftt%ngm 
     ALLOCATE( fac(ngmt) )
     nrxxs= dfftt%nnr
@@ -1451,7 +1453,7 @@ MODULE exx_std
     ENDIF
     !$acc update device(psi)
     !
-    !$acc data create(rhoc, vc, fac, temppsic, result, result_g, temppsic_nc, result_nc, result_nc_g) present(exxbuff) 
+    !$acc data create(rhoc, vc, fac, temppsic, result, result_g, temppsic_nc, result_nc, result_nc_g) copy(hpsi) present(exxbuff) 
     !
     LOOP_ON_PSI_BANDS : &
     DO im = 1,m !for each band of psi (the k cycle is outside band)

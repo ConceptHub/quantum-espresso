@@ -16,6 +16,7 @@
            tot_magnetization = 1.0
             exxdiv_treatment = 'gygi-baldereschi'
        x_gamma_extrapolation = .TRUE.
+!civn
                     exx_type = "bands"
  /
  &ELECTRONS
