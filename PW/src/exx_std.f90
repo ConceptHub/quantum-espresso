@@ -398,7 +398,7 @@ MODULE exx_std
     LOGICAL :: l_fft_singleband
     INTEGER :: ngmt
     !
-print *, '@vexx_std_gamma'
+print *, '@vexx_std_gamma_one'
     ngmt = dfftt%ngm
     ALLOCATE( fac(ngmt) )
     nrxxs= dfftt%nnr
@@ -753,7 +753,7 @@ print *, '@vexx_std_gamma'
     !
     COMPLEX(DP),ALLOCATABLE :: rhoc(:), vc(:), deexx(:)
     REAL(DP),   ALLOCATABLE :: fac(:)
-    INTEGER          :: ibnd, ik, im , ikq, iq, ipol
+    INTEGER          :: ibnd, im , iq, ipol
     INTEGER          :: ir, ig
     INTEGER          :: current_ik
     INTEGER          :: ibnd_loop_start
@@ -766,7 +766,7 @@ print *, '@vexx_std_gamma'
     LOGICAL :: l_fft_singleband
     INTEGER :: ngmt
     !
-print *, '@vexx_std_gamma'
+print *, '@vexx_std_gamma_outer'
     ngmt = dfftt%ngm
     ALLOCATE( fac(ngmt) )
     nrxxs= dfftt%nnr
@@ -795,16 +795,15 @@ print *, '@vexx_std_gamma'
     !
     !$acc data create(rhoc, vc, fac, temppsic_dble, temppsic_aimag, result) copy(hpsi) present(exxbuff) 
     !
+    xkq  = xkq_collect(:,current_ik) 
+    ! calculate the 1/|r-r'| (actually, k+q+g) factor and place it in fac
+    CALL g2_convolution(ngmt, gt, xkp, xkq, fac)
+    !$acc update device(fac)
+    !
     INTERNAL_LOOP_ON_Q : &
     DO iq=1,nqs
        !
-       ikq  = index_xkq(current_ik,iq)
-       ik   = index_xk(ikq)
-       xkq  = xkq_collect(:,ikq)
-       !
-       ! calculate the 1/|r-r'| (actually, k+q+g) factor and place it in fac
-       CALL g2_convolution(ngmt, gt, xkp, xkq, fac)
-       !$acc update device(fac)
+write(*, '(A,3I5,3F12.6)') '@@', nqs, current_ik, iq, xkq
        !
        IF ( okvan .and..not.tqr ) CALL qvan_init (ngmt, xkq, xkp)
        !
@@ -890,12 +889,12 @@ print *, '@vexx_std_gamma'
              IF( ibnd < ibnd_start ) THEN
                 x1 = 0.0_DP
              ELSE
-                x1 = x_occupation(ibnd,  ik)
+                x1 = x_occupation(ibnd,  current_ik)
              ENDIF
              IF( ibnd == ibnd_end) THEN
                 x2 = 0.0_DP
              ELSE
-                x2 = x_occupation(ibnd+1,  ik)
+                x2 = x_occupation(ibnd+1,  current_ik)
              ENDIF
              IF ( abs(x1) < eps_occ .and. abs(x2) < eps_occ ) CYCLE
              !
@@ -938,9 +937,9 @@ print *, '@vexx_std_gamma'
              !   >>>> add augmentation in REAL SPACE here
              IF(okvan .and. tqr) THEN
                 IF(ibnd>=ibnd_start) &
-                CALL addusxx_r(rhoc,_CX(becxx(ikq)%r(:,ibnd)), _CX(becpsi%r(:,im)))
+                CALL addusxx_r(rhoc,_CX(becxx(current_ik)%r(:,ibnd)), _CX(becpsi%r(:,im)))
                 IF(ibnd<ibnd_end) &
-                CALL addusxx_r(rhoc,_CY(becxx(ikq)%r(:,ibnd+1)),_CX(becpsi%r(:,im)))
+                CALL addusxx_r(rhoc,_CY(becxx(current_ik)%r(:,ibnd+1)),_CX(becpsi%r(:,im)))
              ENDIF
              !
              !$acc host_data use_device(rhoc)
@@ -951,11 +950,11 @@ print *, '@vexx_std_gamma'
                 ! contribution from one band added to real (in real space) part of rhoc
                 IF(ibnd>=ibnd_start) &
                    CALL addusxx_g(dfftt, rhoc, xkq,  xkp, 'r', &
-                   becphi_r=becxx(ikq)%r(:,ibnd), becpsi_r=becpsi%r(:,im) )
+                   becphi_r=becxx(current_ik)%r(:,ibnd), becpsi_r=becpsi%r(:,im) )
                 ! contribution from following band added to imaginary (in real space) part of rhoc
                 IF(ibnd<ibnd_end) &
                    CALL addusxx_g(dfftt, rhoc, xkq,  xkp, 'i', &
-                   becphi_r=becxx(ikq)%r(:,ibnd+1), becpsi_r=becpsi%r(:,im) )
+                   becphi_r=becxx(current_ik)%r(:,ibnd+1), becpsi_r=becpsi%r(:,im) )
              ENDIF
              !   >>>> charge density done
              !
@@ -984,10 +983,10 @@ print *, '@vexx_std_gamma'
              IF(okvan .and. .not. tqr) THEN
                 IF(ibnd>=ibnd_start) &
                 CALL newdxx_g(dfftt, vc, xkq, xkp, 'r', deexx, &
-                              becphi_r=x1*becxx(ikq)%r(:,ibnd))
+                              becphi_r=x1*becxx(current_ik)%r(:,ibnd))
                 IF(ibnd<ibnd_end) &
                 CALL newdxx_g(dfftt, vc, xkq, xkp, 'i', deexx, &
-                              becphi_r=x2*becxx(ikq)%r(:,ibnd+1))
+                              becphi_r=x2*becxx(current_ik)%r(:,ibnd+1))
              ENDIF
              !
              !brings back v in real space
@@ -998,17 +997,17 @@ print *, '@vexx_std_gamma'
              !   >>>>  compute <psi|H_fock REAL SPACE here
              IF(okvan .and. tqr) THEN
                 IF(ibnd>=ibnd_start) &
-                CALL newdxx_r(dfftt, vc, _CX(x1*becxx(ikq)%r(:,ibnd)), deexx)
+                CALL newdxx_r(dfftt, vc, _CX(x1*becxx(current_ik)%r(:,ibnd)), deexx)
                 IF(ibnd<ibnd_end) &
-                CALL newdxx_r(dfftt, vc, _CY(x2*becxx(ikq)%r(:,ibnd+1)), deexx)
+                CALL newdxx_r(dfftt, vc, _CY(x2*becxx(current_ik)%r(:,ibnd+1)), deexx)
              ENDIF
              !
              IF(okpaw) THEN
                 IF(ibnd>=ibnd_start) &
-                CALL PAW_newdxx(x1/nqs, _CX(becxx(ikq)%r(:,ibnd)),&
+                CALL PAW_newdxx(x1/nqs, _CX(becxx(current_ik)%r(:,ibnd)),&
                                         _CX(becpsi%r(:,im)), deexx)
                 IF(ibnd<ibnd_end) &
-                CALL PAW_newdxx(x2/nqs, _CX(becxx(ikq)%r(:,ibnd+1)), &
+                CALL PAW_newdxx(x2/nqs, _CX(becxx(current_ik)%r(:,ibnd+1)), &
                                         _CX(becpsi%r(:,im)), deexx)
              ENDIF
              !
