@@ -753,7 +753,7 @@ print *, '@vexx_std_gamma_one'
     !
     COMPLEX(DP),ALLOCATABLE :: rhoc(:), vc(:), deexx(:)
     REAL(DP),   ALLOCATABLE :: fac(:)
-    INTEGER          :: ibnd, im , iq, ipol
+    INTEGER          :: ibnd, im , ipol
     INTEGER          :: ir, ig
     INTEGER          :: current_ik
     INTEGER          :: ibnd_loop_start
@@ -800,274 +800,266 @@ print *, '@vexx_std_gamma_outer'
     CALL g2_convolution(ngmt, gt, xkp, xkq, fac)
     !$acc update device(fac)
     !
-    INTERNAL_LOOP_ON_Q : &
-    DO iq=1,nqs
+    IF ( okvan .and..not.tqr ) CALL qvan_init (ngmt, xkq, xkp)
+    !
+    LOOP_ON_PSI_BANDS : &
+    DO im = 1,m !for each band of psi (the k cycle is outside band)
        !
-write(*, '(A,3I5,3F12.6)') '@@', nqs, current_ik, iq, xkq
+       IF(okvan) deexx(:) = 0.0_DP
        !
-       IF ( okvan .and..not.tqr ) CALL qvan_init (ngmt, xkq, xkp)
+       !$acc kernels
+       RESULT = 0.0_DP
+       !$acc end kernels
        !
-       LOOP_ON_PSI_BANDS : &
-       DO im = 1,m !for each band of psi (the k cycle is outside band)
-          !
-          IF(okvan) deexx(:) = 0.0_DP
-          !
-          !$acc kernels
-          RESULT = 0.0_DP
-          !$acc end kernels
-          !
-          l_fft_doubleband = .false.
-          l_fft_singleband = .false.
-          !
-          IF ( mod(im,2)==1 .and. (im+1)<=m ) l_fft_doubleband = .true.
-          IF ( mod(im,2)==1 .and. im==m )     l_fft_singleband = .true.
-          !
-          IF( l_fft_doubleband ) THEN
+       l_fft_doubleband = .false.
+       l_fft_singleband = .false.
+       !
+       IF ( mod(im,2)==1 .and. (im+1)<=m ) l_fft_doubleband = .true.
+       IF ( mod(im,2)==1 .and. im==m )     l_fft_singleband = .true.
+       !
+       IF( l_fft_doubleband ) THEN
 #if defined(__CUDA)
-             !$acc parallel loop 
+          !$acc parallel loop 
 #else
-             !$omp parallel do  default(shared), private(ig)
+          !$omp parallel do  default(shared), private(ig)
 #endif
-             DO ig = 1, npwt
-                RESULT( dfftt%nl(ig) )  =       psi(ig, im) + (0._DP,1._DP) * psi(ig, im+1)
-                RESULT( dfftt%nlm(ig) ) = conjg(psi(ig, im) - (0._DP,1._DP) * psi(ig, im+1))
-             ENDDO
+          DO ig = 1, npwt
+             RESULT( dfftt%nl(ig) )  =       psi(ig, im) + (0._DP,1._DP) * psi(ig, im+1)
+             RESULT( dfftt%nlm(ig) ) = conjg(psi(ig, im) - (0._DP,1._DP) * psi(ig, im+1))
+          ENDDO
 #if !defined(__CUDA)
-             !$omp end parallel do
+          !$omp end parallel do
 #endif
-          ENDIF
-          !
-          IF( l_fft_singleband ) THEN
+       ENDIF
+       !
+       IF( l_fft_singleband ) THEN
 #if defined(__CUDA)
-             !$acc parallel loop
+          !$acc parallel loop
 #else
-             !$omp parallel do  default(shared), private(ig)
+          !$omp parallel do  default(shared), private(ig)
 #endif
-             DO ig = 1, npwt
-                RESULT( dfftt%nl(ig) )  =       psi(ig,im)
-                RESULT( dfftt%nlm(ig) ) = conjg(psi(ig,im))
-             ENDDO
+          DO ig = 1, npwt
+             RESULT( dfftt%nl(ig) )  =       psi(ig,im)
+             RESULT( dfftt%nlm(ig) ) = conjg(psi(ig,im))
+          ENDDO
 #if !defined(__CUDA)
-             !$omp end parallel do
+          !$omp end parallel do
 #endif
-          ENDIF
-          !
-          IF( l_fft_doubleband.or.l_fft_singleband) THEN
-             !$acc host_data use_device(RESULT)
-             CALL invfft ('Wave', RESULT, dfftt)
-             !$acc end host_data
-#if defined(__CUDA) 
-             !$acc parallel loop
-#else
-             !$omp parallel do default(shared), private(ir)
-#endif
-             DO ir = 1, nrxxs
-                temppsic_dble(ir)  = dble ( RESULT(ir) )
-                temppsic_aimag(ir) = aimag( RESULT(ir) )
-             ENDDO
-#if !defined(__CUDA) 
-             !$omp end parallel do
-#endif
-          ENDIF
-          !
-          !$acc kernels
-          RESULT = 0.0_DP
-          !$acc end kernels
-          !
-          h_ibnd = ibnd_start/2
-          IF(mod(ibnd_start,2)==0) THEN
-             h_ibnd=h_ibnd-1
-             ibnd_loop_start=ibnd_start-1
-          ELSE
-             ibnd_loop_start=ibnd_start
-          ENDIF
-          !
-          IBND_LOOP_GAM : &
-          DO ibnd=ibnd_loop_start,ibnd_end, 2 !for each band of psi
-             !
-             h_ibnd = h_ibnd + 1
-             IF( ibnd < ibnd_start ) THEN
-                x1 = 0.0_DP
-             ELSE
-                x1 = x_occupation(ibnd,  current_ik)
-             ENDIF
-             IF( ibnd == ibnd_end) THEN
-                x2 = 0.0_DP
-             ELSE
-                x2 = x_occupation(ibnd+1,  current_ik)
-             ENDIF
-             IF ( abs(x1) < eps_occ .and. abs(x2) < eps_occ ) CYCLE
-             !
-             ! calculate rho in real space. Gamma tricks are used.
-             ! temppsic is real; tempphic contains one band in the real part,
-             ! another one in the imaginary part; the same applies to rhoc
-             !
-             IF( mod(im,2) == 0 ) THEN
-#if defined(__CUDA)
-                !$acc kernels present(exxbuff, rhoc, temppsic_aimag)
-#else
-                !$omp parallel do default(shared), private(ir)
-#endif
-                DO ir = 1, nrxxs
-                   rhoc(ir) = exxbuff(ir,h_ibnd,current_k) * temppsic_aimag(ir) / omega
-                ENDDO
-#if defined(__CUDA)
-                !$acc end kernels
-#else
-                !$omp end parallel do
-#endif
-             ELSE
-#if defined(__CUDA)
-                !$acc kernels
-#else
-                !$omp parallel do default(shared), private(ir)
-#endif
-                DO ir = 1, nrxxs
-                   rhoc(ir) = exxbuff(ir,h_ibnd,current_k) * temppsic_dble(ir) / omega
-                ENDDO
-#if defined(__CUDA)
-                !$acc end kernels
-#else
-                !$omp end parallel do
-#endif
-             ENDIF
-             !
-             ! bring rho to G-space
-             !
-             !   >>>> add augmentation in REAL SPACE here
-             IF(okvan .and. tqr) THEN
-                IF(ibnd>=ibnd_start) &
-                CALL addusxx_r(rhoc,_CX(becxx(current_ik)%r(:,ibnd)), _CX(becpsi%r(:,im)))
-                IF(ibnd<ibnd_end) &
-                CALL addusxx_r(rhoc,_CY(becxx(current_ik)%r(:,ibnd+1)),_CX(becpsi%r(:,im)))
-             ENDIF
-             !
-             !$acc host_data use_device(rhoc)
-             CALL fwfft ('Rho', rhoc, dfftt)
-             !$acc end host_data
-             !   >>>> add augmentation in G SPACE here
-             IF(okvan .and. .not. tqr) THEN
-                ! contribution from one band added to real (in real space) part of rhoc
-                IF(ibnd>=ibnd_start) &
-                   CALL addusxx_g(dfftt, rhoc, xkq,  xkp, 'r', &
-                   becphi_r=becxx(current_ik)%r(:,ibnd), becpsi_r=becpsi%r(:,im) )
-                ! contribution from following band added to imaginary (in real space) part of rhoc
-                IF(ibnd<ibnd_end) &
-                   CALL addusxx_g(dfftt, rhoc, xkq,  xkp, 'i', &
-                   becphi_r=becxx(current_ik)%r(:,ibnd+1), becpsi_r=becpsi%r(:,im) )
-             ENDIF
-             !   >>>> charge density done
-             !
-             !$acc kernels
-             vc = 0._DP
-             !$acc end kernels
-             !
-#if defined(__CUDA) 
-             !$acc kernels present(vc, fac, rhoc)
-#else 
-             !$omp parallel do default(shared), private(ig)
-#endif
-             DO ig = 1, ngmt
-                !
-                vc(dfftt%nl(ig))  = fac(ig) * rhoc(dfftt%nl(ig))
-                vc(dfftt%nlm(ig)) = fac(ig) * rhoc(dfftt%nlm(ig))
-                !
-             ENDDO
-#if defined(__CUDA)
-             !$acc end kernels
-#else
-             !$omp end parallel do
-#endif
-             !
-             !   >>>>  compute <psi|H_fock G SPACE here
-             IF(okvan .and. .not. tqr) THEN
-                IF(ibnd>=ibnd_start) &
-                CALL newdxx_g(dfftt, vc, xkq, xkp, 'r', deexx, &
-                              becphi_r=x1*becxx(current_ik)%r(:,ibnd))
-                IF(ibnd<ibnd_end) &
-                CALL newdxx_g(dfftt, vc, xkq, xkp, 'i', deexx, &
-                              becphi_r=x2*becxx(current_ik)%r(:,ibnd+1))
-             ENDIF
-             !
-             !brings back v in real space
-             !$acc host_data use_device(vc)
-             CALL invfft ('Rho', vc, dfftt)
-             !$acc end host_data
-             !
-             !   >>>>  compute <psi|H_fock REAL SPACE here
-             IF(okvan .and. tqr) THEN
-                IF(ibnd>=ibnd_start) &
-                CALL newdxx_r(dfftt, vc, _CX(x1*becxx(current_ik)%r(:,ibnd)), deexx)
-                IF(ibnd<ibnd_end) &
-                CALL newdxx_r(dfftt, vc, _CY(x2*becxx(current_ik)%r(:,ibnd+1)), deexx)
-             ENDIF
-             !
-             IF(okpaw) THEN
-                IF(ibnd>=ibnd_start) &
-                CALL PAW_newdxx(x1/nqs, _CX(becxx(current_ik)%r(:,ibnd)),&
-                                        _CX(becpsi%r(:,im)), deexx)
-                IF(ibnd<ibnd_end) &
-                CALL PAW_newdxx(x2/nqs, _CX(becxx(current_ik)%r(:,ibnd+1)), &
-                                        _CX(becpsi%r(:,im)), deexx)
-             ENDIF
-             !
-             ! accumulates over bands and k points
-             !
-#if defined(__CUDA) 
-             !$acc kernels present(RESULT, vc, exxbuff)
-#else
-             !$omp parallel do default(shared), private(ir)
-#endif
-             DO ir = 1, nrxxs
-                RESULT(ir) = RESULT(ir)+x1* dble(vc(ir))* dble(exxbuff(ir,h_ibnd,current_k))&
-                                       +x2*aimag(vc(ir))*aimag(exxbuff(ir,h_ibnd,current_k))
-             ENDDO
-#if defined(__CUDA) 
-             !$acc end kernels 
-#else
-             !$omp end parallel do
-#endif
-             !
-          ENDDO &
-          IBND_LOOP_GAM
-          !
-          IF(okvan) THEN
-             CALL mp_sum(deexx,intra_bgrp_comm)
-             CALL mp_sum(deexx,inter_bgrp_comm)
-          ENDIF
-          !
-          !$acc host_data use_device(result)
-          CALL mp_sum( RESULT(1:nrxxs), inter_bgrp_comm)
-          !$acc end host_data
-          !
-          ! brings back result in G-space
-          !
+       ENDIF
+       !
+       IF( l_fft_doubleband.or.l_fft_singleband) THEN
           !$acc host_data use_device(RESULT)
-          CALL fwfft( 'Wave' , RESULT, dfftt )
+          CALL invfft ('Wave', RESULT, dfftt)
           !$acc end host_data
+#if defined(__CUDA) 
+          !$acc parallel loop
+#else
+          !$omp parallel do default(shared), private(ir)
+#endif
+          DO ir = 1, nrxxs
+             temppsic_dble(ir)  = dble ( RESULT(ir) )
+             temppsic_aimag(ir) = aimag( RESULT(ir) )
+          ENDDO
+#if !defined(__CUDA) 
+          !$omp end parallel do
+#endif
+       ENDIF
+       !
+       !$acc kernels
+       RESULT = 0.0_DP
+       !$acc end kernels
+       !
+       h_ibnd = ibnd_start/2
+       IF(mod(ibnd_start,2)==0) THEN
+          h_ibnd=h_ibnd-1
+          ibnd_loop_start=ibnd_start-1
+       ELSE
+          ibnd_loop_start=ibnd_start
+       ENDIF
+       !
+       IBND_LOOP_GAM : &
+       DO ibnd=ibnd_loop_start,ibnd_end, 2 !for each band of psi
+          !
+          h_ibnd = h_ibnd + 1
+          IF( ibnd < ibnd_start ) THEN
+             x1 = 0.0_DP
+          ELSE
+             x1 = x_occupation(ibnd,  current_ik)
+          ENDIF
+          IF( ibnd == ibnd_end) THEN
+             x2 = 0.0_DP
+          ELSE
+             x2 = x_occupation(ibnd+1,  current_ik)
+          ENDIF
+          IF ( abs(x1) < eps_occ .and. abs(x2) < eps_occ ) CYCLE
+          !
+          ! calculate rho in real space. Gamma tricks are used.
+          ! temppsic is real; tempphic contains one band in the real part,
+          ! another one in the imaginary part; the same applies to rhoc
+          !
+          IF( mod(im,2) == 0 ) THEN
+#if defined(__CUDA)
+             !$acc kernels present(exxbuff, rhoc, temppsic_aimag)
+#else
+             !$omp parallel do default(shared), private(ir)
+#endif
+             DO ir = 1, nrxxs
+                rhoc(ir) = exxbuff(ir,h_ibnd,current_k) * temppsic_aimag(ir) / omega
+             ENDDO
+#if defined(__CUDA)
+             !$acc end kernels
+#else
+             !$omp end parallel do
+#endif
+          ELSE
+#if defined(__CUDA)
+             !$acc kernels
+#else
+             !$omp parallel do default(shared), private(ir)
+#endif
+             DO ir = 1, nrxxs
+                rhoc(ir) = exxbuff(ir,h_ibnd,current_k) * temppsic_dble(ir) / omega
+             ENDDO
+#if defined(__CUDA)
+             !$acc end kernels
+#else
+             !$omp end parallel do
+#endif
+          ENDIF
+          !
+          ! bring rho to G-space
+          !
+          !   >>>> add augmentation in REAL SPACE here
+          IF(okvan .and. tqr) THEN
+             IF(ibnd>=ibnd_start) &
+             CALL addusxx_r(rhoc,_CX(becxx(current_ik)%r(:,ibnd)), _CX(becpsi%r(:,im)))
+             IF(ibnd<ibnd_end) &
+             CALL addusxx_r(rhoc,_CY(becxx(current_ik)%r(:,ibnd+1)),_CX(becpsi%r(:,im)))
+          ENDIF
+          !
+          !$acc host_data use_device(rhoc)
+          CALL fwfft ('Rho', rhoc, dfftt)
+          !$acc end host_data
+          !   >>>> add augmentation in G SPACE here
+          IF(okvan .and. .not. tqr) THEN
+             ! contribution from one band added to real (in real space) part of rhoc
+             IF(ibnd>=ibnd_start) &
+                CALL addusxx_g(dfftt, rhoc, xkq,  xkp, 'r', &
+                becphi_r=becxx(current_ik)%r(:,ibnd), becpsi_r=becpsi%r(:,im) )
+             ! contribution from following band added to imaginary (in real space) part of rhoc
+             IF(ibnd<ibnd_end) &
+                CALL addusxx_g(dfftt, rhoc, xkq,  xkp, 'i', &
+                becphi_r=becxx(current_ik)%r(:,ibnd+1), becpsi_r=becpsi%r(:,im) )
+          ENDIF
+          !   >>>> charge density done
+          !
+          !$acc kernels
+          vc = 0._DP
+          !$acc end kernels
           !
 #if defined(__CUDA) 
-          !$acc kernels present(hpsi, RESULT, dfftt%nl)
-#else  
+          !$acc kernels present(vc, fac, rhoc)
+#else 
           !$omp parallel do default(shared), private(ig)
 #endif
-          DO ig = 1, n
-             hpsi(ig,im)=hpsi(ig,im) - exxalfa*RESULT(dfftt%nl(ig))
+          DO ig = 1, ngmt
+             !
+             vc(dfftt%nl(ig))  = fac(ig) * rhoc(dfftt%nl(ig))
+             vc(dfftt%nlm(ig)) = fac(ig) * rhoc(dfftt%nlm(ig))
+             !
           ENDDO
 #if defined(__CUDA)
           !$acc end kernels
 #else
           !$omp end parallel do
 #endif
-          ! add non-local \sum_I |beta_I> \alpha_Ii (the sum on i is outside)
-          IF(okvan) CALL add_nlxx_pot (lda, hpsi(:,im), xkp, n, &
-                           igk_k(1,current_k), deexx, eps_occ, exxalfa)
+          !
+          !   >>>>  compute <psi|H_fock G SPACE here
+          IF(okvan .and. .not. tqr) THEN
+             IF(ibnd>=ibnd_start) &
+             CALL newdxx_g(dfftt, vc, xkq, xkp, 'r', deexx, &
+                           becphi_r=x1*becxx(current_ik)%r(:,ibnd))
+             IF(ibnd<ibnd_end) &
+             CALL newdxx_g(dfftt, vc, xkq, xkp, 'i', deexx, &
+                           becphi_r=x2*becxx(current_ik)%r(:,ibnd+1))
+          ENDIF
+          !
+          !brings back v in real space
+          !$acc host_data use_device(vc)
+          CALL invfft ('Rho', vc, dfftt)
+          !$acc end host_data
+          !
+          !   >>>>  compute <psi|H_fock REAL SPACE here
+          IF(okvan .and. tqr) THEN
+             IF(ibnd>=ibnd_start) &
+             CALL newdxx_r(dfftt, vc, _CX(x1*becxx(current_ik)%r(:,ibnd)), deexx)
+             IF(ibnd<ibnd_end) &
+             CALL newdxx_r(dfftt, vc, _CY(x2*becxx(current_ik)%r(:,ibnd+1)), deexx)
+          ENDIF
+          !
+          IF(okpaw) THEN
+             IF(ibnd>=ibnd_start) &
+             CALL PAW_newdxx(x1/nqs, _CX(becxx(current_ik)%r(:,ibnd)),&
+                                     _CX(becpsi%r(:,im)), deexx)
+             IF(ibnd<ibnd_end) &
+             CALL PAW_newdxx(x2/nqs, _CX(becxx(current_ik)%r(:,ibnd+1)), &
+                                     _CX(becpsi%r(:,im)), deexx)
+          ENDIF
+          !
+          ! accumulates over bands and k points
+          !
+#if defined(__CUDA) 
+          !$acc kernels present(RESULT, vc, exxbuff)
+#else
+          !$omp parallel do default(shared), private(ir)
+#endif
+          DO ir = 1, nrxxs
+             RESULT(ir) = RESULT(ir)+x1* dble(vc(ir))* dble(exxbuff(ir,h_ibnd,current_k))&
+                                    +x2*aimag(vc(ir))*aimag(exxbuff(ir,h_ibnd,current_k))
+          ENDDO
+#if defined(__CUDA) 
+          !$acc end kernels 
+#else
+          !$omp end parallel do
+#endif
+          !
        ENDDO &
-       LOOP_ON_PSI_BANDS
-       IF ( okvan .and..not.tqr ) CALL qvan_clean ()
+       IBND_LOOP_GAM
        !
+       IF(okvan) THEN
+          CALL mp_sum(deexx,intra_bgrp_comm)
+          CALL mp_sum(deexx,inter_bgrp_comm)
+       ENDIF
+       !
+       !$acc host_data use_device(result)
+       CALL mp_sum( RESULT(1:nrxxs), inter_bgrp_comm)
+       !$acc end host_data
+       !
+       ! brings back result in G-space
+       !
+       !$acc host_data use_device(RESULT)
+       CALL fwfft( 'Wave' , RESULT, dfftt )
+       !$acc end host_data
+       !
+#if defined(__CUDA) 
+       !$acc kernels present(hpsi, RESULT, dfftt%nl)
+#else  
+       !$omp parallel do default(shared), private(ig)
+#endif
+       DO ig = 1, n
+          hpsi(ig,im)=hpsi(ig,im) - exxalfa*RESULT(dfftt%nl(ig))
+       ENDDO
+#if defined(__CUDA)
+       !$acc end kernels
+#else
+       !$omp end parallel do
+#endif
+       ! add non-local \sum_I |beta_I> \alpha_Ii (the sum on i is outside)
+       IF(okvan) CALL add_nlxx_pot (lda, hpsi(:,im), xkp, n, &
+                        igk_k(1,current_k), deexx, eps_occ, exxalfa)
     ENDDO &
-    INTERNAL_LOOP_ON_Q
+    LOOP_ON_PSI_BANDS
+    IF ( okvan .and..not.tqr ) CALL qvan_clean ()
     !
     !$acc end data
     !
