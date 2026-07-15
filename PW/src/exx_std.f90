@@ -758,15 +758,16 @@ print *, '@vexx_std_gamma_one'
     INTEGER          :: current_ik
     INTEGER          :: ibnd_loop_start
     INTEGER          :: h_ibnd, nrxxs
-    REAL(DP) :: x1, x2, xkp(3)
-    REAL(DP) :: xkq(3)
+    REAL(DP), PARAMETER :: xkg(3) = (/0.0_dp, 0.0_dp, 0.0_dp/)
+    ! coordinates of Gamma point
+    REAL(DP) :: x1, x2
     ! <LMS> temp array for vcut_spheric
     INTEGER, EXTERNAL  :: global_kpoint_index
     LOGICAL :: l_fft_doubleband
     LOGICAL :: l_fft_singleband
     INTEGER :: ngmt
     !
-print *, '@vexx_std_gamma_outer'
+print *, '@@vexx_std_gamma_outer'
     ngmt = dfftt%ngm
     ALLOCATE( fac(ngmt) )
     nrxxs= dfftt%nnr
@@ -777,7 +778,6 @@ print *, '@vexx_std_gamma_outer'
     IF(okvan) ALLOCATE(deexx(nkb))
     !
     current_ik = global_kpoint_index ( nkstot, current_k )
-    xkp = xk(:,current_k)
     !
     ! This is to stop numerical inconsistencies creeping in through the band parallelization.
     !
@@ -795,12 +795,11 @@ print *, '@vexx_std_gamma_outer'
     !
     !$acc data create(rhoc, vc, fac, temppsic_dble, temppsic_aimag, result) copy(hpsi) present(exxbuff) 
     !
-    xkq  = xkq_collect(:,current_ik) 
     ! calculate the 1/|r-r'| (actually, k+q+g) factor and place it in fac
-    CALL g2_convolution(ngmt, gt, xkp, xkq, fac)
+    CALL g2_convolution(ngmt, gt, xkg, xkg, fac)
     !$acc update device(fac)
     !
-    IF ( okvan .and..not.tqr ) CALL qvan_init (ngmt, xkq, xkp)
+    IF ( okvan .and..not.tqr ) CALL qvan_init (ngmt, xkg, xkg)
     !
     LOOP_ON_PSI_BANDS : &
     DO im = 1,m !for each band of psi (the k cycle is outside band)
@@ -944,11 +943,11 @@ print *, '@vexx_std_gamma_outer'
           IF(okvan .and. .not. tqr) THEN
              ! contribution from one band added to real (in real space) part of rhoc
              IF(ibnd>=ibnd_start) &
-                CALL addusxx_g(dfftt, rhoc, xkq,  xkp, 'r', &
+                CALL addusxx_g(dfftt, rhoc, xkg,  xkg, 'r', &
                 becphi_r=becxx(current_ik)%r(:,ibnd), becpsi_r=becpsi%r(:,im) )
              ! contribution from following band added to imaginary (in real space) part of rhoc
              IF(ibnd<ibnd_end) &
-                CALL addusxx_g(dfftt, rhoc, xkq,  xkp, 'i', &
+                CALL addusxx_g(dfftt, rhoc, xkg,  xkg, 'i', &
                 becphi_r=becxx(current_ik)%r(:,ibnd+1), becpsi_r=becpsi%r(:,im) )
           ENDIF
           !   >>>> charge density done
@@ -977,10 +976,10 @@ print *, '@vexx_std_gamma_outer'
           !   >>>>  compute <psi|H_fock G SPACE here
           IF(okvan .and. .not. tqr) THEN
              IF(ibnd>=ibnd_start) &
-             CALL newdxx_g(dfftt, vc, xkq, xkp, 'r', deexx, &
+             CALL newdxx_g(dfftt, vc, xkg, xkg, 'r', deexx, &
                            becphi_r=x1*becxx(current_ik)%r(:,ibnd))
              IF(ibnd<ibnd_end) &
-             CALL newdxx_g(dfftt, vc, xkq, xkp, 'i', deexx, &
+             CALL newdxx_g(dfftt, vc, xkg, xkg, 'i', deexx, &
                            becphi_r=x2*becxx(current_ik)%r(:,ibnd+1))
           ENDIF
           !
@@ -1055,7 +1054,7 @@ print *, '@vexx_std_gamma_outer'
        !$omp end parallel do
 #endif
        ! add non-local \sum_I |beta_I> \alpha_Ii (the sum on i is outside)
-       IF(okvan) CALL add_nlxx_pot (lda, hpsi(:,im), xkp, n, &
+       IF(okvan) CALL add_nlxx_pot (lda, hpsi(:,im), xkg, n, &
                         igk_k(1,current_k), deexx, eps_occ, exxalfa)
     ENDDO &
     LOOP_ON_PSI_BANDS
