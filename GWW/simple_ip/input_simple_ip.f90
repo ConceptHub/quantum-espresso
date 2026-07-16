@@ -16,12 +16,12 @@ MODULE input_simple_ip
       INTEGER  :: fermi_ngauss         ! ngauss for Fermi level calculation (n=-99 --> Fermi-Dirac ; n=-1 --> cold-smearing ; n>=0 --> Methfessel-Paxton)
       REAL(kind=DP) :: drude_degauss   ! degauss (in Ry) for Drude plasma frequency calculation
       INTEGER  :: drude_ngauss = -99        ! ngauss for Drude plasma frequency calculation (n=-99 --> Fermi-Dirac) (WARNING: only Fermi-Dirac smearing is implemented now)
-      REAL(kind=DP) :: elec_temp = 0.0018375      ! electronic temperature (in Ry) for the occupation of the electronic states. Default is room temperature
+      REAL(kind=DP) :: elec_temp = 0.0018375_DP      ! electronic temperature (in Ry) for the occupation of the electronic states. Default is room temperature
       REAL(kind=DP) :: wmin, wmax         ! Minimun and maximum energy of the energy interval [wmin,wmax] (in Ry)
       INTEGER :: nw                 ! Number of points in the energy interval [wmin,wmax]
       REAL(kind=DP) ::  inter_broadening   ! broadening used for the optical spectra (interband part)
       REAL(kind=DP) ::  intra_broadening   ! broadening used for the optical spectra (intraband part)
-      REAL(kind=DP) ::  delta_energy_dos = 0.000735  ! Energy spacing for DOS calculation (in Ry) (default is 0.01 eV)
+      REAL(kind=DP) ::  delta_energy_dos = 0.000735_DP  ! Energy spacing for DOS calculation (in Ry) (default is 0.01 eV)
 
    END TYPE input_options_simple_ip
 

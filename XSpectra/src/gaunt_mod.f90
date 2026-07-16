@@ -211,7 +211,7 @@ contains
 ! external cgc
   integer l1,m1,l2,m2,l3,m3
   real(kind=DP) fac,dl1,dm1,dl2,dm2,dl3,dm3
-  real(kind=DP) :: pi = 3.14159265
+  real(kind=DP) :: pi = 3.14159265_dp
   if( m1 /= m2 + m3 .or. mod(l1+l2+l3,2) == 1 &
       .or. l1 < abs(l2-l3) .or. l1 > abs(l2+l3) ) then
 
@@ -292,14 +292,14 @@ contains
     integer, parameter :: Size_tab = 92
   
     type(seuil), parameter :: seuilK1_tab(Size_tab) = (/ &
-        seuil('H',    13.6), seuil('He',    24.6),seuil('Li',    54.7),&
+        seuil('H',    13.6_dp), seuil('He',    24.6_dp),seuil('Li',    54.7_dp),&
         seuil('Be',   111.5),seuil('B',   188.0),&!5
-        seuil('C',   284.2), seuil('N',   409.9),seuil('O',   543.1),&
-        seuil('F',   696.7), seuil('Ne',   870.2),&! 10
-        seuil('Na',  1070.8),seuil('Mg',  1303.0),seuil('Al',  1559.0),&
+        seuil('C',   284.2_dp), seuil('N',   409.9_dp),seuil('O',   543.1_dp),&
+        seuil('F',   696.7_dp), seuil('Ne',   870.2_dp),&! 10
+        seuil('Na',  1070.8_dp),seuil('Mg',  1303.0),seuil('Al',  1559.0),&
         seuil('Si',  1839.0),seuil('P',  2145.5),&! 15
-        seuil('S',  2472.0), seuil('Cl',  2822.4),seuil('Ar',  3205.9),&
-        seuil('K',  3608.4), seuil('Ca',  4038.5),&! 20
+        seuil('S',  2472.0), seuil('Cl',  2822.4_dp),seuil('Ar',  3205.9_dp),&
+        seuil('K',  3608.4_dp), seuil('Ca',  4038.5),&! 20
         seuil('Sc',  4492.0),seuil('Ti',  4966.0),seuil('V',  5465.0),&
         seuil('Cr',  5989.0),seuil('Mn',  6539.0),&! 25
         seuil('Fe',  7112.0),seuil('Co',  7709.0),seuil('Ni',  8333.0),&
@@ -338,32 +338,32 @@ contains
         seuil('Be',   0.),&
         seuil('B',    0.),&!5
         seuil('C',    0.),& 
-        seuil('N',  37.3),&
-        seuil('O',  41.6),&
+        seuil('N',  37.3_dp),&
+        seuil('O',  41.6_dp),&
         seuil('F',    0.),&
         seuil('Ne', 48.5),&! 10
         seuil('Na', 63.5),&
-        seuil('Mg', 88.6),&
-        seuil('Al',117.8),&
-        seuil('Si',149.7),&
+        seuil('Mg', 88.6_dp),&
+        seuil('Al',117.8_dp),&
+        seuil('Si',149.7_dp),&
         seuil('P', 189.0),&! 15
-        seuil('S', 230.9),& 
+        seuil('S', 230.9_dp),&
         seuil('Cl',270.0),&
-        seuil('Ar',326.3),&
-        seuil('K', 378.6),& 
-        seuil('Ca',438.4),&! 20
+        seuil('Ar',326.3_dp),&
+        seuil('K', 378.6_dp),&
+        seuil('Ca',438.4_dp),&! 20
         seuil('Sc',498.0),&
-        seuil('Ti',560.9),&
-        seuil('V', 626.7),&
+        seuil('Ti',560.9_dp),&
+        seuil('V', 626.7_dp),&
         seuil('Cr',696.0),&
-        seuil('Mn',769.1),&! 25
-        seuil('Fe',844.6),&
-        seuil('Co',925.1),&
-        seuil('Ni',1008.6),&
-        seuil('Cu',1096.7),&
-        seuil('Zn',1196.2),&! 30
+        seuil('Mn',769.1_dp),&! 25
+        seuil('Fe',844.6_dp),&
+        seuil('Co',925.1_dp),&
+        seuil('Ni',1008.6_dp),&
+        seuil('Cu',1096.7_dp),&
+        seuil('Zn',1196.2_dp),&! 30
         seuil('Ga', 1299.0),&
-        seuil('Ge', 1414.6),&
+        seuil('Ge', 1414.6_dp),&
         seuil('As', 1527.0),&
         seuil('Se', 1652.0),&
         seuil('Br', 1782.0),&! 35
@@ -436,32 +436,32 @@ contains
         seuil('O',  0.0),&
         seuil('F', 48.5),&
         seuil('Ne',63.5),&! 10
-        seuil('Na',88.6),&
-        seuil('Mg',17.8),&
-        seuil('Al',49.7),&
+        seuil('Na',88.6_dp),&
+        seuil('Mg',17.8_dp),&
+        seuil('Al',49.7_dp),&
         seuil('Si',89.0),&
         seuil('P', 136.0),&! 15
-        seuil('S', 163.6),& 
+        seuil('S', 163.6_dp),&
         seuil('Cl',202.0),&
-        seuil('Ar',250.6),&
-        seuil('K', 297.3),&
-        seuil('Ca',349.7),&! 20
-        seuil('Sc',403.6),&
-        seuil('Ti',460.2),&
-        seuil('V', 519.8),&
-        seuil('Cr',583.8),&
-        seuil('Mn',649.9),&! 25
-        seuil('Fe',719.9),&
-        seuil('Co',793.2),&
+        seuil('Ar',250.6_dp),&
+        seuil('K', 297.3_dp),&
+        seuil('Ca',349.7_dp),&! 20
+        seuil('Sc',403.6_dp),&
+        seuil('Ti',460.2_dp),&
+        seuil('V', 519.8_dp),&
+        seuil('Cr',583.8_dp),&
+        seuil('Mn',649.9_dp),&! 25
+        seuil('Fe',719.9_dp),&
+        seuil('Co',793.2_dp),&
         seuil('Ni',870.0),&
-        seuil('Cu',952.3),&
-        seuil('Zn', 1044.9),&! 30
-        seuil('Ga', 1143.2),&
-        seuil('Ge', 1248.1),&
-        seuil('As', 1359.1),&
-        seuil('Se', 1474.3),&
+        seuil('Cu',952.3_dp),&
+        seuil('Zn', 1044.9_dp),&! 30
+        seuil('Ga', 1143.2_dp),&
+        seuil('Ge', 1248.1_dp),&
+        seuil('As', 1359.1_dp),&
+        seuil('Se', 1474.3_dp),&
         seuil('Br', 1596.0),&! 35
-        seuil('Kr', 1730.9),&
+        seuil('Kr', 1730.9_dp),&
         seuil('Rb', 1864.0),&
         seuil('Sr', 2007.0),&
         seuil('Y',  2156.0),&
@@ -529,33 +529,33 @@ contains
         seuil('N', 0.0),&
         seuil('O', 0.0),&
         seuil('F', 0.0),&
-        seuil('Ne',21.6),&! 10
+        seuil('Ne',21.6_dp),&! 10
         seuil('Na',30.5),&
-        seuil('Mg',49.2),&
+        seuil('Mg',49.2_dp),&
         seuil('Al',72.5),&
-        seuil('Si',99.2),&
+        seuil('Si',99.2_dp),&
         seuil('P', 135.0),&! 15
         seuil('S', 162.5),& 
         seuil('Cl',200.0),&
-        seuil('Ar',248.4),&
-        seuil('K', 294.6),&
-        seuil('Ca',346.2),&! 20
-        seuil('Sc',398.7),&
-        seuil('Ti',453.8),&
-        seuil('V', 512.1),&
-        seuil('Cr',574.1),&
-        seuil('Mn',638.7),&! 25
-        seuil('Fe',706.8),&
-        seuil('Co',778.1),&
-        seuil('Ni',852.7),&
-        seuil('Cu',932.7),&
-        seuil('Zn', 1021.8),&! 30
-        seuil('Ga', 1116.4),&
+        seuil('Ar',248.4_dp),&
+        seuil('K', 294.6_dp),&
+        seuil('Ca',346.2_dp),&! 20
+        seuil('Sc',398.7_dp),&
+        seuil('Ti',453.8_dp),&
+        seuil('V', 512.1_dp),&
+        seuil('Cr',574.1_dp),&
+        seuil('Mn',638.7_dp),&! 25
+        seuil('Fe',706.8_dp),&
+        seuil('Co',778.1_dp),&
+        seuil('Ni',852.7_dp),&
+        seuil('Cu',932.7_dp),&
+        seuil('Zn', 1021.8_dp),&! 30
+        seuil('Ga', 1116.4_dp),&
         seuil('Ge', 1217.0),&
-        seuil('As', 1323.6),&
-        seuil('Se', 1433.9),&
+        seuil('As', 1323.6_dp),&
+        seuil('Se', 1433.9_dp),&
         seuil('Br', 1550.0),&! 35
-        seuil('Kr', 1678.4),&
+        seuil('Kr', 1678.4_dp),&
         seuil('Rb', 1804.0),&
         seuil('Sr', 1940.0),&
         seuil('Y',  2080.0),&

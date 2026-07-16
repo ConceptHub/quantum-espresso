@@ -4,7 +4,7 @@ program series
   real(kind=8), ALLOCATABLE :: a(:,:),b(:,:)
   integer :: nstep,nn,nint
   real(kind=8) :: emin,emax,delta
-  real(kind=8), parameter :: ry2ev=13.6057 
+  real(kind=8), parameter :: ry2ev=13.6057d0
   
 
 
@@ -13,7 +13,7 @@ program series
   complex(kind=8) :: z, f0,f1,eps, term
 
 
-  real(kind=8):: omega=270.0114 
+  real(kind=8):: omega=270.0114d0
   real(kind=8) :: norm(3), nspin, offset
   
 

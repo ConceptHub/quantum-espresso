@@ -25,7 +25,7 @@ LOGICAL     :: debug
 
 call start_clock('build_spectrum')
 debug=.true.
-eta=0.001
+eta=0.001_DP
 
 if(debug) then
    if(ionode) then

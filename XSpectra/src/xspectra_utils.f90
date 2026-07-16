@@ -97,7 +97,7 @@ FUNCTION paste_fermi(e,e0,a,b,gamma,m,term,first)
   nn1 = 1
   nn2 = 1
 
-  t1 = 0.5773502692
+  t1 = 0.5773502692_dp
 
   t = cut_startt
 

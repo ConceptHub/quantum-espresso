@@ -15,14 +15,14 @@ function mygetK(sym)
   integer, parameter :: Size_tab = 92
 
   type(seuilK), parameter :: seuilK_tab(Size_tab) = (/ &
-      seuilK('H',    13.6), seuilK('He',    24.6),seuilK('Li',    54.7),&
+      seuilK('H',    13.6_dp), seuilK('He',    24.6_dp),seuilK('Li',    54.7_dp),&
       seuilK('Be',   111.5),seuilK('B',   188.0),&!5
-      seuilK('C',   284.2), seuilK('N',   409.9),seuilK('O',   543.1),&
-      seuilK('F',   696.7), seuilK('Ne',   870.2),&! 10
-      seuilK('Na',  1070.8),seuilK('Mg',  1303.0),seuilK('Al',  1559.0),&
+      seuilK('C',   284.2_dp), seuilK('N',   409.9_dp),seuilK('O',   543.1_dp),&
+      seuilK('F',   696.7_dp), seuilK('Ne',   870.2_dp),&! 10
+      seuilK('Na',  1070.8_dp),seuilK('Mg',  1303.0),seuilK('Al',  1559.0),&
       seuilK('Si',  1839.0),seuilK('P',  2145.5),&! 15
-      seuilK('S',  2472.0), seuilK('Cl',  2822.4),seuilK('Ar',  3205.9),&
-      seuilK('K',  3608.4), seuilK('Ca',  4038.5),&! 20
+      seuilK('S',  2472.0), seuilK('Cl',  2822.4_dp),seuilK('Ar',  3205.9_dp),&
+      seuilK('K',  3608.4_dp), seuilK('Ca',  4038.5),&! 20
       seuilK('Sc',  4492.0),seuilK('Ti',  4966.0),seuilK('V',  5465.0),&
       seuilK('Cr',  5989.0),seuilK('Mn',  6539.0),&! 25
       seuilK('Fe',  7112.0),seuilK('Co',  7709.0),seuilK('Ni',  8333.0),&
