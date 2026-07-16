@@ -54,13 +54,7 @@
    call startup
 
 #if defined(_OPENMP)
-     ntids=omp_get_max_threads()
-     ! call omp_set_num_threads(1)
-#endif
-
-
-
-#if defined(_OPENMP)
+   ntids = omp_get_max_threads()
    write(stdout,*)  'ntids = ', ntids
 #endif
 
