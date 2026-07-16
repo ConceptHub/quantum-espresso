@@ -465,6 +465,9 @@
       !
       ! calculation of nonlocal potential energy term and array rhovan
       !
+#if defined(_OPENMP)
+      USE omp_lib
+#endif
       use kinds,          only : DP
       use uspp_param,     only : nh, upf
       use uspp,           only : dvan, ofsbeta
@@ -483,7 +486,6 @@
       !
       real(DP) :: sumt, sums(2), ennl_t
       integer  :: is, iv, jv, ijv, inl, jnl, ia, iss, i, indv
-      INTEGER  :: omp_get_num_threads
       !
       ennl_t = 0.d0  
       !
@@ -1090,6 +1092,9 @@ subroutine nlfq_bgrp_x( c_bgrp, betae, bec_bgrp, becdr_bgrp, fion )
   !
   !     contribution to fion due to nonlocal part
   !
+#if defined(_OPENMP)
+  USE omp_lib
+#endif
   USE kinds,          ONLY : DP
   use uspp,           only : nkb, dvan, deeq, ofsbeta
   use uspp_param,     only : nhm, nh
@@ -1120,7 +1125,7 @@ subroutine nlfq_bgrp_x( c_bgrp, betae, bec_bgrp, becdr_bgrp, fion )
   real(DP), allocatable :: tmpbec(:,:), tmpdr(:,:) 
   real(DP), allocatable :: fion_loc(:,:)
 #if defined(_OPENMP) 
-  INTEGER :: mytid, ntids, omp_get_thread_num, omp_get_num_threads
+  INTEGER :: mytid, ntids
 #endif  
   !
   call start_clock( 'nlfq' )

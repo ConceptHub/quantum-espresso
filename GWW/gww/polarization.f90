@@ -1964,6 +1964,9 @@
 !it is done by calculating the eigenvalues and eigenvectors
 !it assumes that the matrix is symmetric and positive definite
 
+#if defined(_OPENMP)
+   USE omp_lib
+#endif
    USE io_global, ONLY : stdout
 
    implicit none
@@ -1980,8 +1983,6 @@
 
 #if defined(_OPENMP)
    INTEGER :: ntids
-   INTEGER :: omp_get_num_threads, omp_get_max_threads
-   EXTERNAL omp_set_num_threads, omp_get_num_threads, omp_get_max_threads
 #endif
 
 

@@ -189,6 +189,9 @@ CONTAINS
       !! Requires in input the updated \(\text{bec}(k)\) for \(k<i\).
       !! On output: \(\text{bec}(i)\) is recalculated.
 !
+#if defined(_OPENMP)
+      USE omp_lib
+#endif
       USE ions_base,      ONLY: na, nat, ityp
       USE uspp,           ONLY: qq_nt, ofsbeta
       USE electrons_base, ONLY: ispin, ispin_bgrp, nbspx_bgrp, ibgrp_g2l, iupdwn, nupdwn, nbspx
@@ -204,7 +207,6 @@ CONTAINS
       REAL(DP)    :: csc( : )
       INTEGER     :: k, kmax_bgrp, kmax,ig, is, iv, jv, ia, inl, jnl, ibgrp_k, ibgrp_i
       REAL(DP)    :: rsum, ddot, rsum_w, rsum_v, bec_tmp_inl
-      INTEGER     :: omp_get_thread_num, omp_get_num_threads
       INTEGER     :: iupdwn_iss
 
       !

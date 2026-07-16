@@ -38,6 +38,9 @@
       !
       ! if compute_only_gradient is true, this routine only puts the gradient
       ! in the array cm_*
+#if defined(_OPENMP)
+      USE omp_lib
+#endif
       USE parallel_include
       USE kinds,               ONLY : DP
       USE mp_global,           ONLY : me_bgrp, &
@@ -89,7 +92,6 @@
      integer :: iwfc, nwfc, is, ii, tg_rhos_siz, c2_siz
      integer :: iflag
      logical :: ttsde, only_gradient
-     INTEGER :: omp_get_num_threads
 
      call start_clock('runcp_uspp')
 #if defined (__CUDA)

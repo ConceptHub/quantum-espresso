@@ -12,6 +12,9 @@
 
    PROGRAM gww
 
+#if defined(_OPENMP)
+   USE omp_lib
+#endif
    USE  input_gw,            ONLY : input_options, read_input_gww
    USE  io_global,           ONLY : stdout, ionode
    USE  self_energy_storage
@@ -43,10 +46,6 @@
    INTEGER :: ie
    REAL(kind=DP) :: energy
 
-#if defined(_OPENMP)
-   INTEGER :: omp_get_num_threads, omp_get_max_threads
-   EXTERNAL omp_set_num_threads, omp_get_num_threads, omp_get_max_threads
-#endif
 
    tmp_dir=' '
 

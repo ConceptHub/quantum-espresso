@@ -424,6 +424,9 @@ DEV_OMP_NOACC end parallel
    SUBROUTINE vofesr( iesr, esr, desr, fion, taus, tstress, hmat )
 !=----------------------------------------------------------------------------=!
 
+#if defined(_OPENMP)
+      USE omp_lib
+#endif
       USE kinds,       ONLY : DP
       USE constants,   ONLY : sqrtpm1
       USE cell_base,   ONLY : s_to_r
@@ -464,7 +467,6 @@ DEV_OMP_NOACC end parallel
       INTEGER, DIMENSION(6), PARAMETER :: ALPHA = (/ 1,2,3,2,3,3 /)
       INTEGER, DIMENSION(6), PARAMETER :: BETA  = (/ 1,1,1,2,2,3 /)
 
-      INTEGER :: omp_get_num_threads
 
 ! ... SUBROUTINE BODY
 

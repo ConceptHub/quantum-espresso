@@ -16,6 +16,9 @@
 !     where
 !         rho_lm = \sum_j f_j <psi_j|beta_l><beta_m|psi_j>
 !
+#if defined(_OPENMP)
+      USE omp_lib
+#endif
       USE kinds,            ONLY: dp
       USE uspp_param,       ONLY: nh, nhm, upf
       USE uspp,             ONLY: deeq
@@ -51,10 +54,6 @@
       REAL(DP), ALLOCATABLE :: fvan(:,:)
       INTEGER :: na_bgrp, ia_bgrp
       INTEGER :: mytid, ntids
-#if defined(_OPENMP)
-      INTEGER :: omp_get_thread_num, omp_get_num_threads
-      EXTERNAL :: omp_get_thread_num, omp_get_num_threads
-#endif
 !
       IF ( dfftb%nr1==0 .OR. dfftb%nr2==0 .OR. dfftb%nr3==0 ) THEN
          RETURN

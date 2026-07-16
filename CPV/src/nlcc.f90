@@ -168,6 +168,9 @@
       !! Same logic as in \(\texttt{newd}\) - uses box grid. For parallel execution:
       !! the sum over node contributions is done in the calling routine.
       !
+#if defined(_OPENMP)
+      USE omp_lib
+#endif
       USE kinds,             ONLY: DP
       use electrons_base,    only: nspin
       use smallbox_gvec,     only: gxb, ngb
@@ -196,10 +199,7 @@
       complex(dp), allocatable :: qv(:), fg1(:), fg2(:)
       real(dp), allocatable :: fcc(:,:)
 
-#if defined(_OPENMP)
-      INTEGER :: itid, mytid, ntids, omp_get_thread_num, omp_get_num_threads
-      EXTERNAL :: omp_get_thread_num, omp_get_num_threads
-#endif
+      INTEGER :: itid, mytid, ntids
 !
       call start_clock( 'forcecc' )
       ci = (0.d0,1.d0)
@@ -307,6 +307,9 @@
       !! Calculate core charge contribution in real space, \(\text{rhoc}(r)\).
       !! Same logic as for \(\text{rhov}\): use box grid for core charges.
       !
+#if defined(_OPENMP)
+      USE omp_lib
+#endif
       use kinds, only: dp
       use ions_base,         only: nsp, na, nat, ityp
       use uspp_param,        only: upf
@@ -331,10 +334,6 @@
       complex(dp), allocatable :: qv(:), fg1(:), fg2(:)
 
       INTEGER :: mytid, ntids
-#if defined(_OPENMP)
-      INTEGER :: omp_get_thread_num, omp_get_num_threads
-      EXTERNAL :: omp_get_thread_num, omp_get_num_threads
-#endif
 !
       call start_clock( 'set_cc' )
 

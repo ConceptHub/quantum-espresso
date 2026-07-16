@@ -19,6 +19,9 @@ MODULE exx_module
   ! to find related changes made in other files look for the string 'exx_wf related'
   !----------------------------------------------------------------------------------------------------------------
   !
+#if defined(_OPENMP)
+  USE omp_lib
+#endif
   USE cell_base,          ONLY: h                  !cell at time t (current time step), also used in r = h s
   USE cell_base,          ONLY: ainv               !h^-1 matrix for converting between r and s coordinates via s = h^-1 r)
   USE cell_base,          ONLY: omega              !cell volume (in au^3)
@@ -159,9 +162,6 @@ MODULE exx_module
   !! the first dimension is the (flattened) 1d local grid index; the second is the jth neighbor orbital index;
   !! the third is the ith local orbital index of the current MPI process
   !
-#if defined(_OPENMP)
-  INTEGER, EXTERNAL                   :: omp_get_max_threads
-#endif
 #if defined __CUDA
   REAL(DP), ALLOCATABLE, PUBLIC, DEVICE       :: coe_1st_derv_d(:,:)      ! coe_1st_derv(neighbor, d/di)
   REAL(DP), ALLOCATABLE, PUBLIC, DEVICE       :: coeke_d(:,:,:)           ! coeke(neighbor, d/di, d/dj)

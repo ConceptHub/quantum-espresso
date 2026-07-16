@@ -237,6 +237,9 @@ end subroutine solve_lanczos_fake
 
 subroutine do_polarization_lanczos(tf,options,ispin)
 !this subroutine create polarization descriptor in imaginary frequency using the lanczos scheme
+#if defined(_OPENMP)
+  USE omp_lib
+#endif
   USE kinds,              ONLY : DP
   USE input_gw,           ONLY : input_options
   USE lanczos,            ONLY : compact_q_lanczos,initialize_compact_q_lanczos,free_memory_compact_q_lanczos,&
@@ -294,10 +297,6 @@ subroutine do_polarization_lanczos(tf,options,ispin)
    LOGICAL :: l_do_restart
    REAL(kind=DP), ALLOCATABLE :: occ(:)
 
-#if defined(_OPENMP)
-   INTEGER :: omp_get_num_threads, omp_get_max_threads 
-   EXTERNAL omp_set_num_threads, omp_get_num_threads, omp_get_max_threads 
-#endif
 
 
    write(stdout,*) 'Routine: do_polarization_lanczos'

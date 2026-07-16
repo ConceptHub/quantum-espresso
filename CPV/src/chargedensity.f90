@@ -604,6 +604,9 @@ SUBROUTINE drhov(irb,eigrb,rhovan,drhovan,rhog,rhor,drhog,drhor)
 !     On input rhor and rhog must contain the smooth part only !
 !     Output in (drhor, drhog)
 !
+#if defined(_OPENMP)
+      USE omp_lib
+#endif
       USE kinds,                    ONLY: DP
       USE control_flags,            ONLY: iprint
       USE ions_base,                ONLY: na, nsp, nat, ityp
@@ -638,10 +641,6 @@ SUBROUTINE drhov(irb,eigrb,rhovan,drhovan,rhog,rhor,drhog,drhor)
       COMPLEX(DP), ALLOCATABLE:: dqgbt(:,:)
       COMPLEX(DP), ALLOCATABLE :: qv(:)
       COMPLEX(DP), ALLOCATABLE :: fg1(:), fg2(:)
-#if defined(_OPENMP)
-      INTEGER  :: omp_get_thread_num, omp_get_num_threads
-      EXTERNAL :: omp_get_thread_num, omp_get_num_threads
-#endif
 !
 !$omp parallel do collapse(3) default(none), private(i,j,iss,ir,ig), shared(nspin,dfftp,drhor,drhog,rhor,rhog,ainv) 
       DO j=1,3
@@ -852,6 +851,9 @@ SUBROUTINE rhov(rhovan,rhog,rhor)
 !
 !     routine makes use of c(-g)=c*(g)  and  beta(-g)=beta*(g)
 !
+#if defined(_OPENMP)
+      USE omp_lib
+#endif
       USE kinds,                    ONLY: dp
       USE ions_base,                ONLY: nat, na, nsp, ityp
       USE io_global,                ONLY: stdout
@@ -896,10 +898,6 @@ SUBROUTINE rhov(rhovan,rhog,rhor)
       COMPLEX(DP), ALLOCATABLE :: fg1(:), fg2(:)
 
       INTEGER  :: mytid, ntids
-#if defined(_OPENMP)
-      INTEGER  :: omp_get_thread_num, omp_get_num_threads
-      EXTERNAL :: omp_get_thread_num, omp_get_num_threads
-#endif
 
       !  Quick return if this sub is not needed
       !
