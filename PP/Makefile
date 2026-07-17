@@ -7,7 +7,7 @@ TLDEPS=pwlibs
 
 all:
 	if test -d src ; then \
-	( cd src ; $(MAKE) || exit 1 ) ; fi
+	( cd src ; $(MAKE) all || exit 1 ) ; fi
 
 doc:
 	if test -d Doc ; then \
