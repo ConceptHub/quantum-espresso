@@ -71,7 +71,6 @@ SUBROUTINE check_initial_status(auxdyn)
   USE scf,             ONLY : rho
   USE disp,            ONLY : nqs, x_q, wq, comp_iq, nq1, nq2, nq3, &
                               done_iq, lgamma_iq
-  USE qpoint,          ONLY : xq
   USE control_lr,      ONLY : lgamma, where_rec, rec_code
   USE output,          ONLY : fildyn, fildvscf
   USE control_ph,      ONLY : ldisp, start_q, last_q, current_iq, tmp_dir_ph, recover, &
