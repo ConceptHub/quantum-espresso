@@ -378,6 +378,7 @@ MODULE exx
       ! prepare buffers for massive EXX scheme (pair parallelism, DFT data transposition)
       Call exxinit_bp()
     elseif( .not. gamma_only .or. (exx_bgrp_type .ne. EXX_BGRP_EXBTC) ) then
+    !else
 print *, '@calling exxinit_std '      
       ! prepare buffers for standard EXX scheme
       Call exxinit_std( DoLoc )
@@ -407,7 +408,7 @@ print *, '@calling exxinit_std '
     USE uspp,           ONLY : okvan
     USE paw_variables,  ONLY : okpaw
     USE wvfct,          ONLY : nbnd
-    USE exx_std,        ONLY : vexx_std_gamma_one, vexx_std_gamma_outer, &
+    USE exx_std,        ONLY : vexx_std_gamma_one, vexx_std_gamma_outer, vexx_std_gamma_outer_exxbuff, &
                                vexx_std_k_inner, vexx_std_k_outer, vexx_std_k_one
     USE exx_bp,         ONLY : vexx_bp
     !

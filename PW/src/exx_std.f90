@@ -764,7 +764,7 @@ print *, '@vexx_std_gamma_one'
     LOGICAL :: l_fft_doubleband
     LOGICAL :: l_fft_singleband
     INTEGER :: ngmt
-    INTEGER :: nblocks, nb_last, iblock, nb , i_global,  ib 
+    INTEGER :: nblocks, nb_last, iblock, nb , i_global,  ib , odd_idx
     !
 print *, '@@vexx_std_gamma_outer'
 print *, 'occ bands: ',  x_nbnd_occ
@@ -806,7 +806,7 @@ print *, 'occ bands: ',  x_nbnd_occ
     CALL g2_convolution(ngmt, gt, xkg, xkg, fac)
     !$acc update device(fac)
     !
-    IF ( okvan .and..not.tqr ) CALL qvan_init (ngmt, xkg, xkg)
+    !IF ( okvan .and..not.tqr ) CALL qvan_init (ngmt, xkg, xkg)
     !
     LOOP_ON_I_BLOCKS : &
     DO iblock = 1, nblocks
@@ -843,8 +843,8 @@ print *, 'occ bands: ',  x_nbnd_occ
          DO ig = 1, npwt
             idx  = (nb/2) * nrxxs + dfftt%nl(ig) 
             idxm = (nb/2) * nrxxs + dfftt%nlm(ig) 
-            temppsic ( idx  ) =       psi(ig, i_global + ib) 
-            temppsic ( idxm ) = conjg(psi(ig, i_global + ib) )
+            temppsic ( idx  ) =       psi(ig, i_global + nb) 
+            temppsic ( idxm ) = conjg(psi(ig, i_global + nb) )
          ENDDO
        end if 
        !
@@ -860,13 +860,25 @@ print *, 'occ bands: ',  x_nbnd_occ
        !$acc end kernels
        !
        IBND_LOOP_GAM : &
-       DO ibnd=1, x_nbnd_occ-1, 2 !for each band of psi
+       DO ibnd=1, x_nbnd_occ, 2 !for each band of psi
           !
           x1 = x_occupation(ibnd,  current_ik)
-          x2 = x_occupation(ibnd+1,  current_ik)
+          !
+          if( mod(x_nbnd_occ,2)==1 .and. ibnd==x_nbnd_occ ) then 
+            ! in this case ibnd+1 should never be referenced
+            !   ibnd + odd_idx = ibnd   (x_nbnd_occ odd)
+            !                    ibnd+1 (x_nbnd_occ even)
+            odd_idx = 0
+            x2 = 0.0_dp
+          else
+            odd_idx = 1
+            x2 = x_occupation(ibnd+1,  current_ik)
+          end if
+          !
           IF ( abs(x1) < eps_occ .and. abs(x2) < eps_occ ) CYCLE
           !
-          Call exx_kernel_gamma ( batchsize, lda, ngmt, nrxxs, rhoc, fac, temppsic, psi(1,ibnd), temppsic_occ, vc ) 
+print *, '@calling exx_kernel_gamma ', ibnd
+          Call exx_kernel_gamma ( odd_idx, ibnd, m, batchsize, lda, ngmt, nrxxs, rhoc, fac, temppsic, psi, temppsic_occ, vc ) 
           !
           ! accumulates over bands and k points
           !
@@ -882,10 +894,10 @@ print *, 'occ bands: ',  x_nbnd_occ
        ENDDO &
        IBND_LOOP_GAM
        !
-       IF(okvan) THEN
-          CALL mp_sum(deexx,intra_bgrp_comm)
-          CALL mp_sum(deexx,inter_bgrp_comm)
-       ENDIF
+       !IF(okvan) THEN
+       !   CALL mp_sum(deexx,intra_bgrp_comm)
+       !   CALL mp_sum(deexx,inter_bgrp_comm)
+       !ENDIF
        !
        !$acc host_data use_device(result)
        CALL mp_sum( RESULT, inter_bgrp_comm)
@@ -925,7 +937,7 @@ print *, 'occ bands: ',  x_nbnd_occ
   !-----------------------------------------------------------------------
   !
   !-----------------------------------------------------------------------
-  SUBROUTINE exx_kernel_gamma ( btcsz, ld, ng, nr, rhoct, fact, psi1, psi2, psi2_out, vct )
+  SUBROUTINE exx_kernel_gamma ( odd, ibb, nbb, btcsz, ld, ng, nr, rhoct, fact, psi1, psi2, psi2_out, vct )
     !-----------------------------------------------------------------------
     !
     USE exx_base,       ONLY : npwt
@@ -934,10 +946,13 @@ print *, 'occ bands: ',  x_nbnd_occ
     !
     IMPLICIT NONE
     !
-    INTEGER, INTENT(IN)  :: btcsz, ld, ng, nr
+    INTEGER, INTENT(IN)  :: btcsz, ld, ng, nr, ibb, nbb
+    !
+    INTEGER, INTENT(IN)  :: odd ! allows to avoid referencing psi(:, ibnd+1) when x_nbnd_occ is odd
+                                ! but gamma_trick is used
     !
     COMPLEX(DP), INTENT(IN) :: psi1(btcsz*nr/2)  ! temppsic
-    COMPLEX(DP), INTENT(IN) :: psi2(ld,2)        ! psi(:, ibnd), psi(:, ibnd+1)
+    COMPLEX(DP), INTENT(IN) :: psi2(ld,nbb)      ! psi(:, ibnd), psi(:, ibnd+1)
     REAL(DP),    INTENT(IN) :: fact(ng)
     !
     ! work buffer, passed as arguments (rather than declared locally)
@@ -951,6 +966,7 @@ print *, 'occ bands: ',  x_nbnd_occ
     !
     INTEGER :: ig, ib, ir, idx, idxm
     !
+print *, '@start exx_kernel_gamma'
     !$acc kernels
     psi2_out = (0.0_dp, 0.0_dp)
     !$acc end kernels
@@ -959,8 +975,8 @@ print *, 'occ bands: ',  x_nbnd_occ
     DO ig = 1, npwt
       idx  = dfftt%nl(ig)
       idxm = dfftt%nlm(ig) 
-      psi2_out( idx )  =       psi2(ig, 1 ) + (0._DP,1._DP) * psi2(ig, 2 )
-      psi2_out( idxm ) = conjg(psi2(ig, 1 ) - (0._DP,1._DP) * psi2(ig, 2 ))
+      psi2_out( idx )  =       psi2(ig, ibb ) + (0._DP,1._DP) * dble(odd) * psi2(ig, ibb+odd )
+      psi2_out( idxm ) = conjg(psi2(ig, ibb ) - (0._DP,1._DP) * dble(odd) * psi2(ig, ibb+odd ))
     END DO 
     !
     !$acc host_data use_device(psi2_out)
@@ -1052,6 +1068,7 @@ print *, 'occ bands: ',  x_nbnd_occ
     !                           _CX(becpsi%r(:,im)), deexx)
     !ENDIF
     !
+print *, '@end exx_kernel_gamma'
     RETURN
     !
     !-----------------------------------------------------------------------
@@ -1110,7 +1127,7 @@ print *, 'occ bands: ',  x_nbnd_occ
     INTEGER :: ngmt
     INTEGER :: nblocks, nb_last, iblock, nb , i_global,  ib 
     !
-print *, '@@vexx_std_gamma_outer'
+print *, '@@vexx_std_gamma_outer_exxbuff'
     if ( mod(batchsize, 2) /= 0 ) Call errore('vexx_std_gamma_outer', 'odd batchsize values not allowed', 1)
     !
     ngmt = dfftt%ngm
@@ -1185,8 +1202,8 @@ print *, '@@vexx_std_gamma_outer'
          DO ig = 1, npwt
             idx  = (nb/2) * nrxxs + dfftt%nl(ig) 
             idxm = (nb/2) * nrxxs + dfftt%nlm(ig) 
-            temppsic ( idx  ) =       psi(ig, i_global + ib) 
-            temppsic ( idxm ) = conjg(psi(ig, i_global + ib) )
+            temppsic ( idx  ) =       psi(ig, i_global + nb) 
+            temppsic ( idxm ) = conjg(psi(ig, i_global + nb) )
          ENDDO
        end if 
        !
