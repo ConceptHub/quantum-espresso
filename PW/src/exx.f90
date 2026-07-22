@@ -377,7 +377,8 @@ MODULE exx
     if( exx_bgrp_type .eq. EXX_BGRP_PAIRS ) then
       ! prepare buffers for massive EXX scheme (pair parallelism, DFT data transposition)
       Call exxinit_bp()
-    else 
+    elseif( .not. gamma_only .or. (exx_bgrp_type .ne. EXX_BGRP_EXBTC) ) then
+print *, '@calling exxinit_std '      
       ! prepare buffers for standard EXX scheme
       Call exxinit_std( DoLoc )
     end if
