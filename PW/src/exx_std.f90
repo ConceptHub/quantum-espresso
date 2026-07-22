@@ -723,7 +723,6 @@ print *, '@vexx_std_gamma_one'
     ! memory friendly version that does not use exxbuff
     !
     USE constants,      ONLY : fpi, e2, pi
-    USE cell_base,      ONLY : omega
     USE gvect,          ONLY : ngm, g
     USE wvfct,          ONLY : npwx, current_k
     USE klist,          ONLY : xk, nks, nkstot, igk_k
@@ -867,106 +866,7 @@ print *, 'occ bands: ',  x_nbnd_occ
           x2 = x_occupation(ibnd+1,  current_ik)
           IF ( abs(x1) < eps_occ .and. abs(x2) < eps_occ ) CYCLE
           !
-          !$acc kernels
-          temppsic_occ = (0.0_dp, 0.0_dp)
-          !$acc end kernels
-          !
-          !$acc parallel loop private(idx, idxm)
-          DO ig = 1, npwt
-            idx  = dfftt%nl(ig)
-            idxm = dfftt%nlm(ig) 
-            temppsic_occ( idx )  =       psi(ig, ibnd ) + (0._DP,1._DP) * psi(ig, ibnd+1)
-            temppsic_occ( idxm ) = conjg(psi(ig, ibnd ) - (0._DP,1._DP) * psi(ig, ibnd+1))
-          END DO 
-          !
-          !$acc host_data use_device(temppsic_occ)
-          CALL invfft ('Wave', temppsic_occ, dfftt)
-          !$acc end host_data
-          !
-          ! calculate rho in real space. Gamma tricks are used.
-          ! temppsic is real; tempphic contains one band in the real part,
-          ! another one in the imaginary part; the same applies to rhoc
-          !
-          !$acc parallel loop collapse(2) private(idx) 
-          do ib = 1, batchsize, 2
-             DO ir = 1, nrxxs
-                idx = ib/2 *nrxxs + ir 
-                rhoc((ib-1)*nrxxs + ir ) = temppsic_occ(ir) *  dble(temppsic(idx)) / omega
-                rhoc((ib)*nrxxs + ir )   = temppsic_occ(ir) * aimag(temppsic(idx)) / omega
-             ENDDO
-          end do 
-          !
-          ! bring rho to G-space
-          !
-          !   >>>> add augmentation in REAL SPACE here
-          !IF(okvan .and. tqr) THEN
-          !   IF(ibnd>=ibnd_start) &
-          !   CALL addusxx_r(rhoc,_CX(becxx(current_ik)%r(:,ibnd)), _CX(becpsi%r(:,im)))
-          !   IF(ibnd<ibnd_end) &
-          !   CALL addusxx_r(rhoc,_CY(becxx(current_ik)%r(:,ibnd+1)),_CX(becpsi%r(:,im)))
-          !ENDIF
-          !
-          !$acc host_data use_device(rhoc)
-          CALL fwfft ('Rho', rhoc, dfftt, howmany=batchsize)
-          !$acc end host_data
-          !   >>>> add augmentation in G SPACE here
-          !IF(okvan .and. .not. tqr) THEN
-          !   ! contribution from one band added to real (in real space) part of rhoc
-          !   IF(ibnd>=ibnd_start) &
-          !      CALL addusxx_g(dfftt, rhoc, xkg,  xkg, 'r', &
-          !      becphi_r=becxx(current_ik)%r(:,ibnd), becpsi_r=becpsi%r(:,im) )
-          !   ! contribution from following band added to imaginary (in real space) part of rhoc
-          !   IF(ibnd<ibnd_end) &
-          !      CALL addusxx_g(dfftt, rhoc, xkg,  xkg, 'i', &
-          !      becphi_r=becxx(current_ik)%r(:,ibnd+1), becpsi_r=becpsi%r(:,im) )
-          !ENDIF
-          !   >>>> charge density done
-          !
-          !$acc kernels
-          vc = 0._DP
-          !$acc end kernels
-          !
-          !$acc parallel loop collapse(2) private(idx, idxm)
-          do ib = 1, batchsize
-            do ig = 1, ngmt
-              idx  = (ib-1)*nrxxs + dfftt%nl(ig) 
-              idxm = (ib-1)*nrxxs + dfftt%nlm(ig) 
-              vc( idx ) = fac(ig) * rhoc( idx )
-              vc( idxm) = fac(ig) * rhoc( idxm)
-            end do 
-          end do  
-          !
-          !   >>>>  compute <psi|H_fock G SPACE here
-          !IF(okvan .and. .not. tqr) THEN
-          !   IF(ibnd>=ibnd_start) &
-          !   CALL newdxx_g(dfftt, vc, xkg, xkg, 'r', deexx, &
-          !                 becphi_r=x1*becxx(current_ik)%r(:,ibnd))
-          !   IF(ibnd<ibnd_end) &
-          !   CALL newdxx_g(dfftt, vc, xkg, xkg, 'i', deexx, &
-          !                 becphi_r=x2*becxx(current_ik)%r(:,ibnd+1))
-          !ENDIF
-          !
-          !brings back v in real space
-          !$acc host_data use_device(vc)
-          CALL invfft ('Rho', vc, dfftt, howmany=batchsize)
-          !$acc end host_data
-          !
-          !   >>>>  compute <psi|H_fock REAL SPACE here
-          !IF(okvan .and. tqr) THEN
-          !   IF(ibnd>=ibnd_start) &
-          !   CALL newdxx_r(dfftt, vc, _CX(x1*becxx(current_ik)%r(:,ibnd)), deexx)
-          !   IF(ibnd<ibnd_end) &
-          !   CALL newdxx_r(dfftt, vc, _CY(x2*becxx(current_ik)%r(:,ibnd+1)), deexx)
-          !ENDIF
-          !!
-          !IF(okpaw) THEN
-          !   IF(ibnd>=ibnd_start) &
-          !   CALL PAW_newdxx(x1/nqs, _CX(becxx(current_ik)%r(:,ibnd)),&
-          !                           _CX(becpsi%r(:,im)), deexx)
-          !   IF(ibnd<ibnd_end) &
-          !   CALL PAW_newdxx(x2/nqs, _CX(becxx(current_ik)%r(:,ibnd+1)), &
-          !                           _CX(becpsi%r(:,im)), deexx)
-          !ENDIF
+          Call exx_kernel_gamma ( batchsize, lda, ngmt, nrxxs, rhoc, fac, temppsic, psi(1,ibnd), temppsic_occ, vc ) 
           !
           ! accumulates over bands and k points
           !
@@ -1024,6 +924,139 @@ print *, 'occ bands: ',  x_nbnd_occ
   END SUBROUTINE vexx_std_gamma_outer
   !-----------------------------------------------------------------------
   !
+  !-----------------------------------------------------------------------
+  SUBROUTINE exx_kernel_gamma ( btcsz, ld, ng, nr, rhoct, fact, psi1, psi2, psi2_out, vct )
+    !-----------------------------------------------------------------------
+    !
+    USE exx_base,       ONLY : npwt
+    USE cell_base,      ONLY : omega
+    USE fft_interfaces, ONLY : invfft, fwfft
+    !
+    IMPLICIT NONE
+    !
+    INTEGER, INTENT(IN)  :: btcsz, ld, ng, nr
+    !
+    COMPLEX(DP), INTENT(IN) :: psi1(btcsz*nr/2)  ! temppsic
+    COMPLEX(DP), INTENT(IN) :: psi2(ld,2)        ! psi(:, ibnd), psi(:, ibnd+1)
+    REAL(DP),    INTENT(IN) :: fact(ng)
+    !
+    ! work buffer, passed as arguments (rather than declared locally)
+    ! only to avoid alloc/dealloc overhead on every call inside the loop
+    COMPLEX(DP), INTENT(OUT) :: rhoct(btcsz*nr)
+    !
+    ! real outputs
+    COMPLEX(DP), INTENT(OUT) :: vct(btcsz*nr)     ! returns the exchange potential in real space
+    COMPLEX(DP), INTENT(OUT) :: psi2_out(nr)      ! temppsic_occ (buffer allocated outside the main loop)
+                                                  ! returns two bands of psi2 in real space
+    !
+    INTEGER :: ig, ib, ir, idx, idxm
+    !
+    !$acc kernels
+    psi2_out = (0.0_dp, 0.0_dp)
+    !$acc end kernels
+    !
+    !$acc parallel loop private(idx, idxm)
+    DO ig = 1, npwt
+      idx  = dfftt%nl(ig)
+      idxm = dfftt%nlm(ig) 
+      psi2_out( idx )  =       psi2(ig, 1 ) + (0._DP,1._DP) * psi2(ig, 2 )
+      psi2_out( idxm ) = conjg(psi2(ig, 1 ) - (0._DP,1._DP) * psi2(ig, 2 ))
+    END DO 
+    !
+    !$acc host_data use_device(psi2_out)
+    CALL invfft ('Wave', psi2_out, dfftt)
+    !$acc end host_data
+    !
+    ! calculate rho in real space. Gamma tricks are used.
+    ! temppsic is real; tempphic contains one band in the real part,
+    ! another one in the imaginary part; the same applies to rhoc
+    !
+    !$acc parallel loop collapse(2) private(idx) 
+    do ib = 1, btcsz, 2
+       DO ir = 1, nr
+          idx = ib/2 *nr + ir 
+          rhoct((ib-1)*nr + ir ) = psi2_out(ir) *  dble(psi1(idx)) / omega
+          rhoct((ib)*nr + ir )   = psi2_out(ir) * aimag(psi1(idx)) / omega
+       ENDDO
+    end do 
+    !
+    ! bring rho to G-space
+    !
+    !   >>>> add augmentation in REAL SPACE here
+    !IF(okvan .and. tqr) THEN
+    !   IF(ibnd>=ibnd_start) &
+    !   CALL addusxx_r(rhoc,_CX(becxx(current_ik)%r(:,ibnd)), _CX(becpsi%r(:,im)))
+    !   IF(ibnd<ibnd_end) &
+    !   CALL addusxx_r(rhoc,_CY(becxx(current_ik)%r(:,ibnd+1)),_CX(becpsi%r(:,im)))
+    !ENDIF
+    !
+    !$acc host_data use_device(rhoct)
+    CALL fwfft ('Rho', rhoct, dfftt, howmany=btcsz)
+    !$acc end host_data
+    !   >>>> add augmentation in G SPACE here
+    !IF(okvan .and. .not. tqr) THEN
+    !   ! contribution from one band added to real (in real space) part of rhoc
+    !   IF(ibnd>=ibnd_start) &
+    !      CALL addusxx_g(dfftt, rhoc, xkg,  xkg, 'r', &
+    !      becphi_r=becxx(current_ik)%r(:,ibnd), becpsi_r=becpsi%r(:,im) )
+    !   ! contribution from following band added to imaginary (in real space) part of rhoc
+    !   IF(ibnd<ibnd_end) &
+    !      CALL addusxx_g(dfftt, rhoc, xkg,  xkg, 'i', &
+    !      becphi_r=becxx(current_ik)%r(:,ibnd+1), becpsi_r=becpsi%r(:,im) )
+    !ENDIF
+    !   >>>> charge density done
+    !
+    !$acc kernels
+    vct = 0._DP
+    !$acc end kernels
+    !
+    !$acc parallel loop collapse(2) private(idx, idxm)
+    do ib = 1, btcsz
+      do ig = 1, ng
+        idx  = (ib-1)*nr + dfftt%nl(ig) 
+        idxm = (ib-1)*nr + dfftt%nlm(ig) 
+        vct( idx ) = fact(ig) * rhoct( idx )
+        vct( idxm) = fact(ig) * rhoct( idxm)
+      end do 
+    end do  
+    !
+    !   >>>>  compute <psi|H_fock G SPACE here
+    !IF(okvan .and. .not. tqr) THEN
+    !   IF(ibnd>=ibnd_start) &
+    !   CALL newdxx_g(dfftt, vc, xkg, xkg, 'r', deexx, &
+    !                 becphi_r=x1*becxx(current_ik)%r(:,ibnd))
+    !   IF(ibnd<ibnd_end) &
+    !   CALL newdxx_g(dfftt, vc, xkg, xkg, 'i', deexx, &
+    !                 becphi_r=x2*becxx(current_ik)%r(:,ibnd+1))
+    !ENDIF
+    !
+    !brings back v in real space
+    !$acc host_data use_device(vct)
+    CALL invfft ('Rho', vct, dfftt, howmany=btcsz)
+    !$acc end host_data
+    !
+    !   >>>>  compute <psi|H_fock REAL SPACE here
+    !IF(okvan .and. tqr) THEN
+    !   IF(ibnd>=ibnd_start) &
+    !   CALL newdxx_r(dfftt, vc, _CX(x1*becxx(current_ik)%r(:,ibnd)), deexx)
+    !   IF(ibnd<ibnd_end) &
+    !   CALL newdxx_r(dfftt, vc, _CY(x2*becxx(current_ik)%r(:,ibnd+1)), deexx)
+    !ENDIF
+    !!
+    !IF(okpaw) THEN
+    !   IF(ibnd>=ibnd_start) &
+    !   CALL PAW_newdxx(x1/nqs, _CX(becxx(current_ik)%r(:,ibnd)),&
+    !                           _CX(becpsi%r(:,im)), deexx)
+    !   IF(ibnd<ibnd_end) &
+    !   CALL PAW_newdxx(x2/nqs, _CX(becxx(current_ik)%r(:,ibnd+1)), &
+    !                           _CX(becpsi%r(:,im)), deexx)
+    !ENDIF
+    !
+    RETURN
+    !
+    !-----------------------------------------------------------------------
+  END SUBROUTINE exx_kernel_gamma 
+  !-----------------------------------------------------------------------
   !
   !-----------------------------------------------------------------------
   SUBROUTINE vexx_std_gamma_outer_exxbuff(lda, n, m, psi, hpsi, becpsi)
