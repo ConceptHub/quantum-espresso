@@ -10,7 +10,27 @@
 SUBROUTINE alloc_neighborhood()
   !---------------------------------------------------------------------
   !
-  ! This routine allocates and assigns values to the neighborhood, at_sc and sc_at 
+  ! This routine allocates and assigns values to the neighborhood, at_sc and sc_at.
+  !
+  ! Context: the HUBBARD card lets the user specify Hubbard_V only for a
+  ! handful of representative atom couples (e.g. one Fe-O couple at a given
+  ! distance); by translational/point-group symmetry, every other couple of
+  ! the same atom types at the same distance must have the same V. This
+  ! routine performs that propagation in three stages:
+  !   1. Build the supercell atom list (at_sc, sc_at, tau_sc, dist_s,
+  !      ityp_s) covering all periodic images within (-sc_size:sc_size)^3
+  !      unit cells, since Hubbard_V(i,j) couples the reference cell atom i
+  !      to a supercell atom j.
+  !   2. Fill in the "missing" Hubbard_V(i,j,:) entries by matching (atom
+  !      type pair, distance) against the few input-specified couples (see
+  !      the source-list build_src/match_single/match_double helpers below).
+  !   3. Cross-check the result against the actual symmetry operations
+  !      (the isym loop): if applying a symmetry operation maps a couple
+  !      with a known V onto one that step 2 left unset, that value is
+  !      filled in and the whole routine restarts from label 13 (since step
+  !      2 needs to be redone with the new nonzero entries); if it maps onto
+  !      a couple with a conflicting V, that is reported as an inconsistent
+  !      input.
   !
   USE symm_base,       ONLY : nsym
   USE io_global,       ONLY : stdout

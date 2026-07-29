@@ -1330,6 +1330,13 @@ SUBROUTINE dprojdepsilon_k ( spsi, ik, ipol, jpol, nb_s, nb_e, mykey, dproj )
    !! We remember that: $$ \text{ns}_{I,s,m_1,m_2} = \sum_{k,v}
    !! f_{kv} \langle\phi^{at}_{I,m1}|S|\psi_{k,v,s}\rangle
    !! \langle\psi_{k,v,s}|S|\phi^{at}_{I,m2}\rangle $$
+   !! In the 'ortho-atomic' collinear case, term 1 (the atomic-orbital-
+   !! derivative contribution multiplied by O^{-1/2}) is evaluated with a
+   !! single GEMM against the strain-derivative orbitals dwfca_orb,
+   !! precomputed once for all atoms, instead of the explicit per-orbital
+   !! reduction used in the noncollinear fallback below. Term 2 (the
+   !! Lyapunov-type d(O^{-1/2})/depsilon solve) still uses the original
+   !! dense solver in both cases; see the NOTE further below for why.
    !
    USE kinds,                ONLY : DP
    USE cell_base,            ONLY : tpiba
@@ -1615,6 +1622,18 @@ SUBROUTINE dprojdepsilon_k ( spsi, ik, ipol, jpol, nb_s, nb_e, mykey, dproj )
       !
       ! Now compute dO^{-1/2}_JI/d\epsilon(ipol,jpol) using dO_IJ/d\epsilon(ipol,jpol)
       ! Note the transposition!
+      !
+      ! NOTE: unlike calc_doverlap_inv in force_hub.f90 (which calls the
+      ! low-rank calculate_doverlap_inv_lr for the collinear case), this still
+      ! uses the original dense O(natomwfc^3) solver for every (ipol,jpol).
+      ! The low-rank trick there relies on dO/dtau being nonzero only in the
+      ! rows/columns of the single displaced atom; here dO/depsilon involves
+      ! ALL atomic orbitals at once (uniform strain displaces every atom), so
+      ! doverlap has no such sparse structure and the dense solve is required.
+      ! This is why "optimize stress as well" only sped up term 1 (dwfca_orb
+      ! + GEMM above) and left this Lyapunov solve untouched; it is tracked
+      ! with the same 'lyapunov' clock as the force low-rank solve, but does
+      ! algorithmically more work (the full dense O(natomwfc^3) solve).
       !
       CALL start_clock('lyapunov')
       CALL calculate_doverlap_inv (natomwfc, eigenval, eigenvect, &

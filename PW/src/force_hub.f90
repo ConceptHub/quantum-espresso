@@ -15,6 +15,10 @@ SUBROUTINE force_hub( forceh )
    !! which is the force acting on the atom at \(\text{tau_alpha}\)
    !! (in the unit cell) along the direction \(\text{ipol}\).
    !!  Note: DFT+U+V force does not support OpenMP.
+   !! In the 'ortho-atomic' collinear case, this routine also precomputes,
+   !! once per k-point, the bare atomic-orbital projections proj_atom used
+   !! by dprojdtau_k to build the projector derivative without plane-wave
+   !! sums (see the comment right before the precompute below).
    !
    USE kinds,                ONLY : DP
    USE ions_base,            ONLY : nat, ntyp => nsp, ityp
@@ -186,6 +190,9 @@ SUBROUTINE force_hub( forceh )
       ! ... orbitals phi (the orthogonalized ones are stored in wfcU). These
       ! ... projections let dprojdtau_k evaluate the O^{-1/2}-derivative term
       ! ... of the projector derivative without any plane-wave sum.
+      ! ... NOTE: dprojdtau_k only reads proj_atom when .NOT.noncolin, so for
+      ! ... noncollinear runs this GEMM is computed but never used; harmless,
+      ! ... just wasted work.
       !
       IF (Hubbard_projectors.EQ."ortho-atomic" .AND. .NOT.gamma_only) THEN
          !$acc host_data use_device(wfcatom, spsi, proj_atom)
@@ -1551,11 +1558,15 @@ END SUBROUTINE dngdtau_gamma
 SUBROUTINE dprojdtau_k( spsi, alpha, na, ijkb0, ipol, ik, nb_s, nb_e, mykey, dproj )
    !-----------------------------------------------------------------------------
    !! This routine computes the first derivative of the projection
-   !! \(\langle\phi^{at}_{I,m1}|S|\psi_{k,v,s}\rangle\) with respect to 
+   !! \(\langle\phi^{at}_{I,m1}|S|\psi_{k,v,s}\rangle\) with respect to
    !! the atomic displacement \(u(\text{alpha,ipol})\). We remind that:
    !! $$ \text{ns}_{I,s,m1,m2} = \sum_{k,v}
    !!    f_{kv} \langle\phi^{at}_{I,m1}|S|\psi_{k,v,s}\rangle
    !!           \langle\psi_{k,v,s}|S|\phi^{at}_{I,m2}\rangle $$
+   !! In the 'ortho-atomic' collinear case, this routine builds the result
+   !! from proj_atom/dproj_atom (precomputed once in force_hub/
+   !! compute_dproj_atom) instead of an explicit plane-wave sum; noncollinear
+   !! calculations use the original plane-wave-based construction below.
    !
    USE kinds,                ONLY : DP
    USE ions_base,            ONLY : nat, ntyp => nsp, ityp
@@ -1997,6 +2008,13 @@ END SUBROUTINE compute_dproj_atom
 SUBROUTINE calc_doverlap_inv( alpha, ipol, ik, ijkb0 )
    !-----------------------------------------------------------------
    !! This routine computes the derivative of \(O^{-1/2}\) transposed.
+   !! Since \(dO/d\tau(\alpha,\text{ipol})\) is nonzero only in the rows/
+   !! columns of the displaced atom \(\alpha\) (plus a low-rank USPP/PAW
+   !! term), the collinear case delegates to the low-rank, Hubbard-column-
+   !! restricted solver \(\texttt{calculate_doverlap_inv_lr}\) instead of
+   !! forming the full dense \(dO\) matrix, avoiding its \(O(\text{natomwfc}^3)\)
+   !! solve. The noncollinear case still assembles the dense \(dO\) and calls
+   !! the original dense \(\texttt{calculate_doverlap_inv}\).
    !
    USE kinds,            ONLY : DP
    USE wvfct,            ONLY : npwx
