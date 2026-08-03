@@ -10,6 +10,9 @@ MODULE io_global
   !----------------------------------------------------------------------------
   !! I/O global variables
   !
+  USE util_param, ONLY: stdout
+  !! unit connected to standard output, reuse definition from UtilXlib
+  !
   IMPLICIT NONE
   !
   PRIVATE
@@ -22,8 +25,6 @@ MODULE io_global
   !! unit connected to standard input
   INTEGER :: qestdin= 9
   !! unit connected to input file (xml or text)
-  INTEGER :: stdout = 6
-  !! unit connected to standard output
   !
   ! For parallel execution: I/O within an image
   ! These are set at startup by calling mp_world_start

@@ -5,11 +5,94 @@
 ! in the root directory of the present distribution,
 ! or http://www.gnu.org/copyleft/gpl.txt .
 !
+MODULE libpwscf
+  PRIVATE
+  PUBLIC :: f2libpwscf
+
+CONTAINS
+
+  SUBROUTINE f2libpwscf( lib_comm, nim, npt, npl, nta, nbn, ndg, retval, infile, fileunit_out )
+    !----------------------------------------------------------------------------
+    !
+    ! ... Library interface to the Plane Wave Self-Consistent Field code
+    !
+    USE environment,       ONLY : environment_start
+    USE mp_global,         ONLY : mp_startup
+    USE mp_bands,          ONLY : intra_bgrp_comm, inter_bgrp_comm
+    USE mp_pools,          ONLY  : intra_pool_comm 
+    USE read_input,        ONLY : read_input_file
+    USE command_line_options, ONLY: set_command_line
+    USE parallel_include
+    USE io_global,         ONLY : stdout
+    !
+    IMPLICIT NONE
+    !
+    include 'laxlib.fh'
+    !
+    INTEGER, INTENT(IN)          :: lib_comm, nim, npt, npl, nta, nbn, ndg
+    integer, intent(INOUT)       :: retval
+    character(LEN=*), INTENT(IN) :: infile
+    INTEGER, INTENT(IN), OPTIONAL :: fileunit_out
+    !! If present, redirect output of pwscf and timers to specified unit.
+    !! File at specified unit has to be opened.
+    !
+    INTEGER                :: ndiag_
+#if defined(DEBUG_QECOUPLE)
+    INTEGER :: me, num, ierr
+    CALL MPI_COMM_SIZE(lib_comm,num,ierr)
+    IF (ierr /= MPI_SUCCESS) THEN
+        CALL MPI_ERROR_STRING(ierr, infile, 80, retval)
+        PRINT*,'MPI Error: ', infile
+        STOP 100
+    END IF
+    CALL MPI_COMM_RANK(lib_comm,me,ierr)
+    IF (me == 0) THEN
+        PRINT*, 'Calling PW library interface with these flags:'
+        PRINT*, 'communicator index: ', lib_comm
+        PRINT*, 'communicator size:  ', num
+        PRINT*, 'nimage: ', nim
+        PRINT*, 'npool:  ', npl
+        PRINT*, 'ntaskg: ', nta
+        PRINT*, 'nband:  ', nbn
+        PRINT*, 'ndiag:  ', ndg
+        PRINT*, 'input:  "',TRIM(infile),'"'
+    END IF
+#endif
+    !
+    IF( PRESENT(fileunit_out) ) THEN
+       ! redirect output unit
+       stdout = fileunit_out
+    ENDIF
+    !
+    CALL set_command_line( nimage=nim, npool=npl, ntg=nta, &
+        nband=nbn, ndiag=ndg )
+    CALL mp_startup ( my_world_comm=lib_comm , start_images = .true. )
+    ndiag_ = ndg 
+    CALL laxlib_start( ndiag_, intra_pool_comm, do_distr_diag_inside_bgrp_ = .false.)
+    CALL set_mpi_comm_4_solvers ( intra_pool_comm, intra_bgrp_comm, inter_bgrp_comm)  
+    CALL environment_start ( 'PWSCF' )
+    !
+    CALL read_input_file ('PW', infile )
+    !
+    ! ... Perform actual calculation
+    !
+    CALL run_pwscf  ( retval )
+    !
+    CALL laxlib_end()
+    CALL stop_run( retval )
+    !
+  END SUBROUTINE f2libpwscf
+
+END MODULE libpwscf
+!
+!
+!----------------------------------------------------------------------------
 SUBROUTINE c2libpwscf(lib_comm,nim,npt,npl,nta,nbn,ndg,retval,infile) BIND(C)
   !----------------------------------------------------------------------------
   !
   ! ... C wrapper for library interface to the Pwscf
   USE ISO_C_BINDING
+  use libpwscf, only: f2libpwscf
   !
   IMPLICIT NONE
   !
@@ -43,65 +126,13 @@ END SUBROUTINE c2libpwscf
 !
 !----------------------------------------------------------------------------
 SUBROUTINE f2libpwscf(lib_comm,nim,npt,npl,nta,nbn,ndg,retval,infile)
-  !----------------------------------------------------------------------------
-  !
-  ! ... Library interface to the Plane Wave Self-Consistent Field code
-  !
-  USE environment,       ONLY : environment_start
-  USE mp_global,         ONLY : mp_startup
-  USE mp_bands,          ONLY : intra_bgrp_comm, inter_bgrp_comm
-  USE mp_pools,          ONLY  : intra_pool_comm 
-  USE read_input,        ONLY : read_input_file
-  USE command_line_options, ONLY: set_command_line
-  USE parallel_include
-  !
-  IMPLICIT NONE
-  !
-  include 'laxlib.fh'
-  !
-  INTEGER, INTENT(IN)    :: lib_comm, nim, npt, npl, nta, nbn, ndg
-  INTEGER, INTENT(INOUT) :: retval
-  CHARACTER(LEN=80)      :: infile
-  !
-  INTEGER                :: ndiag_ 
-#if defined(DEBUG_QECOUPLE)
-  INTEGER :: me, num, ierr
-  CALL MPI_COMM_SIZE(lib_comm,num,ierr)
-  IF (ierr /= MPI_SUCCESS) THEN
-      CALL MPI_ERROR_STRING(ierr, infile, 80, retval)
-      PRINT*,'MPI Error: ', infile
-      STOP 100
-  END IF
-  CALL MPI_COMM_RANK(lib_comm,me,ierr)
-  IF (me == 0) THEN
-      PRINT*, 'Calling PW library interface with these flags:'
-      PRINT*, 'communicator index: ', lib_comm
-      PRINT*, 'communicator size:  ', num
-      PRINT*, 'nimage: ', nim
-      PRINT*, 'npool:  ', npl
-      PRINT*, 'ntaskg: ', nta
-      PRINT*, 'nband:  ', nbn
-      PRINT*, 'ndiag:  ', ndg
-      PRINT*, 'input:  "',TRIM(infile),'"'
-  END IF
-#endif
-  !
-  CALL set_command_line( nimage=nim, npool=npl, ntg=nta, &
-      nband=nbn, ndiag=ndg )
-  CALL mp_startup ( my_world_comm=lib_comm , start_images = .true. )
-  ndiag_ = ndg 
-  CALL laxlib_start( ndiag_, intra_pool_comm, do_distr_diag_inside_bgrp_ = .false.)
-  CALL set_mpi_comm_4_solvers ( intra_pool_comm, intra_bgrp_comm, inter_bgrp_comm)  
-  CALL environment_start ( 'PWSCF' )
-  !
-  CALL read_input_file ('PW', infile )
-  !
-  ! ... Perform actual calculation
-  !
-  CALL run_pwscf  ( retval )
-  !
-  CALL laxlib_end()
-  CALL stop_run( retval )
-  !
+   !----------------------------------------------------------------------------
+   !
+   ! ... Standalone subroutine interface to PWscf library
+   !
+   USE libpwscf, ONLY: f2libpwscf_x => f2libpwscf
+   INTEGER, INTENT(IN)    :: lib_comm, nim, npt, npl, nta, nbn, ndg
+   INTEGER, INTENT(INOUT) :: retval
+   CHARACTER(LEN=80)      :: infile
+   CALL f2libpwscf_x( lib_comm, nim, npt, npl, nta, nbn, ndg, retval, TRIM(infile) )
 END SUBROUTINE f2libpwscf
-
