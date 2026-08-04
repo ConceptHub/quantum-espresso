@@ -9,10 +9,13 @@ Fixed in 7.6.1 version(s)
   * Missing initialization of some PAW arrays (issue #863, courtesy Minkyu Park)
   * XML reading problem with some PPs (issue #857, courtesy Victor Yu)
   * The averaging of full-relativistic PPs for usage without spin-orbit was 
-    failing in some cases. Averaging is now more expensive, all projectors being
-    needed, but more correct (see !2886, courtesy Michail Minotakis)
+    failing in some cases. Averaging is now more expensive, all projectors
+    being needed, but more correct (see !2886, courtesy Michail Minotakis)
   * Incorrect weights when using tetrahedra and fixed magnetization on
     more than one MPI processes (issue #869, courtesy Robert Rueger)
+  * Recently added "direct" diagonalization could fail in some cases
+    (see !2907, courtesy Jae-Mo Limh)
+  * Incorrect __WIN32 replaced by _WIN32 (see !2909, courtesy Robert Rueger)
 
 Incompatible changes in 7.6.1 version(s)
   * Full-relativistic PPs in calculations with no spin-orbit may yield 

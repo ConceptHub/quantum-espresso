@@ -13,21 +13,19 @@
 .PHONY: install
 
 default :
-	@echo 'to install Quantum ESPRESSO, type at the shell prompt:'
-	@echo '  ./configure [--prefix=]'
-	@echo '  make [-j] target'
+	@echo 'Usage: make [-j] target'
 	@echo ' '
 	@echo 'where target identifies one or multiple CORE PACKAGES:'
 	@echo '  pw           basic code for scf, structure optimization, MD'
+	@echo '  pp           postprocessing programs'
+	@echo '  neb          code for Nudged Elastic Band method'
 	@echo '  ph           phonon code, Gamma-only and third-order derivatives'
 	@echo '  hp           calculation of the Hubbard parameters from DFPT'
-	@echo '  pwcond       ballistic conductance'
-	@echo '  neb          code for Nudged Elastic Band method'
-	@echo '  pp           postprocessing programs'
-	@echo '  pwall        same as "make pw ph pp pwcond neb"'
+	@echo '  tddfpt       time dependent dft code'
+	@echo '  pwall        same as "make pw pp neb ph hp tddfpt"'
 	@echo '  cp           CP code: Car-Parrinello molecular dynamics'
 	@echo '  all_currents QEHeat code: energy flux and charge current'
-	@echo '  tddfpt       time dependent dft code'
+	@echo '  pwcond       ballistic conductance'
 	@echo '  gwl          GW with Lanczos chains'
 	@echo '  ld1          utilities for pseudopotential generation'
 	@echo '  xspectra     X-ray core-hole spectroscopy calculations'
@@ -36,17 +34,17 @@ default :
 	@echo '               (compiles w90 as well)'
 	@echo '  kcw          KCW code: implementation of Koopmans functionals in primitive cell'
 	@echo '  pioud        Path Integral Molecular Dynamics with PIOUD algorithm'
-	@echo '  gui          Graphical User Interface'
-	@echo '  all          same as "make pwall cp ld1 tddfpt xspectra hp"'
+	@echo '  all          same as "make pwall cp ld1 xspectra pwcond"'
 	@echo ' '
-	@echo 'where target identifies one or multiple THIRD-PARTIES PACKAGES:'
+	@echo 'target may also identify one or multiple THIRD-PARTIES PACKAGES:'
 	@echo '  gipaw        NMR and EPR spectra'
 	@echo '  w90          Maximally localised Wannier Functions'
 	@echo '  want         Quantum Transport with Wannier functions'
 	@echo '  yambo        electronic excitations with plane waves'
 	@echo '  d3q          general third-order code and thermal transport codes'
 	@echo ' '
-	@echo 'where target is one of the following suite operation:'
+	@echo 'target may also be one of the following operations:'
+	@echo '  gui          build Graphical User Interface'
 	@echo '  doc          build documentation'
 	@echo '  links        create links to all executables in bin/'
 	@echo '  install      copy all executables to PREFIX/bin/'
@@ -174,9 +172,9 @@ gui : bindir
 	   fi ; \
 	fi
 
-pwall : pw neb ph pp pwcond acfdt
+pwall : pw pp neb ph hp tddfpt acfdt
 
-all   : pwall cp ld1 tddfpt hp xspectra gwl kcw pioud
+all   : pwall cp ld1 pwcond xspectra gwl kcw pioud
 
 ###########################################################
 # Auxiliary targets used by main targets:
