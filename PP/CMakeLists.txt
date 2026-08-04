@@ -605,6 +605,7 @@ set(PP_EXE_TARGETS
     qe_pp_pmw_exe
     qe_pp_projwfc_exe
     qe_pp_pw2wannier90_exe
+    qe_pp_wannier2pw_exe
     qe_pp_pw2critic_exe
     qe_pp_wfck2r_exe
     qe_pp_initial_state_exe
