@@ -273,7 +273,7 @@ SUBROUTINE ortho_swfc ( npw, normalize_only, m, wfc, swfc, lflag )
   USE mp_bands,         ONLY : intra_bgrp_comm, me_bgrp, root_bgrp
   USE mp,               ONLY : mp_sum
   USE noncollin_module, ONLY : noncolin, npol
-  USE force_mod,        ONLY : eigenval, eigenvect, overlap_inv
+  USE ldaU,             ONLY : eigenval, eigenvect, overlap_inv
   USE control_flags,    ONLY : use_gpu
   !
   IMPLICIT NONE

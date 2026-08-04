@@ -22,7 +22,8 @@ SUBROUTINE stres_hub ( sigmah )
                                   lda_plus_u_kind, Hubbard_projectors, is_hubbard_back, &
                                   ldim_back, ldmx_b, v_nsg, max_num_neighbors, &
                                   ldim_u, Hubbard_V, at_sc, neighood, ldmx_tot, &
-                                  wfcU, nwfcU, Hubbard_J
+                                  wfcU, nwfcU, Hubbard_J, eigenval, eigenvect, &
+                                  overlap_inv, at_dy, at_dj, us_dy, us_dj
    USE becmod,             ONLY : becp, calbec, allocate_bec_type_acc, deallocate_bec_type_acc
    USE lsda_mod,           ONLY : lsda, nspin, current_spin, isk
    USE uspp,               ONLY : nkb, vkb, okvan
@@ -38,8 +39,6 @@ SUBROUTINE stres_hub ( sigmah )
    USE control_flags,      ONLY : gamma_only, offload_type
    USE mp_bands,           ONLY : use_bgrp_in_hpsi, intra_bgrp_comm
    USE noncollin_module,   ONLY : noncolin, npol
-   USE force_mod,          ONLY : eigenval, eigenvect, overlap_inv, at_dy, at_dj, &
-                                  us_dy, us_dj
    USE uspp_init,          ONLY : init_us_2, gen_us_dj, gen_us_dy
    USE constants,          ONLY : eps16
    !
@@ -1347,7 +1346,8 @@ SUBROUTINE dprojdepsilon_k ( spsi, ik, ipol, jpol, nb_s, nb_e, mykey, dproj )
                                     offsetU, offsetU_back, offsetU_back1,      &
                                     oatwfc, oatwfc_back, oatwfc_back1, ldim_u, &
                                     Hubbard_projectors, Hubbard_l, Hubbard_l2, &
-                                    backall
+                                    backall, eigenval, eigenvect, overlap_inv, &
+                                    at_dy, at_dj
    USE lsda_mod,             ONLY : lsda, nspin, isk
    USE wvfct,                ONLY : nbnd, npwx, wg
    USE uspp,                 ONLY : nkb, vkb, okvan
@@ -1355,7 +1355,6 @@ SUBROUTINE dprojdepsilon_k ( spsi, ik, ipol, jpol, nb_s, nb_e, mykey, dproj )
    USE becmod,               ONLY : becp, calbec
    USE control_flags,        ONLY : offload_type
    USE basis,                ONLY : natomwfc, wfcatom, swfcatom
-   USE force_mod,            ONLY : eigenval, eigenvect, overlap_inv, at_dy, at_dj
    USE mp_bands,             ONLY : intra_bgrp_comm
    USE mp,                   ONLY : mp_sum
    USE noncollin_module,     ONLY : noncolin, npol
@@ -1731,11 +1730,10 @@ SUBROUTINE matrix_element_of_dSdepsilon (ik, ipol, jpol, lA, A, lB, B, A_dS_B, l
    USE becmod,               ONLY : calbec
    USE control_flags,        ONLY : offload_type
    USE klist,                ONLY : xk, igk_k, ngk
-   USE force_mod,            ONLY : us_dy, us_dj
    USE mp_bands,             ONLY : intra_bgrp_comm
    USE mp,                   ONLY : mp_sum
    USE noncollin_module,     ONLY : noncolin, npol
-   USE ldaU,                 ONLY : offsetU, Hubbard_l, is_hubbard
+   USE ldaU,                 ONLY : offsetU, Hubbard_l, is_hubbard, us_dy, us_dj
    !
    IMPLICIT NONE
    !
@@ -2090,7 +2088,7 @@ SUBROUTINE dprojdepsilon_gamma ( spsi, ik, ipol, jpol, nb_s, nb_e, mykey, dproj 
                                     offsetU, offsetU_back, offsetU_back1,      &
                                     oatwfc, oatwfc_back, oatwfc_back1, ldim_u, &
                                     Hubbard_projectors, Hubbard_l, Hubbard_l2, &
-                                    backall
+                                    backall, at_dy, at_dj, us_dy, us_dj
    USE lsda_mod,             ONLY : lsda, nspin, isk
    USE wvfct,                ONLY : nbnd, npwx, wg
    USE uspp,                 ONLY : nkb, vkb, qq_at, okvan
@@ -2098,7 +2096,6 @@ SUBROUTINE dprojdepsilon_gamma ( spsi, ik, ipol, jpol, nb_s, nb_e, mykey, dproj 
    USE wavefunctions,        ONLY : evc
    USE becmod,               ONLY : becp, calbec
    USE control_flags,        ONLY : offload_type
-   USE force_mod,            ONLY : at_dy, at_dj, us_dy, us_dj
    !
    IMPLICIT NONE
    !

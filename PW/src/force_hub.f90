@@ -27,7 +27,8 @@ SUBROUTINE force_hub( forceh )
                                     nwfcU, wfcU, is_hubbard, lda_plus_u_kind,    &
                                     offsetU, is_hubbard_back, ldim_back, ldmx_b, &
                                     ldmx_tot, v_nsg, max_num_neighbors,     &
-                                    ldim_u, Hubbard_V, at_sc, neighood, Hubbard_J
+                                    ldim_u, Hubbard_V, at_sc, neighood, Hubbard_J, &
+                                    eigenval, eigenvect, overlap_inv, proj_atom
    USE basis,                ONLY : natomwfc, wfcatom, swfcatom
    USE symme,                ONLY : symvector
    USE wvfct,                ONLY : nbnd, npwx
@@ -44,7 +45,6 @@ SUBROUTINE force_hub( forceh )
    USE buffers,              ONLY : get_buffer
    USE mp_bands,             ONLY : use_bgrp_in_hpsi
    USE noncollin_module,     ONLY : noncolin, npol
-   USE force_mod,            ONLY : eigenval, eigenvect, overlap_inv, proj_atom
    USE uspp_init,            ONLY : init_us_2
    USE mp_bands,             ONLY : intra_bgrp_comm
    USE constants,            ONLY : eps16
@@ -426,10 +426,9 @@ SUBROUTINE dndtau_k( ldim, proj, spsi, alpha, jkb0, ipol, ik, nb_s, &
    USE ldaU,                 ONLY : nwfcU, offsetU, is_hubbard_back, offsetU_back, &
                                     ldim_u, offsetU_back1, ldim_back, Hubbard_l2,  &
                                     backall, Hubbard_projectors, wfcU, is_hubbard, &
-                                    Hubbard_l
+                                    Hubbard_l, doverlap_inv, dproj_atom
    USE wvfct,                ONLY : nbnd, npwx, wg
    USE uspp,                 ONLY : okvan
-   USE force_mod,            ONLY : doverlap_inv, dproj_atom
    USE basis,                ONLY : natomwfc
    USE wavefunctions,        ONLY : evc
    USE mp_pools,             ONLY : intra_pool_comm, me_pool, nproc_pool
@@ -621,15 +620,14 @@ SUBROUTINE dndtau_k_nc ( ldim, proj, spsi, alpha, jkb0, ipol, ik, nb_s, &
    USE ldaU,                 ONLY : is_hubbard, Hubbard_l, nwfcU, offsetU, &
                                     is_hubbard_back, offsetU_back, ldim_u, &
                                     offsetU_back1, ldim_back, Hubbard_l2, &
-                                    backall, Hubbard_projectors, wfcU
-   USE noncollin_module,     ONLY : npol                            
+                                    backall, Hubbard_projectors, wfcU, doverlap_inv
+   USE noncollin_module,     ONLY : npol
    USE wvfct,                ONLY : nbnd, npwx, wg
    USE mp_pools,             ONLY : intra_pool_comm, me_pool, nproc_pool
    USE mp_bands,             ONLY : intra_bgrp_comm
    USE mp,                   ONLY : mp_sum
    USE wavefunctions,        ONLY : evc
    USE uspp,                 ONLY : okvan
-   USE force_mod,            ONLY : doverlap_inv
    USE basis,                ONLY : natomwfc
    !
    IMPLICIT NONE
@@ -940,10 +938,10 @@ SUBROUTINE dngdtau_k( ldim, proj, spsi, alpha, jkb0, ipol, ik, nb_s, &
    USE ldaU,                 ONLY : is_hubbard, Hubbard_l, nwfcU, offsetU, at_sc,  &
                                     offsetU_back, offsetU_back1, Hubbard_l2,   &
                                     backall, max_num_neighbors, phase_fac, ldim_u, &
-                                    neighood, Hubbard_projectors, wfcU
+                                    neighood, Hubbard_projectors, wfcU, &
+                                    doverlap_inv, dproj_atom
    USE wvfct,                ONLY : nbnd, npwx, npw, wg
    USE uspp,                 ONLY : okvan
-   USE force_mod,            ONLY : doverlap_inv, dproj_atom
    USE basis,                ONLY : natomwfc
    USE wavefunctions,        ONLY : evc
    USE mp_pools,             ONLY : intra_pool_comm, me_pool, nproc_pool
@@ -1176,13 +1174,12 @@ SUBROUTINE dngdtau_k_nc ( ldim, proj, spsi, alpha, jkb0, ipol, ik, nb_s, &
    USE ldaU,                 ONLY : is_hubbard, Hubbard_l, nwfcU, offsetU, at_sc,  &
                   offsetU_back, offsetU_back1, Hubbard_l2,   &
                   backall, max_num_neighbors, phase_fac, ldim_u, &
-                  neighood, Hubbard_projectors, wfcU
+                  neighood, Hubbard_projectors, wfcU, doverlap_inv
    USE wvfct,                ONLY : nbnd, npwx, npw, wg
    USE mp_pools,             ONLY : intra_pool_comm, me_pool, nproc_pool
    USE mp,                   ONLY : mp_sum
    USE wavefunctions,        ONLY : evc
    USE uspp,                 ONLY : okvan
-   USE force_mod,            ONLY : doverlap_inv
    USE basis,                ONLY : natomwfc
    USE noncollin_module,     ONLY : npol 
    USE io_global,  ONLY : stdout
@@ -1576,16 +1573,15 @@ SUBROUTINE dprojdtau_k( spsi, alpha, na, ijkb0, ipol, ik, nb_s, nb_e, mykey, dpr
    USE ldaU,                 ONLY : is_hubbard, Hubbard_l, nwfcU, wfcU, offsetU, &
                                     is_hubbard_back, Hubbard_l2, offsetU_back, &
                                     offsetU_back1, ldim_u, backall, lda_plus_u_kind, &
-                                    Hubbard_projectors, oatwfc
-   USE noncollin_module,     ONLY : noncolin, npol                         
+                                    Hubbard_projectors, oatwfc, overlap_inv, &
+                                    doverlap_inv, proj_atom, dproj_atom
+   USE noncollin_module,     ONLY : noncolin, npol
    USE wvfct,                ONLY : nbnd, npwx, wg
    USE uspp,                 ONLY : okvan, nkb
    USE uspp_param,           ONLY : nh
    USE basis,                ONLY : natomwfc, wfcatom
    USE mp_bands,             ONLY : intra_bgrp_comm
    USE mp,                   ONLY : mp_sum
-   USE force_mod,            ONLY : overlap_inv, doverlap_inv, proj_atom, dproj_atom
-   USE ldaU,                 ONLY : is_hubbard, Hubbard_l, offsetU
    !
    IMPLICIT NONE
    !
@@ -1956,7 +1952,7 @@ SUBROUTINE compute_dproj_atom( alpha, ipol, ik, spsi )
    USE gvect,     ONLY : g
    USE klist,     ONLY : xk, ngk, igk_k
    USE basis,     ONLY : natomwfc, wfcatom
-   USE force_mod, ONLY : dproj_atom
+   USE ldaU,      ONLY : dproj_atom
    USE mp_bands,  ONLY : intra_bgrp_comm
    USE mp,        ONLY : mp_sum
    !
@@ -2026,8 +2022,8 @@ SUBROUTINE calc_doverlap_inv( alpha, ipol, ik, ijkb0 )
    USE ions_base,        ONLY : ityp
    USE klist,            ONLY : xk, ngk, igk_k
    USE basis,            ONLY : natomwfc, wfcatom, swfcatom
-   USE force_mod,        ONLY : eigenval, eigenvect, overlap_inv, doverlap_inv
-   USE ldaU,             ONLY : Hubbard_projectors
+   USE ldaU,             ONLY : Hubbard_projectors, eigenval, eigenvect, &
+                                overlap_inv, doverlap_inv
    USE mp_bands,         ONLY : intra_bgrp_comm
    USE mp,               ONLY : mp_sum
    !
