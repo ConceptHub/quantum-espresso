@@ -5,14 +5,20 @@ Incompatible changes in 8.0 version
 New in 8.0 version 
   * ...
 
-Fixed in 7.6.x version(s)
+Fixed in 7.6.1 version(s)
   * Missing initialization of some PAW arrays (issue #863, courtesy Minkyu Park)
+  * XML reading problem with some PPs (issue #857, courtesy Victor Yu)
+  * The averaging of full-relativistic PPs for usage without spin-orbit was 
+    failing in some cases. Averaging is now more expensive, all projectors being
+    needed, but more correct (see !2886, courtesy Michail Minotakis)
+  * Incorrect weights when using tetrahedra and fixed magnetization on
+    more than one MPI processes (issue #869, courtesy Robert Rueger)
 
-Incompatible changes in 7.6.x version(s)
-  * None (fully compatible with 7.6) 
-  * For metaGGA functionals raised thresholds for rho ang grho2, may cause slight differences 
-    in final total energies. (pietro delugas)  
-New in 7.6.x version(s) 
+Incompatible changes in 7.6.1 version(s)
+  * Full-relativistic PPs in calculations with no spin-orbit may yield 
+    tiny differences wrt previous versions
+
+New in 7.6.1 version(s) 
   * ... 
 
 Fixed in 7.6 version:
