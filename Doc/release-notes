@@ -20,6 +20,7 @@ Fixed in 7.6.1 version(s)
 Incompatible changes in 7.6.1 version(s)
   * Full-relativistic PPs in calculations with no spin-orbit may yield 
     tiny differences wrt previous versions
+  * "make pwall" compiles hp and tddfpt instead of pwcond
 
 New in 7.6.1 version(s) 
   * ... 
