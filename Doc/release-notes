@@ -16,6 +16,8 @@ Fixed in 7.6.1 version(s)
   * Recently added "direct" diagonalization could fail in some cases
     (see !2907, courtesy Jae-Mo Limh)
   * Incorrect __WIN32 replaced by _WIN32 (see !2909, courtesy Robert Rueger)
+  * Gross mistake in compute_qq*, existing since 3 years. May have affected
+    EELS and Berry phase calculations with USPP
 
 Incompatible changes in 7.6.1 version(s)
   * Full-relativistic PPs in calculations with no spin-orbit may yield 

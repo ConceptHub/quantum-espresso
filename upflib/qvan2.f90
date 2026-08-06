@@ -191,7 +191,7 @@ subroutine compute_qqr ( tpiba, q, omega, qq_nt )
   !! when calling ylmr2 and qvan2 (both expect arrays with that dimension)
   !
   q_(:,1) = q(:)
-  qmod(1) = q(1)**2 + q(2)**2 + q(1)**2
+  qmod(1) = q(1)**2 + q(2)**2 + q(3)**2
   call ylmr2 (lmaxq * lmaxq, 1, q_, qmod, ylmk0)
   !
   qmod(1) = sqrt ( qmod(1) ) * tpiba
@@ -234,7 +234,7 @@ subroutine compute_qqc ( tpiba, q, omega, qq_nt )
   !! when calling ylmr2 and qvan2 (both expect arrays with that dimension)
   !
   q_(:,1) = q(:)
-  qmod(1) = q(1)**2 + q(2)**2 + q(1)**2
+  qmod(1) = q(1)**2 + q(2)**2 + q(3)**2
   call ylmr2 (lmaxq * lmaxq, 1, q_, qmod, ylmk0)
   !
   qmod(1) = sqrt ( qmod(1) ) * tpiba
