@@ -97,6 +97,11 @@ SUBROUTINE init_run()
   REAL(DP)           :: a1(3), a2(3), a3(3)
   LOGICAL            :: ftest
   !
+  LOGICAL, PARAMETER :: domag = .FALSE.
+  !! CP does not support the magnetization of the noncollinear case
+  LOGICAL, PARAMETER :: lapl_provided = .FALSE.
+  !! CP does not compute the laplacian of the density
+  !
 #if defined (__ENVIRON)
   REAL(DP) :: at_scaled(3, 3)
   REAL(DP) :: gcutm_scaled
@@ -187,7 +192,7 @@ SUBROUTINE init_run()
   !=======================================================================
   !     Initialization of the libxc
   !=======================================================================
-  IF (xclib_dft_is_libxc('ANY')) CALL xclib_init_libxc( nspin, .FALSE. )
+  IF (xclib_dft_is_libxc('ANY')) CALL xclib_init_libxc( nspin, domag, lapl_provided )
   !=======================================================================
   !     Initialization of the exact exchange code (exx_module)
   !=======================================================================

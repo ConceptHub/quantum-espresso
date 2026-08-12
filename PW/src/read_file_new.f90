@@ -276,9 +276,12 @@ SUBROUTINE post_xml_init (  )
   CHARACTER(LEN=37) :: dft_name
   INTEGER :: ierr
   !
+  LOGICAL, PARAMETER :: lapl_provided = .TRUE.
+  !! PW computes the laplacian of the density when the functional needs it
+  !
   ! ... initialize Libxc if needed
   !
-  IF (xclib_dft_is_libxc('ANY')) CALL xclib_init_libxc( nspin, domag )
+  IF (xclib_dft_is_libxc('ANY')) CALL xclib_init_libxc( nspin, domag, lapl_provided )
   !
   ! ... set G cutoffs and cell factor (FIXME: from setup.f90?)
   !
