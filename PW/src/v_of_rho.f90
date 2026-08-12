@@ -131,8 +131,7 @@ SUBROUTINE v_xc_meta( rho, rho_core, rhog_core, tau_core, etxc, vtxc, v, kedtaur
   USE cell_base,        ONLY : omega
   USE funct,            ONLY : dft_is_nonlocc, nlc, dft_is_ctb09
   USE scf,              ONLY : scf_type
-  USE xc_lib,           ONLY : xc_metagcx, xclib_get_ID, xclib_dft_needs_laplacian, &
-                               set_libxc_ext_param
+  USE xc_lib,           ONLY : xc_metagcx, xclib_get_ID, xclib_dft_needs_laplacian
   USE mp,               ONLY : mp_sum
   USE mp_bands,         ONLY : intra_bgrp_comm
   USE ctb09,            ONLY : tb09_c
