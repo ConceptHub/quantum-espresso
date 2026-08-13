@@ -51,6 +51,7 @@ SUBROUTINE init_run()
   USE cell_nose,                ONLY : xnhh0, xnhhm, vnhh
   USE xc_lib,                   ONLY : xclib_dft_is_libxc, xclib_init_libxc
   USE xc_lib,                   ONLY : xclib_dft_is
+  USE funct,                    ONLY : get_dft_name
   USE metagga_cp,               ONLY : crosstaus, dkedtaus, gradwfc
   !
   USE efcalc,                   ONLY : clear_nbeg
@@ -235,6 +236,10 @@ SUBROUTINE init_run()
   !
   ALLOCATE( vkb( ngw, nkb ) )
   !$acc enter data create(vkb(1:ngw,1:nkb))
+  !
+  IF ( TRIM(get_dft_name()) == 'CTB09' ) &
+     CALL errore( ' init_run ', 'CTB09 not implemented for CP: the mixing &
+                  &parameter c is only computed in PW', 1 )
   !
   IF ( xclib_dft_is('meta') .AND. tens ) &
      CALL errore( ' init_run ', 'ensemble_dft not implemented for metaGGA', 1 )

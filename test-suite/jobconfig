@@ -31,7 +31,7 @@ inputs_args = ('lsda.in', ''), ('lsda-2.in', ''), ('lsda-cg.in', ''), ('lsda-mix
 
 [pw_libxc/]
 program = PW
-inputs_args = ('lda_pol_atom-lsda.in', ''), ('gga_unpol_atom-pbe.in', ''), ('hyb_gga_unpol_hse-si111.in', ''), ('mgga_unpol_metaGGA.in', ''), ('mgga_unpol_TB09.in', '')
+inputs_args = ('lda_pol_atom-lsda.in', ''), ('gga_unpol_atom-pbe.in', ''), ('hyb_gga_unpol_hse-si111.in', ''), ('mgga_unpol_metaGGA.in', ''), ('mgga_unpol_TB09.in', ''), ('mgga_unpol_CTB09.in', ''), ('mgga_unpol_CTB09-nscf.in', '')
 
 [pw_metal/]
 program = PW

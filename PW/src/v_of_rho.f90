@@ -129,11 +129,13 @@ SUBROUTINE v_xc_meta( rho, rho_core, rhog_core, tau_core, etxc, vtxc, v, kedtaur
   USE gvect,            ONLY : g, ngm
   USE lsda_mod,         ONLY : nspin
   USE cell_base,        ONLY : omega
-  USE funct,            ONLY : dft_is_nonlocc, nlc
+  USE funct,            ONLY : dft_is_nonlocc, nlc, get_dft_name
   USE scf,              ONLY : scf_type
-  USE xc_lib,           ONLY : xc_metagcx, xclib_get_ID, xclib_dft_needs_laplacian
+  USE xc_lib,           ONLY : xc_metagcx, xclib_get_ID, xclib_dft_needs_laplacian, &
+                               set_libxc_ext_param
   USE mp,               ONLY : mp_sum
   USE mp_bands,         ONLY : intra_bgrp_comm
+  USE ctb09,            ONLY : tb09_c
   !
   IMPLICIT NONE
   !
@@ -237,6 +239,13 @@ SUBROUTINE v_xc_meta( rho, rho_core, rhog_core, tau_core, etxc, vtxc, v, kedtaur
   !
   !$acc end data
   DEALLOCATE( rhogsum )
+  !
+  ! ... the TB09 mixing parameter is a functional of the density and has to
+  ! ... be recomputed here, before the functional is evaluated
+  !
+  IF ( TRIM(get_dft_name()) == 'CTB09' ) &
+    CALL set_libxc_ext_param( 5, 0, tb09_c( dfftp_nnr, nspin, rho%of_r(:,1), &
+                                            rho_core, grho ) )
   !
   !$acc data copyin( rho%of_r )
   !$acc data create( ex, ec, v1x, v2x, v3x, v1c, v2c, v3c )
