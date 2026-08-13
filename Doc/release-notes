@@ -1,3 +1,20 @@
+Fixed in 8.0 version 
+  * ...
+Incompatible changes in 8.0 version 
+  * ...
+New in 8.0 version 
+  * ...
+
+Fixed in 7.6.x version(s)
+  * Missing initialization of some PAW arrays (issue #863, courtesy Minkyu Park)
+
+Incompatible changes in 7.6.x version(s)
+  * None (fully compatible with 7.6) 
+  * For metaGGA functionals raised thresholds for rho ang grho2, may cause slight differences 
+    in final total energies. (pietro delugas)  
+New in 7.6.x version(s) 
+  * ... 
+
 Fixed in 7.6 version:
   * Stress for meta-GGA functionals was broken (Marc Slot, Pietro Delugas) 
   * pw2wannier90: Fix gamma_only bug in write_plot (Jae-Mo Lihm)
@@ -8,7 +25,8 @@ Fixed in 7.6 version:
   * Bug in ELF normalization for nspin=1 (courtesy Nicolas F. Barrera)
   * Phonon bug for GPU + 1 k-point + finite wave-vector (courtesy A. Dal Corso)
   * Bug in TDDFPT codes when restart is used (courtesy Ermanno Botti)
-
+  * Minor bug fix in PH/elphon.f90 addressing a symmetry-related issue in 
+    printing electron-phonon matrix elements (EPW group).
 Incompatible changes in 7.6 version:
   * Removed the option to compile PW with the pre-processor flag
     __SPIN_BALANCE (T. Thonhauser)
@@ -16,6 +34,11 @@ Incompatible changes in 7.6 version:
 New in 7.6 version:
   * NLCC for norm-conserving with mega-GGA functionals (Marc Slot, Pietro Delugas) 
   * Use of ONCVPP for R2SCAN with model atomic kinetic energy density (Marc Slot) 
+  * EPW v6.1 with new features including 
+     	1. GPU offloading support through CUDA, OpenACC, and OpenMP. 
+        2. Two-level parallelization across EPW using image and pool parallelism (both coarse and fine grids). 
+        3. Support for calculations with DFPT+U. 
+        4. Support for calculations with LSDA. 
   * Support for out of build directory with autoconf (Tommaso Gorni) 
   * vdW-DF3-mc, van der Waals density functional for molecular crystals
     [T. Jenkins, K. Berland, and T. Thonhauser, Phys. Rev. B 112, 235121 (2025)]
