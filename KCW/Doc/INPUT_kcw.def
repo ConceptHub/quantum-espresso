@@ -335,17 +335,13 @@ input_description -distribution {Quantum ESPRESSO} -package KCW -program kcw.x {
             }
         }
 
-       var alpha_mix(niter)  -type REAL {
-            dimensionality { dimensionless }
-            default -kind conditional {
-                case -test {iteration index == 1} { 0.7 }
-                case { 0.0 }
-            }
+        var l_unique_manifold -type LOGICAL {
+            default { .FALSE. }
             info {
-                Mixing factor (for each iteration) for updating
-                the scf potential:
-
-                vnew(in) = alpha_mix*vold(out) + (1-alpha_mix)*vold(in)
+            Specify that occupied and empty states were wannierised together as
+            a single manifold. One unitary matrix of dimension @ref num_wann_occ
+            + @ref num_wann_emp is then read, and the "_emp" files are not.
+            Use with caution.
             }
         }
 }
@@ -413,10 +409,45 @@ input_description -distribution {Quantum ESPRESSO} -package KCW -program kcw.x {
             }
        }
 
+       var alpha_mix(niter)  -type REAL {
+            dimensionality { dimensionless }
+            default { 0.7 }
+            info {
+                Mixing factor (for each iteration) for updating the response
+                potential dV_scf, i.e. the variation of the potential induced
+                by the perturbation:
+
+                dV_scf(in) = alpha_mix*dV_scf(out) + (1-alpha_mix)*dV_scf(in)
+            }
+        }
+
 }
 
     namelist HAM {
 
+
+        var qp_symm -type LOGICAL {
+           default { .FALSE. }
+           info {
+           The KI Hamiltonian is not Hermitian, since the KI potential is
+           orbital-dependent: the element between two orbitals differs according
+           to which of the two potentials is used. If .TRUE. the two are averaged.
+
+           Only for a single k point (Gamma-only supercell) in a collinear
+           calculation.
+           }
+        }
+
+        var kipz_corr -type LOGICAL {
+           default { .FALSE. }
+           info {
+           If .TRUE. the Perdew-Zunger term is added to the KI potential, giving
+           the pKIPZ Hamiltonian perturbatively.
+
+           Only for finite systems: a single k point (Gamma-only supercell) in a
+           collinear calculation.
+           }
+        }
 
         var do_bands -type LOGICAL {
            default { .FALSE. }
@@ -443,6 +474,16 @@ input_description -distribution {Quantum ESPRESSO} -package KCW -program kcw.x {
            info {
            If .true. the KCW hamiltonain in the Wannier basis and in real spase H(R)_m_n
            is printed to file. Usefull for furhter post-processing.
+           }
+        }
+
+        var l_alpha_corr -type LOGICAL {
+           default { .FALSE. }
+           info {
+           If .TRUE. the screening coefficients are corrected for terms beyond
+           second order before the Hamiltonian is built, and the corrected
+           values are printed. Nothing is done if @ref lrpa = .TRUE., where
+           there is no contribution beyond second order.
            }
         }
 
