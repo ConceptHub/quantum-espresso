@@ -599,6 +599,9 @@ print *, '@calling exxinit_std '
     !
     CALL start_clock( 'exx_stress' )
     !
+!civn: temporary fix as exxbuff is not allocated in EXX_BGRP_EXBTC gamma only path
+    if (gamma_only .and. (exx_bgrp_type .eq. EXX_BGRP_EXBTC) ) return
+    !
     IF ( exx_bgrp_type .eq. EXX_BGRP_PAIRS ) THEN 
        exx_stress = exx_stress_bp() 
     ELSE
