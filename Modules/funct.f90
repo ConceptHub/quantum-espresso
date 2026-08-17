@@ -37,6 +37,7 @@ MODULE funct
   PUBLIC :: get_nonlocc_name
   PUBLIC :: get_inlc
   PUBLIC :: dft_is_nonlocc
+  PUBLIC :: dft_is_ctb09
   ! driver subroutine computing XC non local
   PUBLIC  :: nlc
   ! XC non local index
@@ -383,9 +384,7 @@ CONTAINS
     ! ----------------------------------------------
     !
     SELECT CASE( TRIM(dftout) )
-    ! Special case CTB09: same functional as TB09, but the mixing parameter c
-    ! of the Becke-Johnson exchange potential is computed from the density at
-    ! every call instead of being left at the Libxc default c=1 (no mixing).
+    ! special case : CTB09 = TB09 with c computed from the density
     CASE( 'CTB09' )
        CALL xclib_set_dft_from_name( 'TB09' )
        dft_defined = .TRUE.
@@ -698,6 +697,15 @@ CONTAINS
     get_dft_name = dft
     RETURN
   END FUNCTION get_dft_name
+  !-----------------------------------------------------------------------
+  !
+  !-----------------------------------------------------------------------
+  FUNCTION dft_is_ctb09()
+    !! TRUE if dft is CTB09.
+    LOGICAL :: dft_is_ctb09
+    dft_is_ctb09 = ( TRIM(dft) == 'CTB09' )
+    RETURN
+  END FUNCTION dft_is_ctb09
   !-----------------------------------------------------------------------
   !
   !-----------------------------------------------------------------------

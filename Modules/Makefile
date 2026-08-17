@@ -11,6 +11,7 @@ MODFLAGS=$(BASEMOD_FLAGS)
 
 MODULES = \
 additional_kpoints.o \
+atomic_radial.o \
 atomic_wfc_mod.o \
 autopilot.o \
 ions_nose.o \
