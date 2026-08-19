@@ -18,11 +18,14 @@ Fixed in 7.6.1 version(s)
   * Incorrect __WIN32 replaced by _WIN32 (see !2909, courtesy Robert Rueger)
   * Gross mistake in compute_qq*, existing since 3 years. May have affected
     EELS and Berry phase calculations with USPP
-
+  * Too small thresholds for rho and grho2 in meta-GGA lead to numerical noise 
+    (Pietro Delugas)
+    
 Incompatible changes in 7.6.1 version(s)
   * Full-relativistic PPs in calculations with no spin-orbit may yield 
     tiny differences wrt previous versions
   * "make pwall" compiles hp and tddfpt instead of pwcond
+  * Meta-GGA: tiny differences in final total energies may appear 
 
 New in 7.6.1 version(s) 
   * ... 
