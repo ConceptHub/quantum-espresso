@@ -75,7 +75,7 @@ SUBROUTINE atomic_rho_g( rhocg, nspina )
      !
      ! interpolate atomic rho(G)
      !
-     CALL interp_rhoat( nt, ngl, gl, tpiba2, rhoatg )
+     CALL interp_rhoat( nt, ngl, gl, tpiba2, omega, rhoatg )
      !
      IF (upf(nt)%zp > eps8) THEN
         rhoscale = MAX(0.0_dp, upf(nt)%zp - starting_charge(nt)) / upf(nt)%zp

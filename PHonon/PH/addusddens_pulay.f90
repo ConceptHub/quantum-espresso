@@ -35,7 +35,7 @@ subroutine addusddens_pulay (drhop, dbecsum, mode0, npe)
   use fft_interfaces, only: invfft
   USE gvect,  ONLY : ngm, g, eigts1, eigts2, eigts3, mill
   USE uspp,     ONLY : okvan, becsum
-  USE cell_base, ONLY : tpiba
+  USE cell_base, ONLY : tpiba, omega
   USE ions_base, ONLY : nat, ityp, ntyp => nsp
   USE wavefunctions,  ONLY: psic
   USE uspp_param, ONLY: upf, lmaxq, nh, nhm
@@ -145,7 +145,7 @@ subroutine addusddens_pulay (drhop, dbecsum, mode0, npe)
            do jh = ih, nh(nt)
               ijh = ijh + 1
               ientry = ientry + 1
-              call qvan2 (ngm, ih, jh, nt, qmod, qgm, ylmk0)
+              call qvan2 (ngm, ih, jh, nt, qmod, omega, qgm, ylmk0)
               !
               ! Store mapping information and qgm
               ijh_map(1, ientry) = nt

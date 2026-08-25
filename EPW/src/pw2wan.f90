@@ -2129,7 +2129,7 @@
         IF (upf(nt)%tvanp) THEN
           DO ih = 1, nh(nt)
             DO jh = 1, nh(nt)
-              CALL qvan2(nbt, ih, jh, nt, qg, qgm, ylm)
+              CALL qvan2(nbt, ih, jh, nt, qg, omega, qgm, ylm)
               qb(ih, jh, nt, 1:nbt) = omega * qgm(1:nbt)
             ENDDO
           ENDDO

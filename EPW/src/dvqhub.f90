@@ -768,7 +768,7 @@
       !
       ! chiq = radial fourier transform of atomic orbitals chi
       !
-      CALL interp_atwfc ( npw_, qg, nwfcm, chiq )
+      CALL interp_atwfc ( npw_, qg, nwfcm, omega, chiq )
       !
       wfcatom_(:,:,:) = czero
       n_starting_wfc = 0

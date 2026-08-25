@@ -113,7 +113,7 @@ SUBROUTINE init_us_2_acc( npw_, npwx, igk_, q_, nat, tau, ityp, &
   jkb = 0
   do nt = 1, nsp
      !
-     CALL interp_beta ( nt, npw_, qg, vq )
+     CALL interp_beta ( nt, npw_, qg, omega, vq )
      ! add spherical harmonic part  (Y_lm(q)*f_l(q)) 
      nhnt = nh(nt)
      !$acc parallel loop collapse(2)

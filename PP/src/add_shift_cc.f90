@@ -88,7 +88,7 @@ SUBROUTINE add_shift_cc (shift_cc)
   DO nt = 1, ntyp
      IF ( upf(nt)%nlcc ) THEN
 
-        CALL interp_rhc (nt, ngl, gl, tpiba2, rhocg)
+        CALL interp_rhc (nt, ngl, gl, tpiba2, omega, rhocg)
         DO na = 1, nat
            IF (nt == ityp (na) ) THEN
               IF (gstart==2)  shift_(na) = omega * rhocg (igtongl (1) ) * &

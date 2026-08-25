@@ -15,7 +15,7 @@ subroutine addusldos (ldos, becsum1)
   !
   USE kinds,            ONLY : DP
   USE ions_base,        ONLY : nat, ityp, ntyp => nsp
-  USE cell_base,        ONLY : tpiba
+  USE cell_base,        ONLY : tpiba, omega
   USE fft_base,         ONLY : dfftp
   USE fft_interfaces,   ONLY : invfft
   USE gvect,            ONLY : eigts1, eigts2, eigts3, mill, gg, g, ngm
@@ -62,7 +62,7 @@ subroutine addusldos (ldos, becsum1)
         ijh = 0
         do ih = 1, nh (nt)
            do jh = ih, nh (nt)
-              call qvan2 (ngm, ih, jh, nt, qmod, qgm, ylmk0)
+              call qvan2 (ngm, ih, jh, nt, qmod, omega, qgm, ylmk0)
               ijh = ijh + 1
               do na = 1, nat
                  if (ityp (na) .eq.nt) then

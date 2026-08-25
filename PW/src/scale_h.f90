@@ -16,7 +16,7 @@ SUBROUTINE scale_h
   USE kinds,          ONLY : DP
   USE io_global,      ONLY : stdout
   USE cell_base,      ONLY : bg, omega, set_h_ainv, tpiba
-  USE cellmd,         ONLY : at_old, omega_old
+  USE cellmd,         ONLY : at_old
   USE constants,      ONLY : eps8
   USE gvect,          ONLY : g, gg, ngm
   USE klist,          ONLY : nks, xk, wk, ngk, igk_k, nkstot, qnorm
@@ -29,11 +29,9 @@ SUBROUTINE scale_h
   USE mp,             ONLY : mp_max
   USE mp_bands,       ONLY : intra_bgrp_comm
   USE mp_pools,       ONLY: inter_pool_comm
-  USE atwfc_mod,      ONLY : scale_tab_atwfc, init_tab_atwfc
-  USE beta_mod,       ONLY : scale_tab_beta, init_tab_beta
-  USE qrad_mod,       ONLY : scale_tab_qrad, init_tab_qrad
-  USE rhoc_mod,       ONLY : scale_tab_rhc
-  USE rhoat_mod,      ONLY : scale_tab_rhoat
+  USE atwfc_mod,      ONLY : init_tab_atwfc
+  USE beta_mod,       ONLY : init_tab_beta
+  USE qrad_mod,       ONLY : init_tab_qrad
   !
   IMPLICIT NONE
   !
@@ -109,14 +107,6 @@ SUBROUTINE scale_h
   ! (kmax^2=ecutwfc at the first step or at fixed cell)
   ! for hybrid functionals, we need max |k+q+G|
   IF ( xclib_dft_is('hybrid') )  kmax = kmax + qnorm
-  !
-  ! Scale the interpolation tables with correct volume
-  !
-  CALL scale_tab_atwfc( omega_old/omega )
-  CALL scale_tab_beta ( omega_old/omega )
-  CALL scale_tab_rhc  ( omega_old/omega )
-  CALL scale_tab_rhoat( omega_old/omega )
-  CALL scale_tab_qrad ( omega_old/omega )
   !
   ! Check that interpolation tables are of sufficient size,
   ! re-allocate and re-compute if needed

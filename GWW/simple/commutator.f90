@@ -73,7 +73,7 @@ subroutine gen_beta_simple (qk, npw_max, dvkb)
      q (ig) = SQRT (q(ig)) * tpiba
   enddo
   do nt = 1, ntyp
-     CALL interp_dbeta( nt, npw_max, q, djl(:,:,nt) )
+     CALL interp_dbeta( nt, npw_max, q, omega, djl(:,:,nt) )
   enddo
   call stop_clock('stres_us33')
   call start_clock('stres_us34')
@@ -134,7 +134,7 @@ subroutine gen_beta_simple_2 (qk, npw_max, u, dvkb)
   USE io_global,  ONLY : stdout
   USE constants,  ONLY : tpi
   USE ions_base,  ONLY : nat, ntyp => nsp, ityp, tau
-  USE cell_base,  ONLY : tpiba
+  USE cell_base,  ONLY : tpiba, omega
   USE klist,      ONLY : ngk, igk_k
   USE gvect,      ONLY : mill, eigts1, eigts2, eigts3, g
   USE uspp,       ONLY : nkb, indv, nhtol, nhtolm
@@ -192,7 +192,7 @@ subroutine gen_beta_simple_2 (qk, npw_max, u, dvkb)
 
   do nt = 1, ntyp
      ! calculate beta in G-space using an interpolation table
-     CALL interp_beta( nt, npw_max, q, vkb0(:,:,nt) )
+     CALL interp_beta( nt, npw_max, q, omega, vkb0(:,:,nt) )
   enddo
 
   deallocate (q)

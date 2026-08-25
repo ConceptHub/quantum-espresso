@@ -133,7 +133,7 @@ SUBROUTINE gen_us_dy_base( npw, npwx, igk, xk, nat, tau, ityp, ntyp, tpiba, &
   !$acc end kernels
   !
   DO nt = 1, ntyp
-     CALL interp_beta ( nt, npw, q, vkb0(:,:,nt))
+     CALL interp_beta ( nt, npw, q, omega, vkb0(:,:,nt))
   ENDDO
   !
   !$acc end data

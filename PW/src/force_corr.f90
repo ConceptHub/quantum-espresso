@@ -76,7 +76,7 @@ SUBROUTINE force_corr( forcescc )
   !
   DO nt = 1, ntyp
      !
-     CALL interp_rhoat( nt, ngl, gl, tpiba**2, rhoatg )
+     CALL interp_rhoat( nt, ngl, gl, tpiba**2, omega, rhoatg )
      !
 #if defined(_OPENACC)
      !$acc parallel loop gang copy(forcescc)

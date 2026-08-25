@@ -54,7 +54,7 @@ subroutine set_drhoc (q, drc)
   !! Check if interpolation table needs to be re-initialized
   do nt = 1, ntyp
      if ( upf(nt)%nlcc ) then
-        call interp_rhc( nt, ngm, qg2, tpiba2, drc(1,nt) )
+        call interp_rhc( nt, ngm, qg2, tpiba2, omega, drc(1,nt) )
      else
         drc (:,nt) = 0.0_dp
      end if

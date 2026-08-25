@@ -485,7 +485,7 @@ SUBROUTINE compute_gw( omegamin, omegamax, d_omega, use_gmaps, qplda, vkb, vxcdi
       !
       DO nt = 1, ntyp
         vkb0(:,:) = 0.0_dp
-        CALL interp_beta ( nt, npw, q, vkb0 )
+        CALL interp_beta ( nt, npw, q, omega, vkb0 )
         DO nb = 1, upf(nt)%nbeta
           WRITE(15,*) "---------------DEBUG-VKB0----------------------"
           WRITE(15,*) "ik= ", ik

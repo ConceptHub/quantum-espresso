@@ -2469,7 +2469,7 @@ SUBROUTINE compute_dmn
          IF (upf(nt)%tvanp) THEN
             DO ih = 1, nh(nt)
                DO jh = 1, nh(nt)
-                  CALL qvan2(1, ih, jh, nt, qg, qgm, ylm)
+                  CALL qvan2(1, ih, jh, nt, qg, omega, qgm, ylm)
                   qb(ih, jh, nt) = omega * qgm
                ENDDO
             ENDDO
@@ -2815,7 +2815,7 @@ SUBROUTINE compute_mmn
             IF (upf(nt)%tvanp ) THEN
                DO ih = 1, nh (nt)
                   DO jh = 1, nh (nt)
-                     CALL qvan2 (nnb, ih, jh, nt, qg, qgm, ylm)
+                     CALL qvan2 (nnb, ih, jh, nt, qg, omega, qgm, ylm)
                      qb(ih, jh, nt, 1:nnb, ik) = omega * qgm(1:nnb)
                   ENDDO
                ENDDO
@@ -3904,7 +3904,7 @@ SUBROUTINE compute_mmn_ibz
          IF( .not. upf(nt)%tvanp ) CYCLE
          DO ih = 1, nh(nt)
             DO jh = 1, nh(nt)
-               CALL qvan2(nnb, ih, jh, nt, qg, qgm, ylm)
+               CALL qvan2(nnb, ih, jh, nt, qg, omega, qgm, ylm)
                qb(ih, jh, nt, :) = omega * qgm(:)
             END DO
          END DO

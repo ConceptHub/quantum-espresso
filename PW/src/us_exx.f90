@@ -89,7 +89,7 @@ MODULE us_exx
     !-----------------------------------------------------------------------
     !! Allocate and store augmentation charges in G space Q(G) for USPP.
     !
-    USE cell_base,           ONLY : tpiba
+    USE cell_base,           ONLY : tpiba, omega
     USE ions_base,           ONLY : ntyp => nsp
     USE uspp_param,          ONLY : upf, nh, lmaxq
     USE gvect,               ONLY : g
@@ -138,7 +138,7 @@ MODULE us_exx
           DO ih = 1, nh(nt)
              DO jh = ih, nh(nt)
                 ijh = ijh + 1
-                CALL qvan2( ngms, ih, jh, nt, qmod, qgm(1,ijh), ylmk0 )
+                CALL qvan2( ngms, ih, jh, nt, qmod, omega, qgm(1,ijh), ylmk0 )
              ENDDO
           ENDDO
        ENDIF

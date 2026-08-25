@@ -137,7 +137,7 @@ subroutine newdq (dvscf, npe)
            !
            do ih = 1, nh (nt)
               do jh = ih, nh (nt)
-                 call qvan2 (ngm, ih, jh, nt, qmod, qgm, ylmk0)
+                 call qvan2 (ngm, ih, jh, nt, qmod, omega, qgm, ylmk0)
                  nb = 0
                  do na = 1, nat
                     if (ityp (na) == nt) then

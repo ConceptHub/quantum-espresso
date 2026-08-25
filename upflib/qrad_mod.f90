@@ -19,7 +19,6 @@ MODULE qrad_mod
   PRIVATE
   PUBLIC :: dq, tab_qrad
   PUBLIC :: init_tab_qrad
-  PUBLIC :: scale_tab_qrad
   PUBLIC :: deallocate_tab_qrad
   !
   SAVE
@@ -135,7 +134,7 @@ CONTAINS
            ENDDO
            ! l
         ENDDO
-        tab_qrad (:, :, :, nt) = tab_qrad (:, :, :, nt) * fpi / omega
+        tab_qrad (:, :, :, nt) = tab_qrad (:, :, :, nt) * fpi
 
         CALL mp_sum ( tab_qrad (:, :, :, nt), comm )
      ENDIF
@@ -148,18 +147,6 @@ CONTAINS
   !$acc update device(tab_qrad)
   !
 END SUBROUTINE init_tab_qrad
-!
-SUBROUTINE scale_tab_qrad ( vol_ratio_m1 )
-  !
-  REAL(DP), INTENT(in) :: vol_ratio_m1
-  !! vol_ratio_m1 = omega_old / omega
-  !
-  IF ( ALLOCATED ( tab_qrad ) ) THEN
-     tab_qrad(:,:,:,:) = tab_qrad(:,:,:,:) * vol_ratio_m1
-     !$acc update device (tab_qrad)
-  END IF
-  !
-END SUBROUTINE scale_tab_qrad
 !
 SUBROUTINE deallocate_tab_qrad ( )
   !

@@ -24,7 +24,6 @@ MODULE rhoc_mod
   PUBLIC :: interp_tac
   PUBLIC :: interp_drhc
   PUBLIC :: interp_dtac
-  PUBLIC :: scale_tab_rhc
   PUBLIC :: deallocate_tab_rhc
   PUBLIC :: deallocate_tab_tac
   PRIVATE :: interp_tab, interp_dtab
@@ -122,7 +121,7 @@ CONTAINS
            ENDDO
            !
            CALL simpson ( msh(nt), aux, rgrid(nt)%rab, tab_rhc(iq,nt) )
-           tab_rhc (iq,nt) = fpi * tab_rhc (iq,nt) / omega
+           tab_rhc (iq,nt) = fpi * tab_rhc (iq,nt)
         END IF
      ENDDO
      !
@@ -150,7 +149,7 @@ CONTAINS
         ENDDO
         !
         CALL simpson ( msh(nt), aux, rgrid(nt)%rab, tab_tac(iq,nt) )
-        tab_tac (iq,nt) = fpi * tab_tac (iq,nt) / omega
+        tab_tac (iq,nt) = fpi * tab_tac (iq,nt)
         !
      ENDDO
      !
@@ -165,65 +164,65 @@ CONTAINS
   END SUBROUTINE init_tab_rhc
   !
   !-----------------------------------------------------------------------
-  SUBROUTINE interp_rhc( nt, ngl, gl, tpiba2, rhocg )
+  SUBROUTINE interp_rhc( nt, ngl, gl, tpiba2, omega, rhocg )
   !-----------------------------------------------------------------------
   !! Calculates the radial Fourier transform of the core charge.
   !
   INTEGER,  INTENT(IN)  :: nt, ngl
-  REAL(DP), INTENT(IN)  :: gl(ngl), tpiba2
+  REAL(DP), INTENT(IN)  :: gl(ngl), tpiba2, omega
   REAL(DP), INTENT(OUT) :: rhocg(ngl)
   !
-  CALL interp_tab( tab_rhc, nt, ngl, gl, tpiba2, rhocg )
+  CALL interp_tab( tab_rhc, nt, ngl, gl, tpiba2, omega, rhocg )
   !
   END SUBROUTINE interp_rhc
   !
   !-----------------------------------------------------------------------
-  SUBROUTINE interp_tac( nt, ngl, gl, tpiba2, tacg )
+  SUBROUTINE interp_tac( nt, ngl, gl, tpiba2, omega, tacg )
   !-----------------------------------------------------------------------
   !! Calculates the radial Fourier transform of the core kinetic energy density.
   !
   INTEGER,  INTENT(IN)  :: nt, ngl
-  REAL(DP), INTENT(IN)  :: gl(ngl), tpiba2
+  REAL(DP), INTENT(IN)  :: gl(ngl), tpiba2, omega
   REAL(DP), INTENT(OUT) :: tacg(ngl)
   !
-  CALL interp_tab( tab_tac, nt, ngl, gl, tpiba2, tacg )
+  CALL interp_tab( tab_tac, nt, ngl, gl, tpiba2, omega, tacg )
   !
   END SUBROUTINE interp_tac
   !
   !-----------------------------------------------------------------------
-  SUBROUTINE interp_drhc( nt, ngl, gl, tpiba2, drhocg )
+  SUBROUTINE interp_drhc( nt, ngl, gl, tpiba2, omega, drhocg )
   !-----------------------------------------------------------------------
   !! Calculates the Fourier transform of d Rho_c / dG.
   !
   INTEGER,  INTENT(IN)  :: nt, ngl
-  REAL(DP), INTENT(IN)  :: gl(ngl), tpiba2
+  REAL(DP), INTENT(IN)  :: gl(ngl), tpiba2, omega
   REAL(DP), INTENT(OUT) :: drhocg(ngl)
   !
-  CALL interp_dtab( tab_rhc, nt, ngl, gl, tpiba2, drhocg )
+  CALL interp_dtab( tab_rhc, nt, ngl, gl, tpiba2, omega, drhocg )
   !
   END SUBROUTINE interp_drhc
   !
   !-----------------------------------------------------------------------
-  SUBROUTINE interp_dtac( nt, ngl, gl, tpiba2, dtacg )
+  SUBROUTINE interp_dtac( nt, ngl, gl, tpiba2, omega, dtacg )
   !-----------------------------------------------------------------------
   !! Calculates the Fourier transform of d tau_c / dG.
   !
   INTEGER,  INTENT(IN)  :: nt, ngl
-  REAL(DP), INTENT(IN)  :: gl(ngl), tpiba2
+  REAL(DP), INTENT(IN)  :: gl(ngl), tpiba2, omega
   REAL(DP), INTENT(OUT) :: dtacg(ngl)
   !
-  CALL interp_dtab( tab_tac, nt, ngl, gl, tpiba2, dtacg )
+  CALL interp_dtab( tab_tac, nt, ngl, gl, tpiba2, omega, dtacg )
   !
   END SUBROUTINE interp_dtac
   !
   !-----------------------------------------------------------------------
-  SUBROUTINE interp_tab( tab, nt, ngl, gl, tpiba2, fg )
+  SUBROUTINE interp_tab( tab, nt, ngl, gl, tpiba2, omega, fg )
   !-----------------------------------------------------------------------
   !! Cubic interpolation of a tabulated radial Fourier transform.
   !
   REAL(DP), INTENT(IN)  :: tab(:,:)
   INTEGER,  INTENT(IN)  :: nt, ngl
-  REAL(DP), INTENT(IN)  :: gl(ngl), tpiba2
+  REAL(DP), INTENT(IN)  :: gl(ngl), tpiba2, omega
   REAL(DP), INTENT(OUT) :: fg(ngl)
   !
   REAL(DP) :: gx, px, ux, vx, wx
@@ -241,23 +240,23 @@ CONTAINS
      i1 = i0 + 1
      i2 = i0 + 2
      i3 = i0 + 3
-     fg(igl) = tab(i0,nt) * ux * vx * wx / 6.d0 + &
-               tab(i1,nt) * px * vx * wx / 2.d0 - &
-               tab(i2,nt) * px * ux * wx / 2.d0 + &
-               tab(i3,nt) * px * ux * vx / 6.d0
+     fg(igl) = ( tab(i0,nt) * ux * vx * wx / 6.d0 + &
+                 tab(i1,nt) * px * vx * wx / 2.d0 - &
+                 tab(i2,nt) * px * ux * wx / 2.d0 + &
+                 tab(i3,nt) * px * ux * vx / 6.d0 ) / omega
   ENDDO
   !$acc end data
   !
   END SUBROUTINE interp_tab
   !
   !-----------------------------------------------------------------------
-  SUBROUTINE interp_dtab( tab, nt, ngl, gl, tpiba2, dfg )
+  SUBROUTINE interp_dtab( tab, nt, ngl, gl, tpiba2, omega, dfg )
   !-----------------------------------------------------------------------
   !! Cubic interpolation of d(tabulated FT) / dG.
   !
   REAL(DP), INTENT(IN)  :: tab(:,:)
   INTEGER,  INTENT(IN)  :: nt, ngl
-  REAL(DP), INTENT(IN)  :: gl(ngl), tpiba2
+  REAL(DP), INTENT(IN)  :: gl(ngl), tpiba2, omega
   REAL(DP), INTENT(OUT) :: dfg(ngl)
   !
   REAL(DP) :: gx, px, ux, vx, wx
@@ -278,26 +277,11 @@ CONTAINS
      dfg(igl) = (- tab(i0,nt) * (ux*vx + vx*wx + ux*wx) / 6.0_dp &
                  + tab(i1,nt) * (wx*vx - px*wx - px*vx) / 2.0_dp &
                  - tab(i2,nt) * (wx*ux - px*wx - px*ux) / 2.0_dp &
-                 + tab(i3,nt) * (ux*vx - px*ux - px*vx) / 6.0_dp ) / dq
+                 + tab(i3,nt) * (ux*vx - px*ux - px*vx) / 6.0_dp ) / dq / omega
   ENDDO
   !$acc end data
   !
   END SUBROUTINE interp_dtab
-  !
-  subroutine scale_tab_rhc( vol_ratio_m1 )
-     ! vol_ratio_m1 = omega_old / omega
-     real(DP), intent(in) :: vol_ratio_m1
-     !
-     if ( allocated(tab_rhc) ) then
-        tab_rhc(:,:)  = tab_rhc(:,:) * vol_ratio_m1
-        !$acc update device (tab_rhc)
-     end if
-     if ( allocated(tab_tac) ) then
-        tab_tac(:,:)  = tab_tac(:,:) * vol_ratio_m1
-        !$acc update device (tab_tac)
-     end if
-     !
-  end subroutine scale_tab_rhc
   !
   subroutine deallocate_tab_rhc(  )
      !

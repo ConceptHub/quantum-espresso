@@ -105,7 +105,7 @@ SUBROUTINE gen_us_dj_base( npw, npwx, igk, xk, nat, tau, ityp, ntyp, tpiba, &
      q(ig) = SQRT(q(ig)) * tpiba
   ENDDO
   DO nt = 1, ntyp
-     CALL interp_dbeta( nt, npw, q, djl(:,:,nt) )
+     CALL interp_dbeta( nt, npw, q, omega, djl(:,:,nt) )
   ENDDO
   !
   !CALL stop_clock( 'stres_us33' )
