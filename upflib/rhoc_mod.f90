@@ -44,7 +44,7 @@ MODULE rhoc_mod
 CONTAINS
   !
   !----------------------------------------------------------------------
-  SUBROUTINE init_tab_rhc (qmax_, omega, comm, ierr)
+  SUBROUTINE init_tab_rhc (qmax_, comm, ierr)
   !----------------------------------------------------------------------
    !! Compute interpolation table for atomic core (pseudo-)charge density
    !! and kinetic-energy density:
@@ -63,8 +63,6 @@ CONTAINS
   !!              ierr =-2 if IT was already present and nothing is done
   REAL(dp), INTENT(IN) :: qmax_
   !! Interpolate q up to qmax_ (sqrt(Ry), q^2 is an energy)
-  REAL(dp), INTENT(IN) :: omega
-  !! Unit-cell volume
   !
   INTEGER :: ndm, startq, lastq, nt, iq, ir
   !! Various indices

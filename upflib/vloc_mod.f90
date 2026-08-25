@@ -37,7 +37,7 @@ MODULE vloc_mod
   !
 CONTAINS
   !----------------------------------------------------------------------
-  SUBROUTINE init_tab_vloc (qmax_, modified_coulomb, omega, comm, ierr)
+  SUBROUTINE init_tab_vloc (qmax_, modified_coulomb, comm, ierr)
     !----------------------------------------------------------------------
     !
     !! Allocate and fill interpolation table for numerical pseudopotentials
@@ -67,8 +67,6 @@ CONTAINS
     !!             ierr = 0 if interpolation table (IT) was allocated
     !!             ierr =-1 if IT had insufficient dimension and was re-allocated
     !!             ierr =-2 if IT was already present and nothing is done
-    REAL(dp), INTENT(IN) :: omega
-    !! Unit-cell volume
     REAL(dp), INTENT(IN) :: qmax_
     !! Interpolate q up to qmax_ (sqrt(Ry), q^2 is an energy)
     INTEGER :: ndm, startq, lastq, nt, iq, ir
@@ -118,7 +116,7 @@ CONTAINS
           !! Uncomment for testing purposes
           !DO iq = startq, lastq
           !   q2(1) = ( (iq-1)*dq )**2
-          !   CALL vloc_gth( nt, upf(nt)%zp, 1.0_dp, 1, q2, omega, tab_vloc(iq,nt) )
+          !   CALL vloc_gth( nt, upf(nt)%zp, 1.0_dp, 1, q2, omega=1.0_dp, tab_vloc(iq,nt) )
           !END DO
           !IF ( startq == 1 ) tab_vloc (0,nt) = tab_vloc (1,nt)
           CONTINUE
@@ -346,8 +344,7 @@ CONTAINS
                     - tab_vloc(i2, nt) * (wx*ux - px*wx - px*ux) / 2.0_dp &
                     + tab_vloc(i3, nt) * (ux*vx - px*ux - px*vx) / 6.0_dp ) / dq
      ! DV(g^2)/Dg^2 = (DV(g)/Dg)/2g
-     dvlocg(igl) = dvlocg(igl) / (2.0_dp*gx)
-     dvlocg(igl) = dvlocg(igl) / omega
+     dvlocg(igl) = dvlocg(igl) / (2.0_dp*gx*omega)
   ENDDO
   !$acc end data
   !

@@ -432,7 +432,7 @@ SUBROUTINE atomic_wfc_cp(omega, nat, nsp, ityp, tau, nupdwn, iupdwn, nspin, &
          ! gamma point only
          xk=0.d0
          qmax = SQRT(ecutwfc)
-         call init_tab_atwfc(qmax, omega, intra_bgrp_comm, ierr)
+         call init_tab_atwfc(qmax, intra_bgrp_comm, ierr)
          natomwfc = n_atom_wfc ( nat, ityp )
          allocate ( wfcatom(npw, 1, natomwfc) )
          allocate (igk (npw) )

@@ -50,7 +50,7 @@ subroutine set_drhoc (q, drc)
   qmax = SQRT ( tpiba2 * MAXVAL ( qg2 ) )
   CALL mp_max (qmax, intra_bgrp_comm)
   !! qmax is the actual maximum |q+G| needed in the interpolation table
-  CALL init_tab_rhc  ( qmax, omega, intra_bgrp_comm, ierr )
+  CALL init_tab_rhc  ( qmax, intra_bgrp_comm, ierr )
   !! Check if interpolation table needs to be re-initialized
   do nt = 1, ntyp
      if ( upf(nt)%nlcc ) then

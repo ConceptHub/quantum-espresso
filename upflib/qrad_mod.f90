@@ -34,7 +34,7 @@ MODULE qrad_mod
   !
 CONTAINS
 !----------------------------------------------------------------------
-  SUBROUTINE init_tab_qrad (qmax_, omega, comm, ierr)
+  SUBROUTINE init_tab_qrad (qmax_, comm, ierr)
   !----------------------------------------------------------------------
   !
   !! Allocate and fill interpolation table tab_qrad:
@@ -53,8 +53,6 @@ CONTAINS
   !!             ierr =-1 if IT had insufficient dimension and was re-allocated
   !!             ierr =-2 if IT was already present and nothing is done
   !!             ierr =-3 if IT not needed and nothing is done
-  REAL(dp), INTENT(IN) :: omega
-  !! Unit-cell volume
   REAL(dp), INTENT(IN) :: qmax_
   !! Interpolate q up to qmax_ (sqrt(Ry), q^2 is an energy)
   !

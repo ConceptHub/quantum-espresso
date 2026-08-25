@@ -62,7 +62,7 @@ SUBROUTINE atomic_rho_g( rhocg, nspina )
   !! re-allocations of the interpolation table
   !
   qmax = MAX (sqrt(qmax), sqrt(ecutrho)*cell_factor)
-  CALL init_tab_rhoat (qmax, omega, intra_bgrp_comm, ierr)
+  CALL init_tab_rhoat (qmax, intra_bgrp_comm, ierr)
   !! Initialize  interpolation tables (if not already done)
   !
   ALLOCATE (rhoatg( ngl))

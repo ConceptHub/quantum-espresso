@@ -38,7 +38,7 @@ MODULE beta_mod
 CONTAINS
 !
 !----------------------------------------------------------------------
-SUBROUTINE init_tab_beta ( qmax_, omega, comm, ierr ) 
+SUBROUTINE init_tab_beta ( qmax_, comm, ierr ) 
   !----------------------------------------------------------------------
   !
   ! Compute interpolation table for beta(G) radial functions
@@ -53,8 +53,6 @@ SUBROUTINE init_tab_beta ( qmax_, omega, comm, ierr )
   !
   REAL(dp), INTENT(IN) :: qmax_
   !! Interpolate q up to qmax_ (sqrt(Ry), q^2 is an energy)
-  REAL(dp), INTENT(IN) :: omega
-  !! Unit-cell volume
   INTEGER, INTENT(IN)  :: comm
   !! MPI communicator, to split the workload
   INTEGER, INTENT(OUT) :: ierr
@@ -65,9 +63,9 @@ SUBROUTINE init_tab_beta ( qmax_, omega, comm, ierr )
   INTEGER :: ndm, startq, lastq, nt, l, nb, iq, ir
   REAL(dp) :: qi
   ! q-point grid for interpolation
-  REAL(dp) :: pref
-  ! the prefactor of the Q functions
-  real(DP) ::  vqint, d1
+  real(DP) ::  omega_ =1.0_dp
+  ! For GTH compatibility: effectively removes division by sqrt(omega)
+  real(DP) ::  vqint
   !
   REAL(dp), allocatable :: aux (:)
   ! work space
@@ -96,7 +94,6 @@ SUBROUTINE init_tab_beta ( qmax_, omega, comm, ierr )
   ndm = MAXVAL ( upf(:)%kkbeta )
   allocate( aux (ndm) )
   allocate (besr( ndm))
-  pref = fpi
   call divide (comm, nqx, startq, lastq)
   tab_beta (:,:,:) = 0.d0
   do nt = 1, nsp
@@ -105,14 +102,14 @@ SUBROUTINE init_tab_beta ( qmax_, omega, comm, ierr )
         do iq = startq, lastq
            qi = (iq - 1) * dq
            if ( upf(nt)%is_gth ) then
-              CALL mk_ffnl_gth( nt, nb, 1, omega, [ qi ] , tab_beta(iq,nb,nt) )
+              CALL mk_ffnl_gth( nt, nb, 1, omega_, [ qi ] , tab_beta(iq,nb,nt) )
            else
               call sph_bes (upf(nt)%kkbeta, rgrid(nt)%r, qi, l, besr)
               do ir = 1, upf(nt)%kkbeta
                  aux (ir) = upf(nt)%beta (ir, nb) * besr (ir) * rgrid(nt)%r(ir)
               enddo
               call simpson (upf(nt)%kkbeta, aux, rgrid(nt)%rab, vqint)
-              tab_beta (iq, nb, nt) = vqint * pref
+              tab_beta (iq, nb, nt) = vqint * fpi
            end if
         enddo
      enddo

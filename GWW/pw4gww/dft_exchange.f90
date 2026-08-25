@@ -28,7 +28,6 @@ subroutine dft_exchange(nbnd_v,nbnd_s,n_set, e_x,ks_wfcs)
   USE uspp_param,           ONLY : lmaxq,upf,nh, nhm
   USE wavefunctions, ONLY : psic
  ! USE realus,  ONLY : adduspos_gamma_r
-  USE cell_base,            ONLY : at, bg, omega
   USE mp, ONLY : mp_sum, mp_bcast
   USE mp_world, ONLY : world_comm
   USE control_flags,        ONLY : gamma_only

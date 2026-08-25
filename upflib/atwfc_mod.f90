@@ -38,14 +38,13 @@ MODULE atwfc_mod
 CONTAINS
   !
   !-----------------------------------------------------------------------
-  SUBROUTINE init_tab_atwfc( qmax_, omega, comm, ierr)
+  SUBROUTINE init_tab_atwfc( qmax_, comm, ierr)
   !-----------------------------------------------------------------------
   !! This routine computes a table with the radial Fourier transform 
   !! of the atomic wavefunctions.
   !
   USE upf_kinds,    ONLY : DP
   USE atom,         ONLY : rgrid, msh
-  USE upf_const,    ONLY : fpi
   USE uspp_param,   ONLY : nsp, upf, nwfcm, nsp
   USE mp,           ONLY : mp_sum
   !
@@ -53,8 +52,6 @@ CONTAINS
   !
   REAL(dp), INTENT(IN) :: qmax_
   !! Interpolate q up to qmax_ (sqrt(Ry), q^2 is an energy)
-  REAL(dp), INTENT(IN) :: omega
-  !! Unit-cell volume
   INTEGER, INTENT(IN)  :: comm
   !! MPI communicator, to split the workload
   INTEGER, INTENT(OUT) :: ierr
@@ -65,7 +62,7 @@ CONTAINS
   INTEGER :: nt, nb, iq, ir, l, startq, lastq, ndm
   !
   REAL(DP), ALLOCATABLE :: aux(:), vchi(:)
-  REAL(DP) :: vqint, pref, q
+  REAL(DP) :: vqint, q
   !
   IF ( .NOT. ALLOCATED(tab_atwfc) ) THEN
      !! table not yet allocated
@@ -90,11 +87,8 @@ CONTAINS
   ndm = MAXVAL(msh(1:nsp))
   ALLOCATE( aux(ndm), vchi(ndm) )
   !
-  ! chiq = radial fourier transform of atomic orbitals chi
+  ! chiq = radial fourier transform of atomic orbitals chi (times omega)
   !
-  pref = fpi
-  ! needed to normalize atomic wfcs (not a bad idea in general and 
-  ! necessary to compute correctly lda+U projections)
   CALL divide( comm, nqx, startq, lastq )
   !
   tab_atwfc(:,:,:) = 0.0_DP
@@ -112,7 +106,7 @@ CONTAINS
                  vchi(ir) = upf(nt)%chi(ir,nb) * aux(ir) * rgrid(nt)%r(ir)
               ENDDO
               CALL simpson( msh(nt), vchi, rgrid(nt)%rab, vqint )
-              tab_atwfc( iq, nb, nt ) = vqint * pref
+              tab_atwfc( iq, nb, nt ) = vqint * fpi
            ENDDO
            !
         ENDIF

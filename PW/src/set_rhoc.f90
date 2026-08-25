@@ -63,7 +63,7 @@ SUBROUTINE set_rhoc
      !
      qmax = MAX (sqrt(qmax), sqrt(ecutrho)*cell_factor)
      IF (ANY( upf(1:ntyp)%nlcc) .OR. ANY( upf(1:ntyp)%with_metagga_info)) THEN
-         CALL init_tab_rhc  ( qmax, omega, intra_bgrp_comm, ir )
+         CALL init_tab_rhc  ( qmax, intra_bgrp_comm, ir )
       ENDIF
      !
      ALLOCATE (rhocg( ngl))

@@ -48,7 +48,7 @@ SUBROUTINE force_corr( forcescc )
   !! Initialize the interpolation table if not done previously
   qmax = tpiba * SQRT ( MAXVAL ( gl ) )
   CALL mp_max (qmax, intra_bgrp_comm)
-  CALL init_tab_rhoat (qmax, omega, intra_bgrp_comm, ierr)
+  CALL init_tab_rhoat (qmax, intra_bgrp_comm, ierr)
   !  
   ! ... vnew is V_out - V_in
   !
