@@ -32,7 +32,6 @@ SUBROUTINE scale_h
   USE atwfc_mod,      ONLY : scale_tab_atwfc, init_tab_atwfc
   USE beta_mod,       ONLY : scale_tab_beta, init_tab_beta
   USE qrad_mod,       ONLY : scale_tab_qrad, init_tab_qrad
-  USE vloc_mod,       ONLY : scale_tab_vloc
   USE rhoc_mod,       ONLY : scale_tab_rhc
   USE rhoat_mod,      ONLY : scale_tab_rhoat
   !
@@ -118,7 +117,6 @@ SUBROUTINE scale_h
   CALL scale_tab_rhc  ( omega_old/omega )
   CALL scale_tab_rhoat( omega_old/omega )
   CALL scale_tab_qrad ( omega_old/omega )
-  CALL scale_tab_vloc ( omega_old/omega )
   !
   ! Check that interpolation tables are of sufficient size,
   ! re-allocate and re-compute if needed

@@ -21,7 +21,6 @@ MODULE vloc_mod
   PRIVATE
   PUBLIC :: init_tab_vloc
   PUBLIC :: deallocate_tab_vloc
-  PUBLIC :: scale_tab_vloc
   PUBLIC :: vloc_of_g
   PUBLIC ::dvloc_of_g
   !
@@ -145,7 +144,7 @@ CONTAINS
              ENDDO
              !
              CALL simpson ( msh(nt), aux, rgrid(nt)%rab, tab_vloc(iq,nt) )
-             tab_vloc (iq,nt) = tab_vloc (iq,nt) * fpi / omega 
+             tab_vloc (iq,nt) = tab_vloc (iq,nt) * fpi
              !
           ENDDO
           !! Compute G=0 term only once
@@ -160,7 +159,7 @@ CONTAINS
                    aux (ir) = r * ( r*upf(nt)%vloc(ir) + upf(nt)%zp*e2 )
                 END DO
                 CALL simpson ( msh(nt), aux, rgrid(nt)%rab, tab_vloc(0,nt) )
-                tab_vloc (0,nt) = tab_vloc (0,nt) * fpi / omega
+                tab_vloc (0,nt) = tab_vloc (0,nt) * fpi
              END IF
           END IF
           !
@@ -176,10 +175,10 @@ CONTAINS
   END SUBROUTINE init_tab_vloc
   !
   !-----------------------------------------------------------------------
-  SUBROUTINE interp_vloc( nt, ngl, gl, tpiba2, vlocg )
+  SUBROUTINE interp_vloc( nt, ngl, gl, tpiba2, omega, vlocg )
   !-----------------------------------------------------------------------
   !! Interpolate the radial Fourier transform of the short-range local
-  !! potential using the interpolation table previously computed 
+  !! potential using the interpolation table previously computed
   !
   INTEGER, INTENT(IN) :: nt
   !! atomic type
@@ -189,6 +188,8 @@ CONTAINS
   !! the list of |G|^2 of the shells
   REAL(DP), INTENT(IN) :: tpiba2
   !! 2 times pi / alat
+  REAL(DP), INTENT(IN) :: omega
+  !! the volume of the unit cell
   REAL(DP), INTENT(OUT) :: vlocg(ngl)
   !! the Fourier transform of the local potential (short-range only)
   !
@@ -219,18 +220,11 @@ CONTAINS
              tab_vloc(i2, nt) * px * ux * wx / 2.d0 + &
              tab_vloc(i3, nt) * px * ux * vx / 6.d0
      END IF
+     vlocg (igl) = vlocg (igl) / omega
   ENDDO
   !$acc end data
   !
   END SUBROUTINE interp_vloc
-  !-----------------------------------------------------------------------
-  SUBROUTINE scale_tab_vloc ( vol_ratio_m1 )
-    !-----------------------------------------------------------------------
-    REAL(dp), INTENT(in) :: vol_ratio_m1
-    tab_vloc(:,:) = tab_vloc(:,:) * vol_ratio_m1
-    !$acc update device (tab_vloc)
-  END SUBROUTINE scale_tab_vloc
-  !
   !-----------------------------------------------------------------------
   SUBROUTINE deallocate_tab_vloc ( )
   !-----------------------------------------------------------------------
@@ -289,7 +283,7 @@ CONTAINS
      END DO
   ELSE
      ! normal case: interpolation of short-range terms
-     CALL  interp_vloc ( nt, ngl, gl, tpiba2, vloc )
+     CALL  interp_vloc ( nt, ngl, gl, tpiba2, omega, vloc )
      !
      IF ( .not. modified_coulomb ) THEN
         fac = fpi / omega * upf(nt)%zp * e2 / tpiba2
@@ -306,7 +300,7 @@ CONTAINS
   END SUBROUTINE vloc_of_g
   !
   !----------------------------------------------------------------------------
-  SUBROUTINE interp_dvloc( nt, ngl, igl0, gl, tpiba2, dvlocg )
+  SUBROUTINE interp_dvloc( nt, ngl, igl0, gl, tpiba2, omega, dvlocg )
   !--------------------------------------------------------------------------
   !! Calculates the Fourier transform of \(dV_\text{loc}/dG\).
   !
@@ -322,8 +316,10 @@ CONTAINS
   !! input: the number of G shells
   REAL(dp), INTENT(IN) :: tpiba2
   !! input: 2 times pi / alat
+  REAL(dp), INTENT(IN) :: omega
+  !! input: the volume of the unit cell
   REAL(dp), INTENT(OUT) :: dvlocg(ngl)
-  !! Derivative dVloc/dG^2 of Fourier transform Vloc(G) 
+  !! Derivative dVloc/dG^2 of Fourier transform Vloc(G)
   !
   ! ... local variables
   !
@@ -350,7 +346,8 @@ CONTAINS
                     - tab_vloc(i2, nt) * (wx*ux - px*wx - px*ux) / 2.0_dp &
                     + tab_vloc(i3, nt) * (ux*vx - px*ux - px*vx) / 6.0_dp ) / dq
      ! DV(g^2)/Dg^2 = (DV(g)/Dg)/2g
-     dvlocg(igl) = dvlocg(igl) / (2.0_dp*gx) 
+     dvlocg(igl) = dvlocg(igl) / (2.0_dp*gx)
+     dvlocg(igl) = dvlocg(igl) / omega
   ENDDO
   !$acc end data
   !
@@ -421,7 +418,7 @@ CONTAINS
      !
      ! Pseudopotentials in numerical form (Vloc contains the local part)
      !
-     CALL interp_dvloc( nt, ngl, igl0, gl, tpiba2, dvloc )
+     CALL interp_dvloc( nt, ngl, igl0, gl, tpiba2, omega, dvloc )
      !
      ! In ESM, vloc and dvloc have only short term.
      IF ( .NOT. modified_coulomb ) THEN
