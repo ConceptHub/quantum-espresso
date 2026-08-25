@@ -344,7 +344,7 @@
       ENDDO
       qmax = (SQRT(gcutm) + SQRT(qnorm_tmp)) * tpiba * cell_factor
       ! FIXME: I don't think cell_factor should be there
-      CALL init_tab_qrad(qmax, omega, intra_bgrp_comm, ierr)
+      CALL init_tab_qrad(qmax, intra_bgrp_comm, ierr)
 
     ENDIF
     !
