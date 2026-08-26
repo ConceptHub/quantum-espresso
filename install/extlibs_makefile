@@ -57,7 +57,7 @@ make_mbd: git_mbd
         cd $(TOPDIR)/external/mbd/src; \
         export FXX=$(F90); export FXXOPT="$(F90FLAGS)"; \
         ($(MAKE) -f ../../mbd.make && touch $(BUILDDIR)/MBD/make_mbd); \
-	mv *.o *.mod *.a $(BUILDDIR)/MBD; fi
+	mv *.o *.mod *.a mbd_version.f90  $(BUILDDIR)/MBD; fi
 
 clean_mbd:
 	if test -d $(BUILDDIR)/MBD; then (rm -R -f $(BUILDDIR)/MBD); fi
