@@ -218,7 +218,7 @@ MODULE read_namelists_module
        Hubbard_parameters = '' ! obsolete
        Hubbard_U = 0.0_DP      ! moved to the HUBBARD card
        Hubbard_U_back = 0.0_DP ! replaced by Hubbard_U2 and moved to the HUBBARD card
-       Hubbard_V = 0.0_DP      ! moved to the HUBBARD card
+       ! Hubbard_V = 0.0_DP      ! moved to the HUBBARD card
        Hubbard_J0 = 0.0_DP     ! moved to the HUBBARD card
        Hubbard_J = 0.0_DP      ! moved to the HUBBARD card
        lda_plus_u = .FALSE.    ! automatically set in the HUBBARD card 
@@ -1006,7 +1006,6 @@ MODULE read_namelists_module
        CALL mp_bcast( Hubbard_U_back,         ionode_id, intra_image_comm )
        CALL mp_bcast( Hubbard_J0,             ionode_id, intra_image_comm )
        CALL mp_bcast( Hubbard_J,              ionode_id, intra_image_comm )
-       CALL mp_bcast( Hubbard_V,              ionode_id, intra_image_comm )
        CALL mp_bcast( Hubbard_alpha,          ionode_id, intra_image_comm )
        CALL mp_bcast( Hubbard_alpha_back,     ionode_id, intra_image_comm )
        CALL mp_bcast( Hubbard_beta,           ionode_id, intra_image_comm )
@@ -1795,10 +1794,6 @@ MODULE read_namelists_module
        ENDIF
        IF (ANY(Hubbard_J(:,:)>eps24)) THEN
           WRITE( stdout, '(/5x,"WARNING!!! The input parameter Hubbard_J is obsolete.")' )
-          allowed = .FALSE.
-       ENDIF
-       IF (ANY(Hubbard_V(:,:,:)>eps24)) THEN
-          WRITE( stdout, '(/5x,"WARNING!!! The input parameter Hubbard_V is obsolete.")' )
           allowed = .FALSE.
        ENDIF
        IF (ANY(backall(:))) THEN

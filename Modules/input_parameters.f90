@@ -29,7 +29,7 @@ MODULE input_parameters
 !=----------------------------------------------------------------------------=!
   !
   USE kinds,      ONLY : DP
-  USE parameters, ONLY : nsx, natx, sc_size, nsolx
+  USE parameters, ONLY : nsx, sc_size, nsolx
   USE wannier_new,ONLY : wannier_data
   USE upf_params, ONLY : lqmax
   !
@@ -442,7 +442,7 @@ MODULE input_parameters
         REAL(DP) :: Hubbard_U2(nsx) = 0.0_DP
         REAL(DP) :: Hubbard_Um(lqmax,nspinx,nsx) = 0.0_DP
         REAL(DP) :: Hubbard_Um_nc(2*lqmax,nsx) = 0.0_DP
-        REAL(DP) :: Hubbard_V(natx,natx*(2*sc_size+1)**3,4) = 0.0_DP 
+        REAL(DP), ALLOCATABLE :: Hubbard_V(:,:,:)
         REAL(DP) :: Hubbard_J0(nsx) = 0.0_DP
         REAL(DP) :: Hubbard_J(3,nsx) = 0.0_DP
         REAL(DP) :: Hubbard_alpha(nsx) = 0.0_DP
@@ -2039,6 +2039,8 @@ SUBROUTINE reset_input_checks()
     IF ( allocated( constr_inp ) )        DEALLOCATE( constr_inp )
     IF ( allocated( constr_target_inp ) ) DEALLOCATE( constr_target_inp )
     IF ( allocated( constr_target_set ) ) DEALLOCATE( constr_target_set )
+    !
+    IF ( allocated( Hubbard_V ) )         DEALLOCATE( Hubbard_V )
     !
     IF ( allocated( iprnks ) )       DEALLOCATE( iprnks )
     !

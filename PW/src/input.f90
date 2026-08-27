@@ -2060,13 +2060,16 @@ SUBROUTINE dftu_iosys ( ntyp )
   lda_plus_u_      = lda_plus_u
   lda_plus_u_kind_ = lda_plus_u_kind
   !
+  IF ( lda_plus_u_kind_ == 2 ) THEN
+     ALLOCATE ( Hubbard_V_, MOLD=hubbard_V )
+     Hubbard_V_(:,:,:)           = hubbard_V(:,:,:) / rytoev
+  END IF
   !
   Hubbard_U_(1:ntyp)          = hubbard_u(1:ntyp) / rytoev
   Hubbard_Um_(:,:,:)     = hubbard_um(:,:,:) / rytoev
   Hubbard_Um_nc_(:,:)    = hubbard_um_nc(:,:) / rytoev
   Hubbard_J_(1:3,1:ntyp)      = hubbard_j(1:3,1:ntyp) / rytoev
   Hubbard_J0_(1:ntyp)         = hubbard_j0(1:ntyp) / rytoev
-  Hubbard_V_(:,:,:)           = hubbard_V(:,:,:) / rytoev
   Hubbard_U2_(:)              = hubbard_U2(:) / rytoev
   Hubbard_n_(1:ntyp)          = hubbard_n(1:ntyp)
   Hubbard_l_(1:ntyp)          = hubbard_l(1:ntyp)

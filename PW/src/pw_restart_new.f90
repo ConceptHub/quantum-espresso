@@ -239,8 +239,9 @@ MODULE pw_restart_new
       ! If not allocated, there is no such variable
       !
       REAL(DP), ALLOCATABLE :: london_c6_(:), bp_el_pol(:), bp_ion_pol(:), &
-           U_opt(:), Um_opt(:,:,:), J0_opt(:), alpha_opt(:), J_opt(:,:), beta_opt(:), &
-           U2_opt(:), alpha_back_opt(:), ef_updw(:), nsg_(:,:,:,:)
+           U_opt(:), Um_opt(:,:,:), J0_opt(:), alpha_opt(:), J_opt(:,:), &
+           beta_opt(:), U2_opt(:), alpha_back_opt(:), V_opt(:,:,:), &
+           ef_updw(:), nsg_opt(:,:,:,:)
       INTEGER,ALLOCATABLE :: n_opt(:), l_opt(:), l2_opt(:), l3_opt(:), n2_opt(:), n3_opt(:)
       LOGICAL, ALLOCATABLE :: backall_opt(:) 
       !
@@ -530,8 +531,10 @@ MODULE pw_restart_new
               Um_opt(1:4*Hubbard_lmax+2,1,1:nsp) = Hubbard_Um_nc(1:4*Hubbard_lmax+2,1:nsp) * Ry_to_Ha 
             END IF 
             IF (lda_plus_u_kind==2) THEN
-               ALLOCATE (nsg_(2*Hubbard_lmax+1,2*Hubbard_lmax+1,nspin,nat))
-               nsg_ = 0.0d0
+               ALLOCATE (V_opt, MOLD=Hubbard_V)
+               V_opt = Hubbard_V * Ry_to_Ha
+               ALLOCATE (nsg_opt(2*Hubbard_lmax+1,2*Hubbard_lmax+1,nspin,nat))
+               nsg_opt = 0.0d0
                DO na1 = 1, nat
                   nt1 = ityp(na1)
                   IF (is_hubbard(nt1)) THEN
@@ -541,7 +544,7 @@ MODULE pw_restart_new
                            DO is = 1, nspin
                               DO m1 = 1, 2*Hubbard_l(nt1)+1
                                  DO m2 = 1, 2*Hubbard_l(nt1)+1
-                                    nsg_(m1,m2,is,na1) = DBLE(rho%nsg(m1,m2,viz,na1,is)) 
+                                    nsg_opt(m1,m2,is,na1) = DBLE(rho%nsg(m1,m2,viz,na1,is)) 
                                  ENDDO
                               ENDDO
                            ENDDO   
@@ -558,12 +561,25 @@ MODULE pw_restart_new
                     HUBB_OCC = Hubbard_occ, HUBB_n2 = n2_opt, HUBB_L2 = l2_opt, HUBB_L3 = l3_opt, NONCOLIN = noncolin,& 
                     HUBB_N3 = n3_opt, LDA_PLUS_U_KIND = lda_plus_u_kind, U_PROJECTION_TYPE = Hubbard_projectors,      &
                     U =U_opt, Um = Um_opt, U2 = U2_opt, J0 = J0_opt, J = J_opt, n = n_opt, l = l_opt,                 &
-                    Hubbard_V = Hubbard_V *Ry_to_Ha, alpha = alpha_opt, beta = beta_opt, alpha_back = alpha_back_opt, & 
+                    Hubbard_V = V_opt, alpha = alpha_opt, beta = beta_opt, alpha_back = alpha_back_opt, & 
                     starting_ns = starting_ns_eigenvalue, Hub_ns = rho%ns, Hub_ns_nc = rho%ns_nc, order_um = order_um, & 
-                    Hub_nsg = nsg_)
+                    Hub_nsg = nsg_opt)
             !
-            IF (ALLOCATED(J_opt)) DEALLOCATE(J_opt)
-            IF (ALLOCATED(nsg_))  DEALLOCATE(nsg_)
+            IF (ALLOCATED(n_opt))  DEALLOCATE(n_opt)
+            IF (ALLOCATED(l_opt))  DEALLOCATE(l_opt)
+            IF (ALLOCATED(n2_opt)) DEALLOCATE(n2_opt)
+            IF (ALLOCATED(l2_opt)) DEALLOCATE(l2_opt)
+            IF (ALLOCATED(l3_opt)) DEALLOCATE(l3_opt)
+            IF (ALLOCATED(U_opt))  DEALLOCATE(U_opt)
+            IF (ALLOCATED(Um_opt)) DEALLOCATE(Um_opt)
+            IF (ALLOCATED(U2_opt)) DEALLOCATE(U2_opt)
+            IF (ALLOCATED(J0_opt)) DEALLOCATE(J0_opt)
+            IF (ALLOCATED(V_opt))  DEALLOCATE(V_opt)
+            IF (ALLOCATED(J_opt))  DEALLOCATE(J_opt)
+            IF (ALLOCATED(nsg_opt))   DEALLOCATE(nsg_opt)
+            IF (ALLOCATED(alpha_opt))   DEALLOCATE(alpha_opt)
+            IF (ALLOCATED(beta_opt) )   DEALLOCATE(beta_opt)
+            IF (ALLOCATED(alpha_back_opt))   DEALLOCATE(alpha_back_opt)
          ELSE 
            dftU_obj_opt%lwrite=.false. 
          END IF 
@@ -1227,6 +1243,8 @@ MODULE pw_restart_new
                                   Hubbard_U, Hubbard_U2, Hubbard_J, Hubbard_V, Hubbard_alpha, Hubbard_occ, &
                                   Hubbard_alpha_back, Hubbard_J0, Hubbard_beta, Hubbard_projectors, Hubbard_Um, & 
                                   Hubbard_Um_nc, apply_u, Hubbard_alpha_m, Hubbard_alpha_m_nc
+      USE parameters,      ONLY : sc_size
+
       USE funct,           ONLY : enforce_input_dft, get_dft_short
       USE xc_lib,          ONLY : start_exx, exx_is_active,xclib_dft_is,      &
                                   set_screening_parameter, set_gau_parameter, &
@@ -1342,6 +1360,12 @@ MODULE pw_restart_new
       CALL recips ( at(1,1), at(1,2), at(1,3), bg(1,1), bg(1,2), bg(1,3) )
       !!
       !! DFT section
+      ! FIXME: Hubbard_V should be allocated in qexsd_copy_dft if needed,
+      !        but this is not possible because dimensions are not available
+      !        in xml file, so it is allocated and deallocated if unused
+      ALLOCATE ( Hubbard_V (nat, nat*(2*sc_size+1)**3, 4) )
+      Hubbard_V = 0.0_dp
+      !
       CALL qexsd_copy_dft ( output_obj%dft, nsp, atm, &
            dft_name, nq1, nq2, nq3, ecutfock, exx_fraction, screening_parameter, &
            exxdiv_treatment, x_gamma_extrapolation, ecutvcut, local_thr, use_ace, nbndproj, &
@@ -1365,8 +1389,12 @@ MODULE pw_restart_new
         Hubbard_Um = 0.0_DP 
         Hubbard_alpha_m = 0.0_DP 
       END IF
+      IF( lda_plus_u_kind == 2 ) THEN
+         Hubbard_V       = Hubbard_V          * e2
+      ELSE
+         DEALLOCATE ( Hubbard_V )
+      END IF
       Hubbard_U2         = Hubbard_U2         * e2 
-      Hubbard_V          = Hubbard_V          * e2 
       Hubbard_J0         = Hubbard_J0         * e2 
       Hubbard_J          = Hubbard_J          * e2  
       !! More DFT initializations

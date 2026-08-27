@@ -2178,7 +2178,7 @@ CONTAINS
    !
    SUBROUTINE card_hubbard ( input_line )
       !
-      USE parameters,  ONLY : natx, sc_size
+      USE parameters,  ONLY : sc_size
       USE constants,   ONLY : eps16
       !
       IMPLICIT NONE
@@ -2276,6 +2276,12 @@ CONTAINS
       counter_e3(:) = 0
       ALLOCATE(counter_alpha(ntyp))
       counter_alpha(:) = 0
+      !
+      ! Hubbard_V is needed for DFT+U+V only, but must be allocated anyway
+      ! because only after cards are read one knows if needed or not
+      !
+      ALLOCATE ( Hubbard_V(nat,nat*(2*sc_size+1)**3,4) )
+      Hubbard_V(:,:,:) = 0.0_dp
       !
       ! Read Hubbard parameters, principal and orbital quantum numbers
       !
@@ -2584,10 +2590,6 @@ CONTAINS
          ELSEIF ( is_v ) THEN
             !
             ! Here is the case of V
-            !
-            ! Sanity check
-            IF (nat>natx) CALL errore('card_hubbard', 'Too many atoms. &
-                Increase the value of natx in Modules/parameters.f90 and recompile the code.',1)
             !
             ! Initialize the atomic types for 
             ! the virtual atoms in the same way as it is done in

@@ -13,7 +13,7 @@ MODULE ldaU
   USE kinds,         ONLY : DP
   USE upf_params,    ONLY : lqmax
   ! FIXME: lqmax should not be used (see starting_ns* below)
-  USE parameters,    ONLY : ntypx, natx, sc_size
+  USE parameters,    ONLY : ntypx, sc_size
   USE ions_base,     ONLY : nat, ntyp => nsp, ityp
 #if defined (__OSCDFT)
   USE plugin_flags,      ONLY : use_oscdft
@@ -168,7 +168,7 @@ MODULE ldaU
   ! Inter atomic interaction should be cut off at some distance 
   ! that is the reason of having so many unitcell information. 
   !
-  REAL(DP) :: Hubbard_V(natx,natx*(2*sc_size+1)**3,4) 
+  REAL(DP), ALLOCATABLE :: Hubbard_V(:,:,:)
   !! The Hubbard_V(I,J,int_type) gives the interaction between atom I (in the unit cell)
   !! with atom J (in the supercell).
   !! If int_type=1, the interaction is between standard orbitals,
@@ -655,6 +655,7 @@ CONTAINS
      ENDIF
      IF ( ALLOCATED( ldim_u ) )        DEALLOCATE( ldim_u )
      IF ( ALLOCATED( ldim_back ) )     DEALLOCATE( ldim_back )
+     IF ( ALLOCATED ( Hubbard_V ) )    DEALLOCATE (Hubbard_V)
   END IF
   !
   IF ( ALLOCATED( wfcU ) ) THEN

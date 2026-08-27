@@ -19,8 +19,6 @@ MODULE parameters
   !! max number of different types of atom
   INTEGER, PARAMETER :: nsx = ntypx
   !! max number of atomic species (CP)
-  INTEGER, PARAMETER :: natx = 200
-  !! max number of atoms for DFT+U+V calculations
   INTEGER, PARAMETER :: sc_size = 1
   !! Defines the supercell in DFT+U+V as composed by the unit cells located
   !! by (n1,n2,n3) in primitive vectors base with \(-\text{sc_size} \leq ni

@@ -162,10 +162,12 @@ SUBROUTINE input_sanity()
   IF (compute_hp .AND. ANY(perturb_only_atom(:))) &
      CALL errore ('hp_readin', 'compute_hp and perturb_only_atom are not allowed to be true together', 1)
   !
-  IF ( ANY(Hubbard_V(:,:,2).NE.0.d0) .OR. &
-       ANY(Hubbard_V(:,:,3).NE.0.d0) .OR. &
-       ANY(Hubbard_V(:,:,4).NE.0.d0) ) &
+  IF ( lda_plus_u_kind == 2 ) THEN
+     IF ( ANY(Hubbard_V(:,:,2).NE.0.d0) .OR. &
+          ANY(Hubbard_V(:,:,3).NE.0.d0) .OR. &
+          ANY(Hubbard_V(:,:,4).NE.0.d0) ) &
      CALL errore ('hp_readin', 'The HP code does not support DFT+U+V with the background', 1)
+  END IF
   !
   IF (ANY(is_hubbard_back(:))) CALL errore ("hp_readin", &
           &" Two (or more) Hubbard channels per atomic type is not implemented", 1)
