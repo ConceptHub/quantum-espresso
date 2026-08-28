@@ -195,6 +195,7 @@ subroutine compute_qqr ( tpiba, q, omega, qq_nt )
   call ylmr2 (lmaxq * lmaxq, 1, q_, qmod, ylmk0)
   !
   qmod(1) = sqrt ( qmod(1) ) * tpiba
+  qq_nt = 0.0_dp
   do nt = 1, nsp
      if ( upf(nt)%tvanp ) then
         do ih = 1, nh (nt)
@@ -238,6 +239,7 @@ subroutine compute_qqc ( tpiba, q, omega, qq_nt )
   call ylmr2 (lmaxq * lmaxq, 1, q_, qmod, ylmk0)
   !
   qmod(1) = sqrt ( qmod(1) ) * tpiba
+  qq_nt = 0.0_dp
   do nt = 1, nsp
      if ( upf(nt)%tvanp ) then
         do ih = 1, nh (nt)
