@@ -32,7 +32,7 @@ Incompatible changes in 7.6.1 version(s)
   * Meta-GGA: tiny differences in final total energies may appear 
 
 New in 7.6.1 version(s) 
-  * ... 
+  * DFT+U+V, 'ortho-atomic' DFT+U speedup: see !2905, courtesy Moritz Gubler
 
 Fixed in 7.6 version:
   * Stress for meta-GGA functionals was broken (Marc Slot, Pietro Delugas) 
