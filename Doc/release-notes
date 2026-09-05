@@ -17,13 +17,14 @@ Fixed in 7.6.1 version(s)
     (see !2907, courtesy Jae-Mo Limh)
   * Incorrect __WIN32 replaced by _WIN32 (see !2909, courtesy Robert Rueger)
   * Gross mistake in compute_qq*, existing since 3 years. May have affected
-    EELS and Berry phase calculations with USPP
+    EELS and Berry phase calculations with USPP. Also in compute_qq*: missing
+    initialization for norm-conserving PPs could leads to unpredictable Berry
+    phases if US and NC PPs are mixed (see !2941, courtesy Ikenna Odinaka)
   * Too small thresholds for rho and grho2 in meta-GGA lead to numerical noise 
     (Pietro Delugas)
   * Symmetrization error in noncolinear magnetic phonon calculations
     See !2931, courtesy Seung-Ju Hong
     
-
 Incompatible changes in 7.6.1 version(s)
   * Full-relativistic PPs in calculations with no spin-orbit may yield 
     tiny differences wrt previous versions
