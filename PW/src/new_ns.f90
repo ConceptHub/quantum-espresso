@@ -106,8 +106,8 @@ SUBROUTINE new_ns( ns )
   ! counters
   INTEGER :: off, ldim
   REAL(DP), ALLOCATABLE :: nr(:,:,:,:), r1(:,:), r2(:,:)
-  COMPLEX(DP), ALLOCATABLE :: c1(:,:), c2(:,:), caux(:,:)
-  !$acc declare device_resident(r1,r2,c1,c2,caux)
+  COMPLEX(DP), ALLOCATABLE :: c1(:,:), c2(:,:)
+  !$acc declare device_resident(r1,r2,c1,c2)
   REAL(DP) :: psum
   !
   CALL allocate_bec_type_acc( nwfcU, nbnd, proj ) 
@@ -120,7 +120,7 @@ SUBROUTINE new_ns( ns )
   IF ( gamma_only ) THEN
      ALLOCATE ( r1(nbnd,ldmx), r2(nbnd,ldmx) )
   ELSE
-     ALLOCATE ( c1(nbnd,ldmx), c2(nbnd,ldmx), caux(ldmx,ldmx) )
+     ALLOCATE ( c1(nbnd,ldmx), c2(nbnd,ldmx) )
   ENDIF
   !
   ! we start a loop on k points
@@ -159,6 +159,9 @@ SUBROUTINE new_ns( ns )
         IF ( is_hubbard(nt) ) THEN 
            off = offsetU(na)
            ldim = 2*Hubbard_l(nt) + 1
+           ! Next lines compute nr using matrix-matrix multiplication
+           ! summing over the band index. For complex proj%k, only the
+           ! real part of the result is computed, using real algebra
            IF ( gamma_only ) THEN
               !$acc parallel loop collapse(2) present(proj%r,wg)
               DO m1 = 1, ldim
@@ -169,27 +172,20 @@ SUBROUTINE new_ns( ns )
               ENDDO
               !$acc host_data use_device(nr)
               CALL MYDGEMM( 'T','N', ldim, ldim, nbnd, 1.0_dp, r1, nbnd, &
-                            r2, nbnd, 1.0_dp, nr(:,:,current_spin,na), ldmx )
+                            r2, nbnd, 1.0_dp, nr(1,1,current_spin,na), ldmx )
               !$acc end host_data 
            ELSE
               !$acc parallel loop collapse(2) present(proj%k,wg)
               DO m1 = 1, ldim
-                 DO ibnd = 1, nbnd  
+                 DO ibnd = 1, nbnd
                     c1(ibnd,m1) = proj%k(off+m1,ibnd)
-                    c2(ibnd,m1) = proj%k(off+m1,ibnd) * wg(ibnd,ik) 
+                    c2(ibnd,m1) = proj%k(off+m1,ibnd) * wg(ibnd,ik)
                  ENDDO
               ENDDO
-              !$acc host_data use_device(c1,c2,caux)
-              CALL MYZGEMM( 'C','N', ldim, ldim, nbnd, (1.0_dp, 0.0_dp), &
-                      c1, nbnd, c2, nbnd, (0.0_dp, 0.0_dp), caux, ldmx )
+              !$acc host_data use_device(c1,c2,nr)
+              CALL MYDGEMM( 'C','N', ldim, ldim, 2*nbnd, 1.0_dp, &
+                c1, 2*nbnd, c2, 2*nbnd, 1.0_dp, nr(1,1,current_spin,na), ldmx )
               !$acc end host_data 
-              !$acc parallel loop collapse(2) present(nr,caux)
-              DO m1 = 1, ldim
-                 DO m2 = 1, ldim
-                    nr(m1,m2,current_spin,na) = nr(m1,m2,current_spin,na) &
-                                              + DBLE (caux(m1,m2) )
-                 ENDDO
-              ENDDO
            ENDIF
         ENDIF
      ENDDO
@@ -199,7 +195,7 @@ SUBROUTINE new_ns( ns )
   IF ( gamma_only ) THEN
      DEALLOCATE ( r1, r2 )
   ELSE
-     DEALLOCATE ( c1, c2, caux )
+     DEALLOCATE ( c1, c2 )
   ENDIF
   !
   CALL deallocate_bec_type_acc( proj ) 
