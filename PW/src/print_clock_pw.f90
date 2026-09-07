@@ -266,18 +266,8 @@ SUBROUTINE print_clock_pw()
    !
    IF ( lda_plus_u ) THEN
       WRITE( stdout, '(/,5X,"Hubbard U routines")' )
-      IF (lda_plus_u_kind.EQ.0) THEN
-         CALL print_clock( 'new_ns' )
-         IF (ANY(is_hubbard_back(:))) &
-            CALL print_clock( 'new_nsb' )
-      ELSEIF (lda_plus_u_kind.EQ.1) THEN
-         IF (noncolin) THEN
-            CALL print_clock( 'new_ns_nc' )
-         ELSE
-            CALL print_clock( 'new_ns' )
-         ENDIF
-      ELSEIF (lda_plus_u_kind.EQ.2) THEN
-         CALL print_clock( 'new_nsg' )
+      CALL print_clock( 'new_ns' )
+      IF (lda_plus_u_kind.EQ.2) THEN
          CALL print_clock( 'alloc_neigh' )
       ENDIF
       CALL print_clock( 'vhpsi' )

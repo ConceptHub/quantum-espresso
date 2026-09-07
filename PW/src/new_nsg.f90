@@ -59,8 +59,6 @@ SUBROUTINE new_nsg( nsgnew )
   COMPLEX(DP) :: phase
   INTEGER, EXTERNAL :: find_viz
   !
-  CALL start_clock('new_nsg')
-  !
   ldim = 0
   DO nt = 1, ntyp
      ldim = MAX(ldim,ldim_u(nt))
@@ -482,8 +480,6 @@ SUBROUTINE new_nsg( nsgnew )
   !
   DEALLOCATE(nrg)
   !
-  CALL stop_clock('new_nsg')
-  !
   RETURN
   !
 END SUBROUTINE new_nsg 
@@ -535,8 +531,6 @@ SUBROUTINE new_nsg_nc( nsgnew )
    COMPLEX(DP), ALLOCATABLE :: nrg_nc(:,:,:,:,:,:)
    COMPLEX(DP) :: phase, nrgtmp, sign
    INTEGER, EXTERNAL :: find_viz
-   !
-   CALL start_clock('new_nsg')
    !
    ldim = 0
    DO nt = 1, ntyp
@@ -943,8 +937,6 @@ SUBROUTINE new_nsg_nc( nsgnew )
    !
    !write(stdout,*) "nsgnew", nsgnew
    DEALLOCATE(nrg_nc)
-   !
-   CALL stop_clock('new_nsg')
    !
    RETURN
    !

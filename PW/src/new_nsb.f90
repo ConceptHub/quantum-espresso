@@ -56,8 +56,6 @@ SUBROUTINE new_nsb( ns )
   REAL(DP) , ALLOCATABLE :: nr (:,:,:,:)
   REAL(DP) :: psum
   !
-  CALL start_clock('new_nsb')
-  !
   ALLOCATE( nr(ldmx_b, ldmx_b, nspin, nat) )  
   !
   CALL allocate_bec_type ( nwfcU, nbnd, proj ) 
@@ -316,8 +314,6 @@ SUBROUTINE new_nsb( ns )
         ENDDO
      ENDIF 
   ENDDO
-  !
-  CALL stop_clock('new_nsb')
   !
   RETURN
   !
