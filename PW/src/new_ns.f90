@@ -170,7 +170,7 @@ SUBROUTINE new_ns( ns )
                     r2(ibnd,m1) = proj%r(off+m1,ibnd) * wg(ibnd,ik) 
                  ENDDO
               ENDDO
-              !$acc host_data use_device(nr)
+              !$acc host_data use_device(r1,r2,nr)
               CALL MYDGEMM( 'T','N', ldim, ldim, nbnd, 1.0_dp, r1, nbnd, &
                             r2, nbnd, 1.0_dp, nr(1,1,current_spin,na), ldmx )
               !$acc end host_data 
@@ -330,10 +330,10 @@ SUBROUTINE compute_pproj( ik, q, p )
     USE uspp_param,           ONLY : nhm, nh
     USE wvfct,                ONLY : nbnd
     USE wavefunctions,        ONLY : evc
-    USE control_flags,        ONLY : gamma_only
+    USE control_flags,        ONLY : gamma_only, offload_type
     USE ldaU,                 ONLY : is_hubbard, nwfcU
-    USE becmod,               ONLY : bec_type, calbec, &
-                                     allocate_bec_type, deallocate_bec_type
+    USE becmod,               ONLY : bec_type, calbec, allocate_bec_type_acc, & 
+                                     deallocate_bec_type_acc
     USE uspp_init,            ONLY : init_us_2
     !
     IMPLICIT NONE
@@ -347,7 +347,7 @@ SUBROUTINE compute_pproj( ik, q, p )
     !
     ! ... local variables
     !
-    INTEGER :: ib, iw, nt, na, ikb, ih, npw
+    INTEGER :: ib, iw, nt, na, ih, npw, off
     !
     IF ( nkb == 0 ) RETURN
     !
@@ -357,29 +357,35 @@ SUBROUTINE compute_pproj( ik, q, p )
     !
     ! Compute <beta|psi>
     !
-    CALL allocate_bec_type( nkb, nbnd, becp )
-    CALL init_us_2( npw, igk_k(1,ik), xk(1,ik), vkb )
-    CALL calbec( npw, vkb, evc, becp )
+    CALL allocate_bec_type_acc( nkb, nbnd, becp )
+    CALL init_us_2( npw, igk_k(1,ik), xk(1,ik), vkb, .true. )
+    CALL calbec( offload_type, npw, vkb, evc, becp )
     ! does not need mp_sum intra-pool, since it is already done in calbec 
-    !
+    !$acc data present (p,becp) copyin(q)
     IF ( gamma_only ) THEN 
+       !$acc kernels present(p%r)
        p%r(:,:) = 0.0_DP
+       !$acc end kernels
     ELSE
+       !$acc kernels present(p%k)
        p%k(:,:) = (0.0_DP,0.0_DP)
+       !$acc end kernels 
     ENDIF
     !
     DO nt = 1, ntyp
        DO na = 1, nat
           IF ( ityp(na) == nt ) THEN
              IF ( is_hubbard(nt) ) THEN
+                off = ofsbeta(na)
+                !$acc parallel loop collapse(2)
                 DO ib = 1, nbnd
-                   DO ih = 1, nh(nt)
-                      ikb = ofsbeta(na) + ih
-                      DO iw = 1, nwfcU
+                   DO iw = 1, nwfcU
+                      !$acc loop seq
+                      DO ih = 1, nh(nt)
                          IF ( gamma_only ) THEN
-                            p%r(iw,ib) = p%r(iw,ib) + q(iw,ih,na)*becp%r(ikb,ib)
+                            p%r(iw,ib) = p%r(iw,ib) + q(iw,ih,na)*becp%r(off+ih,ib)
                          ELSE
-                            p%k(iw,ib) = p%k(iw,ib) + q(iw,ih,na)*becp%k(ikb,ib)
+                            p%k(iw,ib) = p%k(iw,ib) + q(iw,ih,na)*becp%k(off+ih,ib)
                          ENDIF
                       ENDDO
                    ENDDO
@@ -388,8 +394,8 @@ SUBROUTINE compute_pproj( ik, q, p )
           ENDIF
        ENDDO
     ENDDO
-    !
-    CALL deallocate_bec_type( becp )
+    !$acc end data
+    CALL deallocate_bec_type_acc( becp )
     !
     RETURN
     !
