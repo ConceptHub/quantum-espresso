@@ -1,0 +1,273 @@
+                                                                                      
+                                       ``:oss/                                        
+                           `.+s+.     .+ys--yh+     `./ss+.                           
+                          -sh//yy+`   +yy   +yy    -+h+-oyy                           
+                          -yh- .oyy/.-sh.   .syo-.:sy-  /yh                           
+                 `.-.`    `yh+   -oyyyo.     `/syys:    oys      `.`                  
+               `/+ssys+-` `sh+      `                   oys`   .:osyo`                
+               -yh- ./syyooyo`                          .sys+/oyo--yh/                
+               `yy+    .-:-.                             `-/+/:`  -sh-                
+                /yh.                                              oys                 
+          ``..---hho---------`   .---------..`      `.-----.`    -hd+---.             
+       `./osmNMMMMMMMMMMMMMMMs. +NNMMMMMMMMNNmh+.   yNMMMMMNm-  oNMMMMMNmo++:`        
+       +sy--/sdMMMhyyyyyyyNMMh- .oyNMMmyyyyyhNMMm+` -yMMMdyyo:` .oyyNMMNhs+syy`       
+       -yy/   /MMM+.`-+/``mMMy-   `mMMh:`````.dMMN:` `MMMy-`-dhhy```mMMy:``+hs        
+        -yy+` /MMMo:-mMM+`-oo/.    mMMh:     `dMMN/`  dMMm:`dMMMMy..MMMo-.+yo`        
+         .sys`/MMMMNNMMMs-         mMMmyooooymMMNo:   oMMM/sMMMMMM++MMN//oh:          
+          `sh+/MMMhyyMMMs- `-`     mMMMMMMMMMNmy+-`   -MMMhMMMsmMMmdMMd/yy+           
+    `-/+++oyy-/MMM+.`/hh/.`mNm:`   mMMd+/////:-.`      NMMMMMd/:NMMMMMy:/yyo/:.`      
+   +os+//:-..-oMMMo:--:::-/MMMo. .-mMMd+---`           hMMMMN+. oMMMMMo. `-+osyso:`   
+   syo     `mNMMMMMNNNNNNNNMMMo.oNNMMMMMNNNN:`         +MMMMs:`  dMMMN/`     ``:syo   
+   /yh`     :syyyyyyyyyyyyyyyy+.`+syyyyyyyyo:`         .oyys:`   .oyys:`        +yh   
+   -yh-        ````````````````    `````````              ``        ``          oys   
+   -+h/------------------------::::::::://////++++++++++++++++++++++///////::::/yd:   
+   shdddddddddddddddddddddddddddddhhhhhhhhyyyyyssssssssssssssssyyyyyyyhhhhhhhddddh`   
+                                                                                      
+ Lee, H., Poncé, S., Bushick, K., Hajinazar, S., Lafuente-Bartolome, J.,Leveillee, J.,
+    Lian, C., Lihm, J., Macheda, F., Mori, H., Paudyal, H., Sio, W., Tiwari, S.,      
+ Zacharias, M., Zhang, X., Bonini, N., Kioupakis, E., Margine, E.R., and Giustino F., 
+                                                     npj Comput Mater 9, 156 (2023)   
+                                                                                      
+
+     Program EPW v.6.1 starts on 22Aug2026 at 22: 4:20 
+        Git branch: plrn_additional_tests
+        Last git commit: 3cfb1df1e49b74263d3a331e40cde449e86a6cac-dirty
+        Last git commit date: Sat Aug 22 21:49:30 2026 -0500
+        Last git commit subject: feat(epw): report the polaron center for non-diago
+
+     This program is part of the open-source Quantum ESPRESSO suite
+     for quantum simulation of materials; please cite
+         "P. Giannozzi et al., J. Phys.:Condens. Matter 21 395502 (2009);
+         "P. Giannozzi et al., J. Phys.:Condens. Matter 29 465901 (2017);
+         "P. Giannozzi et al., J. Chem. Phys. 152 154105 (2020);
+          URL http://www.quantum-espresso.org", 
+     in publications or presentations arising from this work. More details at
+     http://www.quantum-espresso.org/quote
+
+     Parallel version (MPI), running on     4 processors
+
+     MPI processes distributed on     1 nodes
+     K-points division:     npool     =       4
+     127330 MiB available memory on the printing compute node when the environment starts
+ 
+     Reading input from epw4.in
+
+     No temperature supplied. Setting temps(:) to 300 K.
+                      
+     ------------------------------------------------------------------------ 
+                   RESTART - RESTART - RESTART - RESTART                         
+     Restart is done without reading PWSCF save file.                  
+     Be aware that some consistency checks are therefore not done.                  
+     ------------------------------------------------------------------------ 
+                      
+
+     --------                                                                   
+
+     bravais-lattice index     =            0
+     lattice parameter (a_0)   =       0.0000  a.u.
+     unit-cell volume          =       0.0000 (a.u.)^3
+     number of atoms/cell      =            0
+     number of atomic types    =            0
+     kinetic-energy cut-off    =       0.0000  Ry
+     charge density cut-off    =       0.0000  Ry
+     Exchange-correlation= not set
+                           (  -1  -1  -1  -1  -1  -1  -1)
+
+
+     celldm(1)=    0.00000  celldm(2)=    0.00000  celldm(3)=    0.00000
+     celldm(4)=    0.00000  celldm(5)=    0.00000  celldm(6)=    0.00000
+
+     crystal axes: (cart. coord. in units of a_0)
+               a(1) = (  0.0000  0.0000  0.0000 )  
+               a(2) = (  0.0000  0.0000  0.0000 )  
+               a(3) = (  0.0000  0.0000  0.0000 )  
+
+     reciprocal axes: (cart. coord. in units 2 pi/a_0)
+               b(1) = (  0.0000  0.0000  0.0000 )  
+               b(2) = (  0.0000  0.0000  0.0000 )  
+               b(3) = (  0.0000  0.0000  0.0000 )  
+
+
+     Atoms inside the unit cell: 
+
+   Cartesian axes
+
+     site n.  atom      mass           positions (a_0 units)
+
+ 
+     No symmetry!
+
+     G cutoff =    0.0000  (      0 G-vectors)     FFT grid: (  0,  0,  0)
+     number of k points=    0
+                       cart. coord. in units 2pi/a_0
+     EPW          :      0.00s CPU      0.00s WALL
+
+     EPW          :      0.00s CPU      0.00s WALL
+
+
+     -------------------------------------------------------------------
+     Using lif.ukk from disk
+     -------------------------------------------------------------------
+
+     HDF5 is NOT used in the current build. Exciton-phonon coupling calculations are disabled.
+     Symmetries of Bravais lattice:  48
+     Symmetries of crystal:          48
+
+     Do not need to read .epb files; read .fmt files
+
+
+     Computes the analytic long-range interaction for polar materials [lpolar]
+      
+     Use zone-centred Wigner-Seitz cells 
+     Number of WS vectors for electrons       93
+     Number of WS vectors for phonons       93
+     Number of WS vectors for electron-phonon       93
+     Maximum number of cores for efficient parallelization      558
+     Results may improve by using use_ws == .TRUE. 
+
+     Reading Hamiltonian, Dynamical matrix and EP vertex in Wann rep from file
+
+
+     Finished reading Wann rep data from file
+
+     ===================================================================
+     Memory usage:  VmHWM =        93Mb
+                   VmPeak =      2891Mb
+     ===================================================================
+     
+     Using uniform q-mesh:     8    8    8
+     Size of q point mesh for interpolation:        512
+     Using uniform k-mesh:     8    8    8
+     Size of k point mesh for interpolation:        512
+     Max number of k points per pool:              128
+
+     Fermi energy coarse grid =   0.487315 eV
+
+     Skipping    1 occupied bands:
+
+     The Fermi level will be determined with   6.00000 electrons
+
+     Fermi energy is calculated from the fine k-mesh: Ef =   0.626021 eV
+
+     ===================================================================
+
+              ibndmin =     1  ebndmin =    -2.574 eV
+              ibndmax =     3  ebndmax =     0.487 eV
+
+
+     Number of ep-matrix elements per pool :         6912 ~=   54.00 Kb (@ 8 bytes/ DP)
+     fsthick not working in polaron module, selecting all the k/q points.
+     The hole polaron is calculated.
+     ===================================================================
+     Use the band from 1 to 3 total 3
+     Including bands:   1  2  3
+     Use the band from 1 to 3 total 3 in saving g
+     Gathering eigenvalues of 3 bands and 512 k points
+     The band extremes are at band 3
+     Fermi Energy is       0.4873154 (eV) located at kpoint      1   0.000   0.000   0.000 band   3
+     Allocating arrays and open files.
+     Polaron wavefunction calculation starts with k points 512, q points 512 and KS band 3
+     The index of Gamma point in k grid is 1 and q grid IS 1
+     Finding the index of -k for each k point.
+     Checking the k + q is included in the mesh grid for each k and q.
+     End of plrn_prepare
+     Progression iq (fine) =        100/       512
+     Progression iq (fine) =        200/       512
+     Progression iq (fine) =        300/       512
+     Progression iq (fine) =        400/       512
+     Progression iq (fine) =        500/       512
+     Starting from displacements read from file; number of displacements:     1
+     Initializing polaron wavefunction using Gaussian wave packet with the width of      4.5999999
+     centered at k=      0.0000000      0.0000000      0.0000000
+     Starting the SCF cycles
+     Using serial direct diagonalization
+
+     ************************************************************************ 
+     ELPA Library not found                                                   
+     Please install EPW with ELPA for faster and denser calculations          
+     Visit: https://elpa.mpcdf.mpg.de for installing ELPA                     
+
+     ************************************************************************ 
+
+     Starting the self-consistent process
+     --------------------------------------------------------------------------------
+      iter      Eigval/eV      Phonon/eV    Electron/eV   Formation/eV       Error/eV
+         1     0.4949E+01    -0.2907E+01    -0.8763E+00    -0.2031E+01     0.9445E+00
+           Eigenvalue (eV):        4.9485237
+          Phonon part (eV):       -2.9069375
+        Electron part (eV):        0.8763485
+     Formation Energy at this \dtau (eV):       -2.0415862
+     Calculating density of states to save in dos.plrn
+     Generating the polaron wavefunction in Wannier basis to save in Amp.plrn
+     Generating the ionic displacements to save in dtau.plrn and dtau.plrn.xsf
+
+     ======================== Polaron Timers ===========================
+     main_prln    :      1.76s CPU      1.82s WALL (       1 calls)
+     plrn_prepare :      0.01s CPU      0.03s WALL (       1 calls)
+     write_files  :      0.01s CPU      0.02s WALL (       1 calls)
+     Bqu_tran     :      0.28s CPU      0.28s WALL (       1 calls)
+     Ank_trans    :      0.00s CPU      0.00s WALL (       1 calls)
+     cal_E_Form   :      0.00s CPU      0.00s WALL (       1 calls)
+     DiagonH      :      0.95s CPU      0.98s WALL (       1 calls)
+     Setup_H      :      0.03s CPU      0.03s WALL (       1 calls)
+     read_gmat    :      0.01s CPU      0.01s WALL (     512 calls)
+     cal_bqu      :      0.28s CPU      0.28s WALL (       1 calls)
+     init_Ank     :      0.00s CPU      0.00s WALL (       1 calls)
+     find_EVBM    :      0.00s CPU      0.00s WALL (       1 calls)
+     re_omega     :      0.19s CPU      0.19s WALL (       1 calls)
+     ===================================================================
+     ===================================================================
+     Memory usage:  VmHWM =       247Mb
+                   VmPeak =      3076Mb
+     ===================================================================
+
+
+     Unfolding on the coarse grid
+     elphon_wrap  :      0.00s CPU      0.01s WALL (       1 calls)
+
+     INITIALIZATION: 
+
+
+
+
+     Electron-Phonon interpolation
+     ep-interp    :      6.40s CPU      6.79s WALL (     512 calls)
+
+     wigner_seitz :      0.00s CPU      0.00s WALL (       1 calls)
+     DynW2B       :      0.85s CPU      0.86s WALL (    2048 calls)
+     HamW2B       :      0.37s CPU      0.39s WALL (     896 calls)
+     ephW2Bp      :      0.67s CPU      0.92s WALL (     512 calls)
+     ephW2B       :      3.99s CPU      4.08s WALL (   65536 calls)
+     vmeW2B       :      0.82s CPU      0.84s WALL (     512 calls)
+     rgd_blk_epw  :      3.53s CPU      3.61s WALL (   65536 calls)
+
+
+
+     Total program execution
+     EPW          :      8.19s CPU      8.67s WALL
+
+     % Copyright (C) 2016-2023 EPW-Collaboration                                    
+                                                                                    
+     ===============================================================================
+     Please consider citing the following papers.                                   
+                                                                                                 
+     % Paper describing the method on which EPW relies                                           
+       F. Giustino and M. L. Cohen and S. G. Louie, Phys. Rev. B 76, 165108 (2007)               
+                                                                                                 
+     % Papers describing the EPW software                                                        
+       H. Lee et al., npj Comput. Mater. 9, 156 (2023)                                           
+       S. Ponc\'e, E.R. Margine, C. Verdi and F. Giustino, Comput. Phys. Commun. 209, 116 (2016) 
+       J. Noffsinger et al., Comput. Phys. Commun. 181, 2140 (2010)                              
+                                                                                                 
+                                                                                             
+     % Since you used the [lpolar] input,     please consider also citing                        
+       C. Verdi and F. Giustino, Phys. Rev. Lett. 115, 176401 (2015)                         
+                                                                                             
+     % Since you used the [plrn] input,     please consider also citing                      
+       W. H. Sio et al, Phys. Rev. B 99, 235139 (2019)                                       
+       W. H. Sio et al, Phys. Rev. Lett. 122, 246403 (2019)                                  
+                                                                                    
+     For your convenience, this information is also reported in the                 
+     functionality-dependent EPW.bib file.                                          
+     ===============================================================================
+                                                                                    

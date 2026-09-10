@@ -30,7 +30,7 @@
   USE input,            ONLY : wannierize, nqc1, nqc2, nqc3
   USE global_version,   ONLY : version_number
   USE input,            ONLY : filukk, eliashberg, ep_coupling, epwread, epbread, &
-                               lcumulant, nbndsub, do_tdbe, interpolate
+                               lcumulant, nbndsub, do_tdbe, interpolate, specfun_el_scgd0
   USE environment,      ONLY : environment_start
   USE global_var,       ONLY : elph
   USE close,            ONLY : close_final, deallocate_epw, remove_out_files
@@ -43,6 +43,7 @@
   USE wannier,          ONLY : build_wannier
   USE check_stop,       ONLY : check_stop_init
   USE tdbe_driver,      ONLY : tdbe
+  USE scgd0_driver,     ONLY : scgd0_run
   !
   IMPLICIT NONE
   !
@@ -262,6 +263,10 @@
     CALL deallocate_epw()
   ENDIF
   !
+  ! Nina GE scgd0 iterations
+  IF (specfun_el_scgd0) THEN
+    CALL scgd0_run()
+  ENDIF
   ! Print statistics and exit gracefully
   CALL stop_epw()
   !

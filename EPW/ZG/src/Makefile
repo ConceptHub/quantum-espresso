@@ -19,16 +19,16 @@ QEMODS = $(BASEMODS)
 TLDEPS=pwlibs phlibs
 include ../../../install/tldeps
 
-all : ZG.x disca.x pp_disca.x pp_spctrlfn.x bands_unfold.x epsilon_Gaus.x 
+all : ZG.x disca.x pp_disca.x pp_spctrlfn.x bands_unfold.x epsilon_Gaus.x
 
-ZG.x : ZG.o $(PHOBJS) $(PWOBJS) $(LRMODS) $(QEMODS)
+ZG.x : ZG.o ifconstants_zg.o $(PHOBJS) $(PWOBJS) $(LRMODS) $(QEMODS)
 	$(LD) $(LDFLAGS) -o $@ \
-	ZG.o $(PHOBJS) $(LRMODS) $(PWOBJS) $(QEMODS) $(QELIBS) 
+	ZG.o ifconstants_zg.o $(PHOBJS) $(LRMODS) $(PWOBJS) $(QEMODS) $(QELIBS)
 	- ( cd ../../../bin ; ln -fs ../EPW/ZG/src/$@ . )
 
-disca.x : disca.o $(PHOBJS) $(PWOBJS) $(LRMODS) $(QEMODS)
+disca.x : disca.o ifconstants_zg.o $(PHOBJS) $(PWOBJS) $(LRMODS) $(QEMODS)
 	$(LD) $(LDFLAGS) -o $@ \
-	disca.o $(PHOBJS) $(LRMODS) $(PWOBJS) $(QEMODS) $(QELIBS) 
+	disca.o ifconstants_zg.o $(PHOBJS) $(LRMODS) $(PWOBJS) $(QEMODS) $(QELIBS)
 	- ( cd ../../../bin ; ln -fs ../EPW/ZG/src/$@ . )
 
 pp_disca.x : pp_disca.o $(PWOBJS) $(QEMODS)

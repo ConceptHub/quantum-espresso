@@ -76,7 +76,7 @@
     USE kinds,     ONLY : DP
     USE input,     ONLY : filkf, nkf1, nkf2, nkf3, iterative_bte, &
                           rand_k, rand_nk, mp_mesh_k, system_2d, eig_read, vme, &
-                          scell_mat_plrn, scell_mat, as, bs
+                          scell_mat_plrn, scell_mat, as, bs, specfun_el_scgd0
     USE global_var,ONLY : nkqtotf, nkqf, xkf, wkf, nkf, xkfd, deltaq, &
                           xkf_irr, wkf_irr, bztoibz, s_bztoibz, spin_fac
     USE cell_base, ONLY : at, bg
@@ -143,8 +143,9 @@
     !! Supercell G-vectors within primitive reciprocal unit cell
     !
     IF (my_pool_id == ionode_id) THEN
-      IF (filkf /= '') THEN ! load from file
-        !
+      IF (filkf /= '' .AND. (.NOT. specfun_el_scgd0)) THEN ! load from file but only if we are not doing the scGD0 calculation 
+        !                                                  ! which requires a full k grid for the calculation, and uses a 'filkf' file
+        !                                                  ! only for postprocessing!
         WRITE(stdout, *) '    Using k-mesh file: ', TRIM(filkf)
         OPEN(UNIT = iunkf, FILE = filkf, STATUS = 'old', FORM = 'formatted', IOSTAT = ios)
         IF (ios /= 0) CALL errore('loadkmesh_para', 'opening file ' // filkf, ABS(ios))
@@ -2384,7 +2385,7 @@
     USE kinds,         ONLY : DP
     USE global_var,    ONLY : nqf, xqf, xkf, chw, nkf, nqtotf, &
                               map_rebal, nktotf, bztoibz, map_fst, &
-                              selecq, spin_fac
+                              selecq, spin_fac, nkpt_bzfst
     USE io_global,     ONLY : meta_ionode, meta_ionode_id, stdout
     USE io_var,        ONLY : iunselecq
     USE mp_global,     ONLY : npool, world_comm, my_pool_id, inter_pool_comm
@@ -2507,14 +2508,23 @@
       !
       IF (homogeneous) THEN
         ! In case of k-point symmetry
-        IF (mp_mesh_k .AND. (.NOT. lfast_kmesh)) THEN
+        IF (mp_mesh_k) THEN
           IF (iterative_bte .OR. ephwrite .OR. a2f_iso) THEN
-            ALLOCATE(bztoibz_tmp(nkf1 * nkf2 * nkf3), STAT = ierr)
-            IF (ierr /= 0) CALL errore('qwindow', 'Error allocating bztoibz_tmp', 1)
-            bztoibz_tmp(:) = 0
-            DO ikbz = 1, nkf1 * nkf2 * nkf3
-              bztoibz_tmp(ikbz) = map_rebal(bztoibz(ikbz))
-            ENDDO
+            IF (lfast_kmesh) THEN
+              ALLOCATE(bztoibz_tmp(nkpt_bzfst), STAT = ierr)
+              IF (ierr /= 0) CALL errore('qwindow', 'Error allocating bztoibz_tmp', 1)
+              bztoibz_tmp(:) = 0
+              DO ikbz = 1, nkpt_bzfst
+                bztoibz_tmp(ikbz) = map_rebal(bztoibz(ikbz))
+              ENDDO
+            ELSE
+              ALLOCATE(bztoibz_tmp(nkf1 * nkf2 * nkf3), STAT = ierr)
+              IF (ierr /= 0) CALL errore('qwindow', 'Error allocating bztoibz_tmp', 1)
+              bztoibz_tmp(:) = 0
+              DO ikbz = 1, nkf1 * nkf2 * nkf3
+                bztoibz_tmp(ikbz) = map_rebal(bztoibz(ikbz))
+              ENDDO
+            ENDIF
             bztoibz(:) = bztoibz_tmp(:)
             DEALLOCATE(bztoibz_tmp, STAT = ierr)
             IF (ierr /= 0) CALL errore('qwindow', 'Error deallocating bztoibz_tmp', 1)
@@ -2545,14 +2555,23 @@
         CALL poolgather(nbndsub, nktotf, nkf, etf_loc, etf_all)
         !
         ! In case of k-point symmetry
-        IF (mp_mesh_k .AND. (.NOT. lfast_kmesh)) THEN
+        IF (mp_mesh_k) THEN
           IF (iterative_bte .OR. ephwrite .OR. a2f_iso) THEN
-            ALLOCATE(bztoibz_tmp(nkf1 * nkf2 * nkf3), STAT = ierr)
-            IF (ierr /= 0) CALL errore('qwindow', 'Error allocating bztoibz_tmp', 1)
-            bztoibz_tmp(:) = 0
-            DO ikbz = 1, nkf1 * nkf2 * nkf3
-              bztoibz_tmp(ikbz) = map_rebal(bztoibz(ikbz))
-            ENDDO
+            IF (lfast_kmesh) THEN
+              ALLOCATE(bztoibz_tmp(nkpt_bzfst), STAT = ierr)
+              IF (ierr /= 0) CALL errore('qwindow', 'Error allocating bztoibz_tmp', 1)
+              bztoibz_tmp(:) = 0
+              DO ikbz = 1, nkpt_bzfst
+                bztoibz_tmp(ikbz) = map_rebal(bztoibz(ikbz))
+              ENDDO
+            ELSE
+              ALLOCATE(bztoibz_tmp(nkf1 * nkf2 * nkf3), STAT = ierr)
+              IF (ierr /= 0) CALL errore('qwindow', 'Error allocating bztoibz_tmp', 1)
+              bztoibz_tmp(:) = 0
+              DO ikbz = 1, nkf1 * nkf2 * nkf3
+                bztoibz_tmp(ikbz) = map_rebal(bztoibz(ikbz))
+              ENDDO
+            ENDIF
             bztoibz(:) = bztoibz_tmp(:)
             DEALLOCATE(bztoibz_tmp, STAT = ierr)
             IF (ierr /= 0) CALL errore('qwindow', 'Error deallocating bztoibz_tmp', 1)

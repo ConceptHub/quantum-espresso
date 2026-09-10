@@ -800,7 +800,8 @@
     USE modes,            ONLY : nmodes
     USE ep_constants,     ONLY : eps8, czero, twopi, ci, cone, zero
     USE input,            ONLY : nbndsub, lifc, nqc1, nqc2, nqc3, eig_read, nw_specfun, &
-                                 nstemp, specfun_el, ahc_win_min, ahc_win_max, lsda
+                                 nstemp, specfun_el, ahc_win_min, ahc_win_max, lsda,    &
+                                 specfun_el_scgd0
     USE io_var,           ONLY : iusthwe, iudgwe, iuxqc
     USE global_var,       ONLY : dwmatwe, dgmatwe, sthmatwe, dwf17, sthf17, dgf17,   &
                                  epf17, nkf, nbndfst, xkf,etf, etf_ks, chw_ks, chw,  &
@@ -1234,7 +1235,7 @@
     ! Add WFPT contributions (upper Fan and high-energy DW) to the frequency-dependent
     ! self-energy esigmar_all.
     !
-    IF (specfun_el) THEN
+    IF (specfun_el .OR. specfun_el_scgd0) THEN
       DO itemp = 1, nstemp
         DO iw = 1, nw_specfun
           esigmar_all(:, :, iw, itemp) = esigmar_all(:, :, iw, itemp) + sigma_ahc_uf(:, :, itemp)

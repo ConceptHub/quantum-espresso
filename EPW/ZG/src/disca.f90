@@ -5,30 +5,6 @@
 ! present distribution, or http://www.gnu.org/copyleft.gpl.txt .
 !
 !
-Module ifconstants
-  ! This code generates ZG displacements
-  !
-  !! All variables read from file that need dynamical allocation.
-  !
-  USE kinds, ONLY: DP
-  !
-  REAL(DP), ALLOCATABLE :: frc(:,:,:,:,:,:,:)
-  !! interatomic force constants in real space
-  REAL(DP), ALLOCATABLE :: frc_lr(:,:,:,:,:,:,:)
-  !! long-range part of interatomic force constants in real space
-  REAL(DP), ALLOCATABLE :: tau_blk(:,:)
-  !! atomic positions for the original cell
-  REAL(DP), ALLOCATABLE :: zeu(:,:,:)
-  !! effective charges for the original cell
-  REAL(DP), ALLOCATABLE :: m_loc(:,:)
-  !! the magnetic moments of each atom
-  INTEGER, ALLOCATABLE  :: ityp_blk(:)
-  !! atomic types for each atom of the original cell
-  !
-  CHARACTER(LEN=6), ALLOCATABLE :: atm(:)
-  !
-end Module ifconstants
-!
 !---------------------------------------------------------------------
 PROGRAM diff_sca
   !-----------------------------------------------------------------------
@@ -144,7 +120,7 @@ PROGRAM diff_sca
   USE rigid,      ONLY : dyndiag, nonanal, nonanal_ifc
   USE parser,     ONLY : read_line
 
-  USE ifconstants, ONLY : frc, frc_lr, atm, zeu, tau_blk, ityp_blk, m_loc
+  USE ifconstants_zg, ONLY : frc, frc_lr, atm, zeu, tau_blk, ityp_blk, m_loc
   !
   IMPLICIT NONE
   !
@@ -845,7 +821,7 @@ SUBROUTINE readfc ( flfrc, nr1, nr2, nr3, epsil, nat,    &
   !-----------------------------------------------------------------------
   !
   USE kinds,      ONLY : DP
-  USE ifconstants,ONLY : tau => tau_blk, ityp => ityp_blk, frc, frc_lr, zeu, atm
+  USE ifconstants_zg,ONLY : tau => tau_blk, ityp => ityp_blk, frc, frc_lr, zeu, atm
   USE cell_base,  ONLY : celldm
   USE io_global,  ONLY : ionode, ionode_id, stdout
   USE mp,         ONLY : mp_bcast 

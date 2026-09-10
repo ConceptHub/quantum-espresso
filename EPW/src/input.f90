@@ -96,6 +96,8 @@
   !! if .TRUE. restart a calculation stopped during the interpolation phase from XXX.restart file.
   LOGICAL :: specfun_el
   !! if .TRUE. calculate spectral electron function due to e-p interaction
+  LOGICAL :: specfun_el_scgd0
+  !! if .TRUE. calculate spectral electron function due to e-p interaction self-consistently
   LOGICAL :: specfun_ph
   !! if .TRUE. calculate spectral phonon function due to e-p interaction
   LOGICAL :: specfun_pl
@@ -215,6 +217,8 @@
   !! if .TRUE. the iterative solution for BTE is computed. A first run with scattering_serta = .TRUE. is required.
   LOGICAL :: carrier
   !! if .TRUE. compute the doped electronic mobilities.
+  LOGICAL :: opt_cond 
+  !! if .TRUE. compute optical conductivity
   LOGICAL :: longrange_only
   !! if .TRUE. compute the long range interaction of el-ph. Can only be .TRUE. if lpolar is also true.
   LOGICAL :: shortrange

@@ -47,13 +47,14 @@
                               eps_acoustic, efermi_read, fermi_energy, restart, restart_step, &
                               lwfpt, ahc_win_min, ahc_win_max, elecselfen_type, specfun_el, &
                               elecselfen, wmin_specfun, wmax_specfun, nw_specfun, &
-                              lfast_kmesh, nqf1, nqf2, nqf3, eval_hplrn, eval_eplrn
+                              lfast_kmesh, nqf1, nqf2, nqf3, eval_hplrn, eval_eplrn, &
+                              specfun_el_scgd0, ncarrier, carrier, nbndsub
     USE pwcom,         ONLY : ef
     USE global_var,    ONLY : etf, ibndmin, xqf, eta, nbndfst, &
                               nkf, epf17, wf, wqf, adapt_smearing, &
                               sigmar_all, sigmai_all, sigmai_mode, zi_all, efnew, &
                               nktotf, lower_bnd, gtemp, dwf17, esigmar_all, esigmai_all, &
-                              sigmar_dw_all, evbm, ecbm
+                              sigmar_dw_all, evbm, ecbm, ctype, fermi_energies_t, wkf, mu_t
     USE control_flags, ONLY : iverbosity
     USE ep_constants,  ONLY : kelvin2eV, ryd2mev, ryd2ev, one, two, zero, ci, eps6, eps8
     USE constants,     ONLY : pi
@@ -61,7 +62,8 @@
     USE mp_global,     ONLY : inter_pool_comm, inter_image_comm
     USE io_selfen,     ONLY : selfen_el_write, selfen_el_write_wfpt, spectral_write
     USE parallelism,   ONLY : poolgather2
-    USE utilities,     ONLY : fermi_dirac
+    USE utilities,     ONLY : fermi_dirac, fermicarrier
+    USE transport,     ONLY : transport_prepare
     !
     IMPLICIT NONE
     !
@@ -98,8 +100,10 @@
     !
     REAL(KIND = DP) :: g2
     !! Electron-phonon matrix elements squared in Ry^2
-    REAL(KIND = DP) :: ef0
-    !! Fermi energy level
+    REAL(KIND = DP) :: ef0(nstemp)
+    !! Fermi level for the temperature itemp
+    REAL(KIND = DP) :: efcb(nstemp)
+    !! Second Fermi level for the temperature itemp
     REAL(KIND = DP) :: ekk
     !! Eigen energy at k on the fine grid relative to the Fermi level
     REAL(KIND = DP) :: ekq
@@ -183,7 +187,7 @@
     !
     ! energy range and spacing for spectral function
     !
-    IF (specfun_el) THEN
+    IF (specfun_el .OR. specfun_el_scgd0) THEN
       dw = (wmax_specfun - wmin_specfun) / DBLE(nw_specfun - 1)
       DO iw = 1, nw_specfun
         ww(iw) = wmin_specfun + DBLE(iw - 1) * dw
@@ -237,7 +241,7 @@
         WRITE(stdout, '(5x, "Calculation type: ", a)') elecselfen_type
       ENDIF
       !
-      IF (specfun_el) THEN
+      IF (specfun_el .OR. specfun_el_scgd0) THEN
         WRITE(stdout, '(/5x, a)') REPEAT('=', 67)
         WRITE(stdout, '(5x, "Electron Spectral Function in the Migdal Approximation")')
         WRITE(stdout, '(5x, a/)') REPEAT('=', 67)
@@ -260,6 +264,28 @@
     ENDIF
     !
     DO itemp = 1, nstemp ! loop over temperatures
+      !
+      IF (efermi_read) THEN
+        IF (iqq == 1 .OR. first_cycle) mu_t(itemp) = fermi_energy
+      ELSE
+        IF (iqq == 1 .OR. first_cycle) mu_t(itemp) = efnew
+      ENDIF
+      ! here we compute the temperature dependent chemical potential.
+      IF (carrier) THEN
+        IF (iqq == 1 .OR. first_cycle) THEN
+          CALL transport_prepare()
+          IF (.NOT. lfast_kmesh) THEN
+            CALL fermicarrier(itemp, gtemp(itemp), ef0, efcb, ctype, wkf, etf, nbndsub)
+          ELSE
+            ef0(itemp) = fermi_energies_t(itemp)
+          ENDIF
+          IF (ctype > 0) THEN
+            mu_t(itemp) = efcb(itemp)
+          ELSE
+            mu_t(itemp) = ef0(itemp) 
+          ENDIF
+        ENDIF
+      ENDIF
       !
       ! Now pre-treat phonon modes for efficiency
       ! Treat phonon frequency and Bose occupation
@@ -288,17 +314,9 @@
         !
       ENDIF
       !
-      ! Fermi level
-      !
-      IF (efermi_read) THEN
-        ef0 = fermi_energy
-      ELSE
-        ef0 = efnew
-      ENDIF
-      !
       IF (elecselfen_type == 'manybodyplrn') THEN
         ! obtain evbm and ecbm from the band structure
-        CALL get_vbm_cbm(ef0)
+        CALL get_vbm_cbm(mu_t(itemp))
         !
         IF (iqq==1) THEN
           WRITE(stdout, '(5x, "evbm = ", f10.6, " eV")') evbm * ryd2ev
@@ -351,7 +369,7 @@
               DO ibnd = 1, nbndfst
                 !
                 ! the energy of the electron at k (relative to Ef)
-                ekk = etf(ibndmin - 1 + ibnd, ikk) - ef0
+                ekk = etf(ibndmin - 1 + ibnd, ikk) - mu_t(itemp) 
                 !
                 eta_tmp     = eta2(ibnd, imode, ik)
                 sq_eta_tmp  = eta_tmp**two
@@ -360,14 +378,14 @@
                 DO jbnd = 1, nbndfst
                   !
                   ! the energy of the electron at k+q (relative to Ef)
-                  ekq = etf(ibndmin - 1 + jbnd, ikq) - ef0
+                  ekq = etf(ibndmin - 1 + jbnd, ikq) - mu_t(itemp)
                   !
                   IF (lwfpt) THEN
                     !
                     ! Skip coupling with oneself or between degenerate states at the same k point
                     IF (ALL(xqf(:, iq) < eps8) .AND. ABS(ekq - ekk) < 2.d-5) CYCLE
                     ! Skip active states outside the ahc window
-                    IF (ekq + ef0 < ahc_win_min .OR. ekq + ef0 > ahc_win_max) CYCLE
+                    IF (ekq + mu_t(itemp) < ahc_win_min .OR. ekq + mu_t(itemp) > ahc_win_max) CYCLE
                     !
                   ENDIF
                   !
@@ -394,7 +412,7 @@
                     etmp1 = ekk - (ekq - wq(imode))
                     etmp2 = ekk - (ekq + wq(imode))
                   ELSEIF (elecselfen_type == 'manybodyplrn') THEN
-                    IF (ekk <= evbm - ef0) THEN
+                    IF (ekk <= evbm - mu_t(itemp)) THEN
                       ! For valence manifold, use the hole polaron eigenvalue (not referenced to VBM).
                       eval_plrn = evbm + eval_hplrn
                     ELSE
@@ -404,8 +422,8 @@
                     !
                     ! In case of many-body polaron, replace ekk with eval_plrn - ef0 (energy of band extremum referenced to Ef)
                     ! c.f. Below Eq. (63) of Phys. Rev. B 106, 075119 (2022)
-                    etmp1 = (eval_plrn - ef0) - (ekq - wq(imode))
-                    etmp2 = (eval_plrn - ef0) - (ekq + wq(imode))
+                    etmp1 = (eval_plrn - mu_t(itemp)) - (ekq - wq(imode))
+                    etmp2 = (eval_plrn - mu_t(itemp)) - (ekq + wq(imode))
                     !
                     ! ! DEBUG
                     ! IF ((iq==1 .and. imode==1 .and. ibnd==10 .and. jbnd==2) .or. &
@@ -472,7 +490,7 @@
                   ! Frequency-dependent self-energy
                   ! See Eq. 3 in Comput. Phys. Commun. 209, 116 (2016)
                   !
-                  IF (specfun_el) THEN
+                  IF (specfun_el .OR. specfun_el_scgd0) THEN
                     !
                     etmp1 = -(ekq - wq(imode))
                     etmp2 = -(ekq + wq(imode))
@@ -527,7 +545,7 @@
                   ENDDO ! ibnd
                 ENDIF
                 !
-                IF (specfun_el) THEN
+                IF (specfun_el .OR. specfun_el_scgd0) THEN 
                   DO ibnd = 1, nbndfst
                     DO iw = 1, nw_specfun
                       esigmar_all(ibnd, ik_global, iw, itemp) = &
@@ -558,7 +576,7 @@
                 CALL selfen_el_write(iqq, totq, nktotf, sigmar_all, sigmai_all, zi_all)
               ENDIF
             ENDIF
-            IF (specfun_el) THEN
+            IF (specfun_el .OR. specfun_el_scgd0) THEN
               CALL mp_sum(esigmar_all, inter_pool_comm)
               CALL mp_sum(esigmai_all, inter_pool_comm)
               CALL spectral_write(iqq, totq, nktotf, esigmar_all, esigmai_all)
@@ -573,6 +591,398 @@
     !-----------------------------------------------------------------------
     END SUBROUTINE selfen_elec_q
     !-----------------------------------------------------------------------
+    !
+    !-----------------------------------------------------------------------
+    SUBROUTINE selfen_elec_scgd0()
+    !--------------------------------------------------------------------------
+    ! compute the self-energy from the Green's function
+    !--------------------------------------------------------------------------
+    USE parallelism,   ONLY : poolgather2, fkbounds
+    USE kinds,         ONLY : DP
+    USE io_global,     ONLY : stdout, ionode
+    USE modes,         ONLY : nmodes
+    USE input,         ONLY : nstemp, fsthick, eps_acoustic, specfun_el_scgd0, &
+                              efermi_read, fermi_energy, restart, restart_step, &
+                              lwfpt, ahc_win_min, ahc_win_max, elecselfen_type, specfun_el, &
+                              elecselfen, wmin_specfun, wmax_specfun, nw_specfun
+    USE global_var,    ONLY : xqf, nbndfst, iter_scgd0, nkf, wf, wqf, upper_bnd, &
+                              nktotf, lower_bnd, gtemp, esigmar_all, esigmai_all, &
+                              sigmar_dw_all, esigmaisc_all, nkqf, xkf, nkqtotf, mu_t
+    USE ep_constants,  ONLY : kelvin2eV, ryd2mev, ryd2ev, one, two, zero, ci, eps6, eps8
+    USE constants,     ONLY : pi
+    USE mp,            ONLY : mp_barrier, mp_sum
+    USE mp_global,     ONLY : inter_pool_comm, inter_image_comm
+    USE io_selfen,     ONLY : selfen_el_write, selfen_el_write_wfpt, spectral_write
+    USE parallelism,   ONLY : poolgather2, fkbounds
+    USE utilities,     ONLY : fermi_dirac
+    USE supercond_common,     ONLY : nkfs, nbndfs, g2, ixkqf, ixqfs, nqfs, w0g, ekfs, ef0, dosef, &
+                              wkfs, ekfs_all, nbndfs_all, ixkf_inv, ef0, nqfs
+    !
+    IMPLICIT NONE
+    !
+    ! Local variables
+    INTEGER :: ik
+    !! Counter on the k-point index
+    INTEGER :: ikk
+    !! k-point index
+    INTEGER :: ik_global
+    !! Global k-point index
+    INTEGER :: ikq
+    !! q-point index
+    INTEGER :: iq0
+    !!q-point index on the full mesh
+    INTEGER :: iq, ik_all, ikq_all, ikqfs
+    !!q-point index 
+    INTEGER :: ibnd
+    !! Counter on bands at k
+    INTEGER :: jbnd
+    !! Counter on bands at k+q
+    INTEGER :: imode
+    !! Counter on mode
+    INTEGER :: itemp
+    !! Counter on temperatures
+    INTEGER :: iw
+    !! Counter on the frequency
+    INTEGER :: iw_plus
+    !! Counter on the frequency
+    INTEGER :: iw_minus
+    !! Counter on the frequency
+    REAL(KIND = DP) :: ekq
+    !! Eigen energy at k+q on the fine grid relative to the Fermi level
+    COMPLEX(KIND = DP) :: etmpw1
+    !! Temporary variable to store etmpw1 = ww - (ekq - wq)
+    COMPLEX(KIND = DP) :: etmpw2
+    !! Temporary variable to store etmpw2 = ww - (ekq + wq)
+    REAL(KIND = DP) :: wgkq
+    !! Fermi-Dirac occupation factor $f_{mk+q}(T)$
+    REAL(KIND = DP) :: fact1
+    !! Temporary variable to store $f_{mk+q}(T) + n_{q\nu}(T)$
+    REAL(KIND = DP) :: fact2
+    !! Temporary variable to store $1 - f_{mk+q}(T) + n_{q\nu}(T)$
+    REAL(KIND = DP) :: weight
+    !! Self-energy factor
+    !!$$ N_q \Re(\frac{f_{mk+q}(T) + n_{q\nu}(T)}{\varepsilon_{nk} - \varepsilon_{mk+q} + \omega_{q\nu} - i\delta}) $$
+    !!$$ + N_q \Re(\frac{1 - f_{mk+q}(T) + n_{q\nu}(T)}{\varepsilon_{nk} - \varepsilon_{mk+q} - \omega_{q\nu} - i\delta}) $$
+    REAL(KIND = DP) :: dw
+    !! Frequency intervals
+    REAL(KIND = DP) :: ww_minus
+    !! current freq. minus the phonon frequency on the fine grid
+    REAL(KIND = DP) :: ww_plus
+    !! current freq. plus the phonon frequency on the fine grid
+    REAL(KIND = DP) :: wgq(nmodes)
+    !! Bose occupation factor $n_{q\nu}(T)$
+    REAL(KIND = DP) :: ww(nw_specfun)
+    !! Current frequency
+    !
+    dw = (wmax_specfun - wmin_specfun) / DBLE(nw_specfun - 1)
+    DO iw = 1, nw_specfun
+      ww(iw) = wmin_specfun + DBLE(iw - 1) * dw
+    ENDDO
+    ! 
+    ! Print calculation information to stdout
+    WRITE(stdout, '(/5x, a)') REPEAT('=', 67)
+    WRITE(stdout, '(5x, "Electron Spectral Function in the self-consistent Migdal Approximation")')
+    WRITE(stdout,'(/5x, a, i8)') 'Currently doing iteration number ', iter_scgd0
+    WRITE(stdout, '(5x, a/)') REPEAT('=', 67)
+    !
+    IF (lwfpt) THEN
+      WRITE(stdout, '(a)') ' '
+      WRITE(stdout, '(5x, a)') 'The Debye-Waller and upper Fan term are calculated using WFPT.'
+      WRITE(stdout, '(a)') ' '
+    ENDIF
+    !
+    CALL fkbounds(nkfs, lower_bnd, upper_bnd)
+    DO itemp = 1, nstemp ! loop over temperatures
+      !
+      WRITE(stdout, '(/5x, a, f10.6, a)') 'The (updated) Fermi level is ', mu_t(itemp) * ryd2ev, ' eV.'
+      !
+      ! loop over all k points within fsthick
+      !
+      DO ik = lower_bnd, upper_bnd 
+        !
+        ! map fsthick-shell index -> full irreducible mesh index
+        !
+        ik_all = ixkf_inv(ik)
+        DO ibnd = 1, nbndfs
+          !
+          DO iq = 1, nqfs(ik)
+            ! iq0 - index of q-point on the full q-mesh
+            iq0 = ixqfs(ik, iq)
+            ! fsthick-shell index of k+q
+            ikqfs = ixkqf(ik, iq0)
+            ! map k+q fsthick index -> full irreducible mesh index
+            ikq_all = ixkf_inv(ikqfs)
+            DO jbnd = 1, nbndfs
+              IF (lwfpt .OR. ABS(ekfs(jbnd, ikqfs) - ef0) < fsthick) THEN
+                ! the energy of the electron at k+q (relative to Ef)
+                ekq = ekfs(jbnd, ikqfs) - mu_t(itemp) 
+                !
+                IF (lwfpt) THEN
+                  ! Skip coupling with oneself or between degenerate states at the same k point
+                  IF (ALL(xqf(:, iq0) < eps8) .AND. ABS(ekq -  ekfs(ibnd, ik)) < 2.d-5) CYCLE
+                  ! Skip active states outside the ahc window
+                  IF (ekfs(jbnd, ikqfs) < ahc_win_min .OR. ekfs(jbnd, ikqfs) > ahc_win_max) CYCLE
+                  !
+                ENDIF
+                DO imode = 1, nmodes
+                  IF (wf(imode, iq0) > eps_acoustic) THEN
+                    wgq(imode)    = fermi_dirac(wf(imode, iq0), gtemp(itemp))
+                    wgq(imode)    = wgq(imode) / (one - two * wgq(imode))
+                  ELSE
+                    wgq(imode)    = zero
+                  ENDIF
+                  !
+                  DO iw = 1, nw_specfun
+                    ! Here we compute the self-consistent electron spectral function using
+                    ! EQ. 8 from Phys. Rev. Lett. 134, 186401 (2025) 
+                    !
+                    fact1 = fermi_dirac(wf(imode, iq0) + ww(iw), gtemp(itemp)) + wgq(imode)
+                    fact2 = 1 - fermi_dirac(ww(iw) - wf(imode, iq0), gtemp(itemp)) + wgq(imode)
+                    ww_plus = ww(iw) + wf(imode, iq0)
+                    ww_minus = ww(iw) - wf(imode, iq0)
+                    !
+                    iw_plus = FLOOR( (ww_plus - ww(1)) / dw ) + 1
+                    iw_minus = FLOOR( (ww_minus - ww(1)) / dw ) + 1
+                    !
+                    IF (iw_plus >= 1 .AND. iw_plus <= nw_specfun .AND. iw_minus >= 1 &
+                       .AND. iw_minus <=  nw_specfun) THEN
+                      etmpw2 = ww_plus - ekq - esigmar_all(jbnd, ikq_all, iw_plus, itemp) + &
+                        ci *ABS(esigmai_all(jbnd, ikq_all, iw_plus, itemp))
+                      etmpw1 = ww_minus - ekq - esigmar_all(jbnd, ikq_all, iw_minus, itemp) + &
+                       ci * ABS(esigmai_all(jbnd, ikq_all, iw_minus, itemp))
+                      esigmaisc_all(ibnd, ik_all, iw, itemp) = esigmaisc_all(ibnd, ik_all, iw, itemp) + wqf(iq0) * &
+                       g2(ik, iq, ibnd, jbnd, imode) * (fact1 * AIMAG(1 / etmpw2) + fact2 * AIMAG(1 / etmpw1))
+                    ENDIF 
+                  ENDDO !iw 
+                ENDDO ! modes
+              ENDIF  ! ftshick
+            ENDDO !jbnd
+          ENDDO ! q pts
+        ENDDO !ibnd
+      ENDDO ! end loop on k
+    ENDDO ! itemp
+    !
+   RETURN
+    !
+    !-----------------------------------------------------------------------
+    END SUBROUTINE selfen_elec_scgd0
+    !-----------------------------------------------------------------------
+    !
+    !--------------------------------------------------------------------------
+    SUBROUTINE re_selfen_scgd0()
+    !-----------------------------------------------------------------------
+    !! This routine computes the Hilbert transform of a function.
+    !! Here, we assume that the function f(x) is piecewise liner, so that H[f(x)] 
+    !! can be obtained using an exact result for the Hilbert transform of a 
+    !! linear function. See: Phys. Rev. X 16, 011008 (2026) Appendix F.1
+    !! If LWFPT is used, the DW term is added. 
+    !-----------------------------------------------------------------------
+    USE kinds,         ONLY : DP
+    USE io_global,     ONLY : stdout, ionode
+    USE input,         ONLY : nbndsub, wmin_specfun, wmax_specfun, nw_specfun, &
+                              efermi_read, fermi_energy, nstemp, lwfpt,        &
+                              specfun_el_scgd0, fsthick, ahc_win_min, ahc_win_max
+    USE global_var,    ONLY : gtemp, etf, ibndmin, nkqf,   &
+                              xkf, nkqtotf, esigmar_all, esigmai_all, a_all,   &
+                               sigma_ahc_hdw,           &
+                              sigma_ahc_uf, sigmar_dw_all, wf
+    USE ep_constants,  ONLY : kelvin2eV, ryd2mev, one, ryd2ev, two, zero, pi
+    USE mp,            ONLY : mp_sum
+    USE modes,         ONLY : nmodes
+    USE supercond_common, ONLY : nbndfs, nkfs_all, ef0
+    USE mp_global,     ONLY : inter_pool_comm, inter_image_comm
+    USE parallelism,   ONLY : poolgather2
+    !
+    IMPLICIT NONE
+
+    INTEGER :: iw
+    !! Counter on the frequency
+    INTEGER :: ik
+    !! Counter on the k-point index
+    INTEGER :: ikk
+    !! k-point index
+    INTEGER :: ikq
+    !! q-point index
+    INTEGER :: ibnd
+    !! Counter on bands
+    INTEGER :: itemp
+    !! Counter on temperatures
+    INTEGER :: iw0 
+   !
+    REAL(KIND = DP) :: ekk
+    !! Eigen energy on the fine grid relative to the Fermi level
+    REAL(KIND = DP) :: inv_eptemp
+    !! Inverse of temperature define for efficiency reasons
+    REAL(KIND = DP) :: dw
+    !! Frequency intervals
+    REAL(KIND = DP) :: specfun_sum
+    !! Sum of spectral function
+    ! REAL(KIND = DP) :: esigmar0
+    ! !! static SE
+    REAL(KIND = DP), EXTERNAL :: wgauss
+    !! Fermi-Dirac distribution function (when -99)
+    REAL(KIND = DP) :: fermi(nw_specfun)
+    !! Spectral function
+    REAL(KIND = DP) :: ww(nw_specfun)
+    !! Current frequency
+    REAL(KIND = DP) ::  esigmar_kk_all(nw_specfun)
+    !! Kramers-Kronig of an esigmaisc_all array
+    !
+    dw = (wmax_specfun - wmin_specfun) / DBLE(nw_specfun - 1)
+    DO iw = 1, nw_specfun
+      ww(iw) = wmin_specfun + DBLE(iw - 1) * dw
+    ENDDO
+    !
+    DO itemp = 1, nstemp ! second temperature loop to write data
+      esigmar_all(:, :, :, itemp) = 0.d0
+      !
+      DO ik = 1, nkfs_all
+        !
+        DO ibnd = 1, nbndfs
+            !
+            CALL hilbert_transform(ww, nw_specfun, esigmai_all(ibnd, ik, :, itemp), esigmar_kk_all(:))
+            !
+           IF (lwfpt) THEN
+             esigmar_all(ibnd, ik, :, itemp) = esigmar_kk_all(:) + sigma_ahc_uf(ibnd, ik, itemp) + &
+                sigma_ahc_hdw(ibnd, ik, itemp) + sigmar_dw_all(ibnd, ik, itemp)
+           ELSE
+             esigmar_all(ibnd, ik, :, itemp) = esigmar_kk_all(:)
+           ENDIF
+           !
+	ENDDO
+        !
+      ENDDO
+    ENDDO ! itemp
+    !
+    RETURN
+    !
+    !-----------------------------------------------------------------------
+    END SUBROUTINE re_selfen_scgd0
+    !-----------------------------------------------------------------------
+    !
+    !-----------------------------------------------------------------------
+    SUBROUTINE check_convergence(relerr)
+    !-----------------------------------------------------------------------
+    ! Compare esigmaisc_all and esigmai_all for all k points and freqs. and 
+    ! check whether the values have changed.
+    ! This is the L2 norm convergence check.
+    !---------------------------------------------------------------
+    !
+    USE kinds,              ONLY : DP
+    USE io_global,          ONLY : stdout
+    USE global_var,         ONLY : esigmaisc_all, esigmai_all
+    USE supercond_common,   ONLY : nkfs_all, nbndfs, ekfs_all, ef0
+    USE input,              ONLY : nw_specfun, nstemp, lwfpt, ahc_win_min, ahc_win_max, fsthick
+    USE ep_constants,       ONLY : ryd2mev
+    !
+    IMPLICIT NONE
+    !
+    INTEGER :: ik
+    !! k point counter
+    INTEGER :: ibnd
+    !! band counter
+    INTEGER ::  iw
+    !! energy array counter
+    INTEGER :: itemp
+    !! temperature index
+    !
+    REAL(KIND = DP), INTENT(OUT) :: relerr
+    !! absolute error
+    REAL(KIND = DP) :: diff
+    !! difference between two values
+    REAL(KIND = DP) :: sumdiff
+    !! sum of differences
+    REAL(KIND = DP) ::  sumref
+    !! reference sum 
+    !
+    sumdiff = 0.0
+    sumref  = 0.0
+    !
+    DO itemp = 1, nstemp
+      DO ik = 1, nkfs_all
+        DO ibnd = 1, nbndfs
+          IF (lwfpt .OR. ABS(ekfs_all(ibnd, ik) - ef0) < fsthick) THEN
+            IF (lwfpt) THEN
+              IF (ekfs_all(ibnd , ik) < ahc_win_min .OR. ekfs_all(ibnd, ik) > ahc_win_max) CYCLE
+            ENDIF
+            DO iw = 1, nw_specfun
+              !
+              diff = ABS(esigmaisc_all(ibnd, ik, iw, itemp) - esigmai_all(ibnd, ik, iw, itemp))
+              sumdiff = sumdiff + diff**2
+              sumref = sumref + esigmai_all(ibnd, ik, iw, itemp)**2
+            ENDDO
+          ENDIF
+        ENDDO
+      ENDDO
+    ENDDO
+    !
+    relerr = SQRT(sumdiff / (sumref+ 1.0d-20))
+    ! avoid division by zero!
+    !
+    WRITE(stdout, '(5x, a/)') REPEAT('-', 67)
+    WRITE(stdout,'(5x, a, f20.8)') 'Relative L2 error: ', relerr
+    WRITE(stdout, '(5x, a)') 'Convergence criterion: a stable relative error < 0.01'
+    WRITE(stdout, '(/5x, a)') REPEAT('-', 67)
+    !
+    !-----------------------------------------------------------------------
+    END SUBROUTINE check_convergence 
+    !-----------------------------------------------------------------------
+    !
+    !-----------------------------------------------------------------------
+    SUBROUTINE hilbert_transform(ws, nws, fx, Hfx)
+    !-----------------------------------------------------------------------
+    !
+    !! This routine computes the Hilbert transform of a function.
+    !! Here, we assume that the function f(x) is piecewise liner, so that H[f(x)] 
+    !! can be obtained using an exact result for the Hilbert transform of a 
+    !! linear function. See: Phys. Rev. X 16, 011008 (2026) Appendix F.1
+    !-----------------------------------------------------------------------
+    !
+    USE kinds,         ONLY : DP
+    USE constants,     ONLY : pi
+    !
+    IMPLICIT NONE
+    !
+    INTEGER, INTENT(IN) :: nws
+    REAL(KIND = DP), INTENT(IN) :: ws(:)
+    REAL(KIND = DP), INTENT(IN) :: fx(:)
+    REAL(KIND = DP), INTENT(OUT) :: Hfx(:)
+    !
+    INTEGER :: j,i
+    REAL (KIND = DP) ::  a,b, wl, wr
+    !
+    Hfx(:) = 0.0 
+    DO j = 1, nws
+      IF (j == 1) THEN
+        a = (fx(j+1) - fx(j)) / (ws(j+1) - ws(j))
+      ELSEIF (j == nws) then
+        a = (fx(j) - fx(j-1)) / (ws(j) - ws(j-1))
+      ELSE
+        a = (fx(j+1) - fx(j-1)) / (ws(j+1) - ws(j-1))
+      ENDIF
+      b = fx(j) - a * ws(j)
+      IF (j == 1) THEN
+        wl = ws(j) - (ws(j+1) - ws(j)) / 2
+      ELSE
+        wl= (ws(j) + ws(j-1)) / 2
+      ENDIF
+      ! 
+      IF (j == nws) then
+        wr = ws(j) + (ws(j) - ws(j-1)) / 2
+      ELSE
+        wr = (ws(j) + ws(j+1)) / 2
+      ENDIF
+      !
+      DO i = 1, nws
+        Hfx(i)=  Hfx(i) + a * (wr-wl)
+        Hfx(i) = Hfx(i) + (a * ws(i) + b) * log(abs((wr - ws(i)) / (wl - ws(i)))) 
+      ENDDO
+    ENDDO
+    Hfx(:) = Hfx(:) / pi
+    !
+    !-----------------------------------------------------------------------
+    END SUBROUTINE hilbert_transform
+    !--------------------------------------------------------------------------
     !
     !--------------------------------------------------------------------------
     SUBROUTINE selfen_elec_print
@@ -590,7 +1000,8 @@
     USE io_global,     ONLY : stdout, meta_ionode
     USE io_var,        ONLY : linewidth_elself, iuelself_wfpt
     USE input,         ONLY : nbndsub, efermi_read, fermi_energy, nstemp, &
-                              ahc_win_min, ahc_win_max, lwfpt, lsda
+                              ahc_win_min, ahc_win_max, lwfpt, lsda,      &
+                              specfun_el_scgd0, opt_cond
     USE control_flags, ONLY : iverbosity
     USE modes,         ONLY : nmodes
     USE global_var,    ONLY : etf, ibndmin, nkqf, nbndfst, xkf, nkqtotf, gtemp, &
@@ -766,12 +1177,10 @@
             ! calculate Z = 1 / ( 1 -\frac{\partial\Sigma}{\partial\omega} )
             zi_all(ibnd, ik, itemp) = one / (one + zi_all(ibnd, ik, itemp))
             !
-            WRITE(stdout, 102) ibndmin - 1 + ibnd, &
-              ryd2ev * ekk, &
+            WRITE(stdout, 102) ibndmin - 1 + ibnd, ryd2ev * ekk, &
               ryd2mev * sigmar_all_sum(ibnd, ik, itemp), &
               ryd2mev * sigmai_all(ibnd,ik, itemp), &
-              zi_all(ibnd, ik, itemp), &
-              one / zi_all(ibnd, ik, itemp) - one
+              zi_all(ibnd, ik, itemp), one / zi_all(ibnd, ik, itemp) - one
             !
             IF (iverbosity == 3) THEN
               DO imode = 1, nmodes
@@ -789,37 +1198,10 @@
             ENDIF
             !
           ENDDO
-          WRITE(stdout, '(5x, a/)') REPEAT('-', 67)
+            WRITE(stdout, '(5x, a/)') REPEAT('-', 67)
           !
         ENDDO
         CLOSE(linewidth_elself)
-        !
-        ! Print self-energy and Z factor to stdout
-        !
-        DO ibnd = 1, nbndfst
-          DO ik = 1, nktotf
-            !
-            ikk = 2 * ik - 1
-            ikq = ikk + 1
-            !
-            ! note that ekk does not depend on q
-            ekk = etf_all(ibndmin - 1 + ibnd, ikk) - ef0
-            !
-            ! calculate Z = 1 / (1 - \frac{\partial\Sigma}{\partial\omega})
-            !zi_all(ibnd,ik) = one / (one + zi_all(ibnd,ik))
-            !
-            WRITE(stdout, '(2i9, 5E22.14)') ik, ibndmin - 1 + ibnd, &
-              ryd2ev * ekk,&
-              ryd2mev * sigmar_all_sum(ibnd, ik, itemp), &
-              ryd2mev * sigmai_all(ibnd, ik, itemp), &
-              zi_all(ibnd, ik, itemp), &
-              one / zi_all(ibnd, ik, itemp) - one
-            !
-          ENDDO
-          !
-          WRITE(stdout, '(a)') '  '
-          !
-        ENDDO
         !
         ! Print WFPT output self-energy to stdout
         !

@@ -664,6 +664,43 @@
     !--------------------------------------------------------------------
     END SUBROUTINE poolgather_int
     !--------------------------------------------------------------------
-  !-----------------------------------------------------------------------
+    !
+    !--------------------------------------------------------------------
+    SUBROUTINE para_outputs_init()
+    !--------------------------------------------------------------------
+    !!
+    !! Create a directory where output files of
+    !! each pool and image is stored.
+    !!
+    !--------------------------------------------------------------------
+    USE mp_global,        ONLY : my_pool_id, inter_pool_comm, my_image_id
+    USE mp,               ONLY : mp_barrier
+    USE mp_world,         ONLY : mpime, world_comm
+    USE io_global,        ONLY : stdout
+    USE io_files,         ONLY : create_directory
+    !
+    IMPLICIT NONE
+    !
+    INTEGER :: ios
+    !! INTEGER variable for I/O control
+    CHARACTER(LEN = 256) :: my_image_id_ch
+    !! image id
+    CHARACTER(LEN = 256) :: my_pool_id_ch
+    !! pool id
+    CHARACTER(LEN = 256) :: filename
+    !! filename for output redirection
+    !
+    WRITE(my_image_id_ch, '(I0)') my_image_id
+    WRITE(my_pool_id_ch, '(I0)') my_pool_id
+    !
+    IF (my_image_id == 0) CALL create_directory('para_outs')
+    CALL mp_barrier(world_comm)
+    CLOSE(stdout)
+    !
+    filename = 'para_outs/'//'image'//TRIM(ADJUSTL((my_image_id_ch)))//'_pool'//TRIM(ADJUSTL((my_pool_id_ch)))
+    OPEN(UNIT = stdout, FILE = filename, STATUS = 'replace', ACTION = 'write', IOSTAT = ios)
+    !
+    !-----------------------------------------------------------------------
+    END SUBROUTINE para_outputs_init
   END MODULE parallelism
   !-----------------------------------------------------------------------

@@ -767,9 +767,10 @@
     USE input,        ONLY : isk_dummy
     USE input,        ONLY : iterative_bte, ephwrite, mp_mesh_k, etf_mem, vme, &
                              epmatkqread, lcumulant, eliashberg, assume_metal, &
-                             lindabs, carrier, ii_g, scattering, lfast_kmesh
+                             lindabs, carrier, ii_g, scattering, lfast_kmesh,  &
+                             epw_memdist, specfun_el_scgd0, a2f_iso
     USE global_var,   ONLY : map_rebal, map_rebal_inv, vmef, cvmew, cdmew,     &
-                             epmatwp, epmatwp_dist, chw, chw_ks, rdw,          &
+                             epmatwp, chw, chw_ks, rdw,          &
                              epsi, zstar, wf, etf, etf_ks, eps_rpa,            &
                              epstf_therm, bztoibz, s_bztoibz, gtemp, et_ks,    &
                              dos, Qmat, ef0_fca, partion, qtf2_therm,          &
@@ -832,7 +833,8 @@
     INTEGER :: ierr
     !! Error status
     !
-    IF ((iterative_bte .OR. ephwrite) .AND. mp_mesh_k .AND. (.NOT. lfast_kmesh)) THEN
+    ! Same condition as the load_rebal call in use_wannier
+    IF ((iterative_bte .OR. ephwrite .OR. a2f_iso) .AND. mp_mesh_k) THEN
       DEALLOCATE(map_rebal, STAT = ierr)
       IF (ierr /= 0) CALL errore('ephf_deallocate', 'Error deallocating map_rebal', 1)
       DEALLOCATE(map_rebal_inv, STAT = ierr)
@@ -906,14 +908,16 @@
     IF (ierr /= 0) CALL errore('ephf_deallocate', 'Error deallocating irvec_r', 1)
     DEALLOCATE(etf_all, STAT = ierr)
     IF (ierr /= 0) CALL errore('ephf_deallocate', 'Error deallocating etf_all', 1)
-    IF (mp_mesh_k .OR. lfast_kmesh) THEN
-      DEALLOCATE(bztoibz, STAT = ierr)
-      IF (ierr /= 0) CALL errore('ephf_deallocate', 'Error deallocating bztoibz', 1)
+    IF ((mp_mesh_k .AND. (.NOT. specfun_el_scgd0)) .OR. lfast_kmesh) THEN
       DEALLOCATE(s_bztoibz, STAT = ierr)
       IF (ierr /= 0) CALL errore('ephf_deallocate', 'Error deallocating s_bztoibz', 1)
     ENDIF
+    IF (mp_mesh_k .OR. lfast_kmesh) THEN
+      DEALLOCATE(bztoibz, STAT = ierr)
+      IF (ierr /= 0) CALL errore('ephf_deallocate', 'Error deallocating bztoibz', 1)
+    ENDIF
     ! Deallocate temperature when no cumulant or supercond
-    IF ((.NOT. lcumulant) .AND. (.NOT. eliashberg)) THEN
+    IF ((.NOT. lcumulant) .AND. (.NOT. eliashberg) .AND. (.NOT. specfun_el_scgd0)) THEN
       DEALLOCATE(gtemp, STAT = ierr)
       IF (ierr /= 0) CALL errore('ephf_deallocate', 'Error deallocating gtemp', 1)
     ENDIF

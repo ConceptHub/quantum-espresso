@@ -11,13 +11,12 @@
 ! elements and the addition of the nonlocal pseudopotential contribution 
 ! in eps_calc/dipole_calc2. 
 
-! mz: We make a small modification so that 
-! Gaussian broadening is applied on the spectra and avoid numerical artefacts
-! at the tails of indirect optical absorption. Changes can be traced 
-! by "mz_b" and "mz_e". 
+! mz: We make a small modification so that Gaussian broadening is applied 
+! on the spectra and avoid numerical artefacts at the tails of indirect 
+! optical absorption. Changes can be traced by "mz_b" and "mz_e". 
 ! 
-! To compile this routine, it requires to have pp compiled. 
-! i.e in main directory type "make pp". 
+! To compile this routine, it requires to have EPW compiled. 
+! i.e in main directory type "make epw". 
 !
 !------------------------------
  MODULE grid_module
@@ -265,7 +264,7 @@ PROGRAM epsilon
   shift        = 0.0d0
   CALL get_environment_variable( 'ESPRESSO_TMPDIR', outdir )
   IF ( trim( outdir ) == ' ' ) outdir = './'
-  intersmear   = 0.136_DP
+  intersmear   = 0.136
   wmin         = 0.0d0
   wmax         = 30.0d0
   nbndmin      = 1
@@ -385,7 +384,7 @@ PROGRAM epsilon
   !
   CALL grid_destroy()
   !
-  CALL environment_end ( )
+  CALL environment_end ( 'epsilon' )
   !
   CALL stop_pp ()
 

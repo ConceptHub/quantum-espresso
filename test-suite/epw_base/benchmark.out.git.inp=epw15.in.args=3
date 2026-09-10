@@ -1,0 +1,274 @@
+                                                                                      
+                                       ``:oss/                                        
+                           `.+s+.     .+ys--yh+     `./ss+.                           
+                          -sh//yy+`   +yy   +yy    -+h+-oyy                           
+                          -yh- .oyy/.-sh.   .syo-.:sy-  /yh                           
+                 `.-.`    `yh+   -oyyyo.     `/syys:    oys      `.`                  
+               `/+ssys+-` `sh+      `                   oys`   .:osyo`                
+               -yh- ./syyooyo`                          .sys+/oyo--yh/                
+               `yy+    .-:-.                             `-/+/:`  -sh-                
+                /yh.                                              oys                 
+          ``..---hho---------`   .---------..`      `.-----.`    -hd+---.             
+       `./osmNMMMMMMMMMMMMMMMs. +NNMMMMMMMMNNmh+.   yNMMMMMNm-  oNMMMMMNmo++:`        
+       +sy--/sdMMMhyyyyyyyNMMh- .oyNMMmyyyyyhNMMm+` -yMMMdyyo:` .oyyNMMNhs+syy`       
+       -yy/   /MMM+.`-+/``mMMy-   `mMMh:`````.dMMN:` `MMMy-`-dhhy```mMMy:``+hs        
+        -yy+` /MMMo:-mMM+`-oo/.    mMMh:     `dMMN/`  dMMm:`dMMMMy..MMMo-.+yo`        
+         .sys`/MMMMNNMMMs-         mMMmyooooymMMNo:   oMMM/sMMMMMM++MMN//oh:          
+          `sh+/MMMhyyMMMs- `-`     mMMMMMMMMMNmy+-`   -MMMhMMMsmMMmdMMd/yy+           
+    `-/+++oyy-/MMM+.`/hh/.`mNm:`   mMMd+/////:-.`      NMMMMMd/:NMMMMMy:/yyo/:.`      
+   +os+//:-..-oMMMo:--:::-/MMMo. .-mMMd+---`           hMMMMN+. oMMMMMo. `-+osyso:`   
+   syo     `mNMMMMMNNNNNNNNMMMo.oNNMMMMMNNNN:`         +MMMMs:`  dMMMN/`     ``:syo   
+   /yh`     :syyyyyyyyyyyyyyyy+.`+syyyyyyyyo:`         .oyys:`   .oyys:`        +yh   
+   -yh-        ````````````````    `````````              ``        ``          oys   
+   -+h/------------------------::::::::://////++++++++++++++++++++++///////::::/yd:   
+   shdddddddddddddddddddddddddddddhhhhhhhhyyyyyssssssssssssssssyyyyyyyhhhhhhhddddh`   
+                                                                                      
+ Lee, H., Poncé, S., Bushick, K., Hajinazar, S., Lafuente-Bartolome, J.,Leveillee, J.,
+    Lian, C., Lihm, J., Macheda, F., Mori, H., Paudyal, H., Sio, W., Tiwari, S.,      
+ Zacharias, M., Zhang, X., Bonini, N., Kioupakis, E., Margine, E.R., and Giustino F., 
+                                                     npj Comput Mater 9, 156 (2023)   
+                                                                                      
+
+     Program EPW v.6.0 starts on 19May2026 at 15:21:57 
+
+     This program is part of the open-source Quantum ESPRESSO suite
+     for quantum simulation of materials; please cite
+         "P. Giannozzi et al., J. Phys.:Condens. Matter 21 395502 (2009);
+         "P. Giannozzi et al., J. Phys.:Condens. Matter 29 465901 (2017);
+         "P. Giannozzi et al., J. Chem. Phys. 152 154105 (2020);
+          URL http://www.quantum-espresso.org", 
+     in publications or presentations arising from this work. More details at
+     http://www.quantum-espresso.org/quote
+
+     Parallel version (MPI), running on     8 processors
+
+     MPI processes distributed on     1 nodes
+     K-points division:     npool     =       8
+     115944 MiB available memory on the printing compute node when the environment starts
+
+     Reading input from epw15.in
+
+     Suggestion: epw_memdist == .true. can reduce the memory usage when etf_mem == 0.
+
+     Reading supplied temperature list.
+                      
+     ------------------------------------------------------------------------ 
+                   RESTART - RESTART - RESTART - RESTART                         
+     Restart is done without reading PWSCF save file.                  
+     Be aware that some consistency checks are therefore not done.                  
+     ------------------------------------------------------------------------ 
+                      
+
+     --                                                                         
+
+     bravais-lattice index     =            0
+     lattice parameter (a_0)   =       0.0000  a.u.
+     unit-cell volume          =       0.0000 (a.u.)^3
+     number of atoms/cell      =            0
+     number of atomic types    =            0
+     kinetic-energy cut-off    =       0.0000  Ry
+     charge density cut-off    =       0.0000  Ry
+     Exchange-correlation= not set
+                           (  -1  -1  -1  -1  -1  -1  -1)
+
+
+     celldm(1)=    0.00000  celldm(2)=    0.00000  celldm(3)=    0.00000
+     celldm(4)=    0.00000  celldm(5)=    0.00000  celldm(6)=    0.00000
+
+     crystal axes: (cart. coord. in units of a_0)
+               a(1) = (  0.0000  0.0000  0.0000 )  
+               a(2) = (  0.0000  0.0000  0.0000 )  
+               a(3) = (  0.0000  0.0000  0.0000 )  
+
+     reciprocal axes: (cart. coord. in units 2 pi/a_0)
+               b(1) = (  0.0000  0.0000  0.0000 )  
+               b(2) = (  0.0000  0.0000  0.0000 )  
+               b(3) = (  0.0000  0.0000  0.0000 )  
+
+
+     Atoms inside the unit cell: 
+
+   Cartesian axes
+
+     site n.  atom      mass           positions (a_0 units)
+
+
+     No symmetry!
+
+     G cutoff =    0.0000  (      0 G-vectors)     FFT grid: (  0,  0,  0)
+     number of k points=    0
+                       cart. coord. in units 2pi/a_0
+     EPW          :      0.00s CPU      0.00s WALL
+
+     EPW          :      0.00s CPU      0.00s WALL
+
+
+     -------------------------------------------------------------------
+     Using diam.ukk from disk
+     -------------------------------------------------------------------
+
+     HDF5 is NOT used in the current build. Exciton-phonon coupling calculations are disabled.
+     Symmetries of Bravais lattice:  48
+     Symmetries of crystal:          48
+
+     Do not need to read .epb files; read .fmt files
+
+     Use zone-centred Wigner-Seitz cells 
+     Number of WS vectors for electrons       43
+     Number of WS vectors for phonons       43
+     Number of WS vectors for electron-phonon       43
+     Maximum number of cores for efficient parallelization      258
+     Results may improve by using use_ws == .TRUE. 
+
+     Reading Hamiltonian, Dynamical matrix and EP vertex in Wann rep from file
+
+
+     Finished reading Wann rep data from file
+
+     ===================================================================
+     Memory usage:  VmHWM =       116Mb
+                   VmPeak =       829Mb
+     ===================================================================
+     
+     Using uniform q-mesh:     4    4    4
+     Size of q point mesh for interpolation:         64
+     Using uniform k-mesh:     8    8    8
+     Size of k point mesh for interpolation:        512
+     Max number of k points per pool:               64
+
+     Fermi energy coarse grid =  14.009579 eV
+
+     ===================================================================
+
+     Fermi energy is read from the input file: Ef =  13.400000 eV
+
+     ===================================================================
+
+              ibndmin =     2  ebndmin =    12.718 eV
+              ibndmax =     4  ebndmax =    13.891 eV
+
+
+     Number of ep-matrix elements per pool :         3456 ~=   27.00 Kb (@ 8 bytes/ DP)
+      
+     A selecq.fmt file was found but re-created because selecqread == .FALSE.  
+     We only need to compute       27 q-points
+      
+     Gaussian   Broadening:   0.100000 eV, ngauss=   1
+ 
+
+     ===================================================================
+     Electron Spectral Function in the Migdal Approximation
+     ===================================================================
+
+ 
+     The sum rule to conserve the number of electron is enforced.
+     The self energy is rescaled so that its real part is zero at the Fermi level.
+     The sum rule replace the explicit calculation of the Debye-Waller term.
+ 
+
+     Fermi Surface thickness =   0.800000 eV
+
+     Golden Rule strictly enforced with T =   0.043087 eV
+     WARNING: only the eigenstates within the Fermi window are meaningful
+
+     -------------------------------------------------------------------
+     K-point        Energy (eV)         Spectral function (1/meV)
+     -------------------------------------------------------------------
+
+     ik =       1  w =   -0.9000 eV   A(k,w) =   5.32002E-07 meV^-1
+     ik =       1  w =   -0.8379 eV   A(k,w) =   6.34293E-07 meV^-1
+     ik =       1  w =   -0.7759 eV   A(k,w) =   7.62486E-07 meV^-1
+     ik =       1  w =   -0.7138 eV   A(k,w) =   9.24901E-07 meV^-1
+     ik =       1  w =   -0.6517 eV   A(k,w) =   1.13316E-06 meV^-1
+     ik =       1  w =   -0.5897 eV   A(k,w) =   1.40379E-06 meV^-1
+     ik =       1  w =   -0.5276 eV   A(k,w) =   1.76074E-06 meV^-1
+     ik =       1  w =   -0.4655 eV   A(k,w) =   2.23950E-06 meV^-1
+     ik =       1  w =   -0.4034 eV   A(k,w) =   2.89392E-06 meV^-1
+     ik =       1  w =   -0.3414 eV   A(k,w) =   3.80807E-06 meV^-1
+     ik =       1  w =   -0.2793 eV   A(k,w) =   5.11741E-06 meV^-1
+     ik =       1  w =   -0.2172 eV   A(k,w) =   7.04858E-06 meV^-1
+     ik =       1  w =   -0.1552 eV   A(k,w) =   9.99774E-06 meV^-1
+     ik =       1  w =   -0.0931 eV   A(k,w) =   1.46951E-05 meV^-1
+     ik =       1  w =   -0.0310 eV   A(k,w) =   2.25761E-05 meV^-1
+     ik =       1  w =    0.0310 eV   A(k,w) =   3.67021E-05 meV^-1
+     ik =       1  w =    0.0931 eV   A(k,w) =   6.43209E-05 meV^-1
+     ik =       1  w =    0.1552 eV   A(k,w) =   1.25159E-04 meV^-1
+     ik =       1  w =    0.2172 eV   A(k,w) =   2.84049E-04 meV^-1
+     ik =       1  w =    0.2793 eV   A(k,w) =   8.11112E-04 meV^-1
+     ik =       1  w =    0.3414 eV   A(k,w) =   2.99766E-03 meV^-1
+     ik =       1  w =    0.4034 eV   A(k,w) =   1.09041E-02 meV^-1
+     ik =       1  w =    0.4655 eV   A(k,w) =   9.46013E-03 meV^-1
+     ik =       1  w =    0.5276 eV   A(k,w) =   4.39633E-03 meV^-1
+     ik =       1  w =    0.5897 eV   A(k,w) =   3.62291E-03 meV^-1
+     ik =       1  w =    0.6517 eV   A(k,w) =   4.81819E-03 meV^-1
+     ik =       1  w =    0.7138 eV   A(k,w) =   6.63637E-03 meV^-1
+     ik =       1  w =    0.7759 eV   A(k,w) =   2.54007E-03 meV^-1
+     ik =       1  w =    0.8379 eV   A(k,w) =   7.25544E-04 meV^-1
+     ik =       1  w =    0.9000 eV   A(k,w) =   2.70447E-04 meV^-1
+
+
+     Additional k-points are provided in the specfun.elself file
+
+     -------------------------------------------------------------------
+
+
+     ===================================================================
+     Computing optical conductivity in the bubble approximation.
+     ===================================================================
+
+     Number of electrons computed:  N =     0.11617918 N_target=     0.13297366
+
+     Chemical potential is changed from            13.400000[eV] to            13.534375[eV] 
+
+     Drude conductivity_xx =     2.75295791E+05[1/(Ohm m)]
+
+     Drude conductivity_yy =     2.75200355E+05[1/(Ohm m)]
+
+     Drude conductivity_zz =     2.75205833E+05[1/(Ohm m)]
+     ===================================================================
+     Memory usage:  VmHWM =       116Mb
+                   VmPeak =       831Mb
+     ===================================================================
+
+
+     Unfolding on the coarse grid
+     elphon_wrap  :      0.00s CPU      0.00s WALL (       1 calls)
+
+     INITIALIZATION: 
+
+
+
+
+     Electron-Phonon interpolation
+     ep-interp    :      0.02s CPU      0.03s WALL (      27 calls)
+
+     wigner_seitz :      0.00s CPU      0.00s WALL (       1 calls)
+     DynW2B       :      0.00s CPU      0.00s WALL (      27 calls)
+     HamW2B       :      0.01s CPU      0.01s WALL (    3648 calls)
+     ephW2Bp      :      0.01s CPU      0.01s WALL (      27 calls)
+     ephW2B       :      0.00s CPU      0.00s WALL (      33 calls)
+     selfen_elec_ :      0.00s CPU      0.00s WALL (      27 calls)
+
+
+
+     Total program execution
+     EPW          :      0.14s CPU      0.23s WALL
+
+     % Copyright (C) 2016-2023 EPW-Collaboration                                    
+                                                                                    
+     ===============================================================================
+     Please consider citing the following papers.                                   
+                                                                                                 
+     % Paper describing the method on which EPW relies                                           
+       F. Giustino and M. L. Cohen and S. G. Louie, Phys. Rev. B 76, 165108 (2007)               
+                                                                                                 
+     % Papers describing the EPW software                                                        
+       H. Lee et al., npj Comput. Mater. 9, 156 (2023)                                           
+       S. Ponc\'e, E.R. Margine, C. Verdi and F. Giustino, Comput. Phys. Commun. 209, 116 (2016) 
+       J. Noffsinger et al., Comput. Phys. Commun. 181, 2140 (2010)                              
+                                                                                                 
+                                                                                    
+     For your convenience, this information is also reported in the                 
+     functionality-dependent EPW.bib file.                                          
+     ===============================================================================
+                                                                                    

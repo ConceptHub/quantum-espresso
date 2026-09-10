@@ -234,7 +234,7 @@ CONTAINS
   USE mp,               ONLY : mp_sum
   USE mp_global,        ONLY : inter_pool_comm
   USE io_global,        ONLY : stdout
-  USE global_var,       ONLY : epmatwp, epmatwp_dist
+  USE global_var,       ONLY : epmatwp
   USE ep_constants,     ONLY : twopi, ci, czero
   USE parallelism,      ONLY : para_bounds
   USE io,               ONLY : rwepmatw

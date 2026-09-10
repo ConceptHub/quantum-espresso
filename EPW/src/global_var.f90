@@ -92,9 +92,10 @@
     nkpts,                   &!  Total number of k points in the given DFT calculation. (nkc1 * nkc2 * nkc3) 
                               !  For non-magnetic or noncollinear magnetic calculations, identical to nkstot in module pwcom.
                               !  For LSDA calculations, `nkstot = 2 * nkpts`.
-    nk_loc                    !  Number of k points at the given pool. The sum of nk_loc over pools equals nkpts. For non-magnetic
+    nk_loc,                  &!  Number of k points at the given pool. The sum of nk_loc over pools equals nkpts. For non-magnetic
                               !  or non collinear calculations, identical to nks in module pwcom. For LSDA calculations for each 
                               !  pool it is built by dividing nkpts between the total number of pools.
+    iter_scgd0                ! current iteration for scGD0 
   INTEGER, ALLOCATABLE ::    &!
     ibndkept(:),             &!  indices of remaining bands after excluding bands in Wannierization step
     igk(:),                  &!  Index for k+G vector
@@ -145,6 +146,7 @@
     alph                      !  Ewald alpha used to subtract out the long-range term
   REAL(KIND = DP), ALLOCATABLE ::&
     a_all(:, :, :),          &!  electronic spectral function due to electron-phonon interaction
+    a_all_ibnd(:, :, :, :),  &!  band-resolved electronic spectral function due to electron-phonon interaction
     a_all_ph(:, :, :, :),    &!  phononic spectral function due to electron-phonon interaction
     dos(:),                  &!  Density of states at the chemical potential.
     et_ks(:, :),             &!  lda eigenvalues
@@ -161,6 +163,7 @@
     etf_k(:, :),             &!  Saved interpolated KS eigenenergies for later used in q-parallelization (nbnd, nkqf)
     etf_ks(:, :),            &!  interpolated eigenvalues (nbnd, nkqf) KS eigenvalues in the case of eig_read
     fermi_energies_t(:),     &!  temperature dependent fermi energies for fast k mesh
+    mu_t(:),                 &!  Temperature dependent Fermi level on the fine grid for self-energy calculations
     wf(:, :),                &!  interpolated eigenfrequencies
     pi_0(:),                 &!  static part of the phonon self-energy
     gammai_all(:, :, :, :),  &!  Imaginary part of the frequency dependent spectral function
@@ -178,6 +181,7 @@
     eta_imp(:, :),              &!  Adaptative smearing for ionized impurity scattering rate integration
     esigmar_all(:, :, :, :),    &!  energy of the real self-energy
     esigmai_all(:, :, :, :),    &!  energy of the imaginary self-energy
+    esigmaisc_all(:, :, :, :),  &!  energy of the imaginary self-consistent self-energy
     jdos(:),                    &!  j-DOS
     spectra(:, :, :, :, :, :),  &!  dipole absorption spectra, polarizations, nomega, nsmear, dme/vme, absorption/emission
     zstar(:, :, :),             &!  Born effective charges
@@ -267,7 +271,6 @@
     crrw(:, :, :, :),         &!  Position matrix element in wannier basis
     rdw(:, :, :),             &!  dynamical matrix in wannier basis (real)
     epmatwp(:, :, :, :, :),   &!  e-p matrix  in wannier basis - electrons and phonons
-    epmatwp_dist(:, :, :, :), &!  e-p matrix  in wannier basis - electrons and phonons, distributed storage
     umat(:, :, :),            &!  the rotation matrix for the unique setting of the wfs gauge -- on the local pool
     umatq(:, :, :),           &!  the rotation matrix for the unique setting of the wfs gauge for the k + q-- on the local pool
     umat_all(:, :, :),        &!  the rotation matrix for the unique setting of the wfs gauge -- for all k points

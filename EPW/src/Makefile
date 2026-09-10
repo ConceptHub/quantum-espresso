@@ -67,6 +67,7 @@ ep_coarse_unfolding.o \
 supercond_driver.o \
 selfen.o \
 spectral.o \
+scgd0_driver.o\
 wannier.o \
 use_wannier.o \
 init.o \
@@ -74,6 +75,13 @@ readin.o \
 setups.o \
 summaries.o \
 wann_common.o \
+polaron_common.o \
+utilities/polaron_grid.o \
+polaron_hamiltonian.o \
+polaron_diagonalization.o \
+io/io_polaron.o \
+polaron_interpolation.o \
+polaron_scf_driver.o \
 polaron.o \
 qdabs.o\
 wfpt.o \
@@ -136,5 +144,3 @@ clean :
 
 
 include make.depend
-
-

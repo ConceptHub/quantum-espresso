@@ -215,7 +215,7 @@
       OPEN(UNIT = iundmedata, FILE = TRIM(fnm))
       fnm = 'ksdata.fmt'
       IF (TRIM(lsda) == 'down') fnm = 'ksdata.down.fmt'
-      IF (eig_read) OPEN(UNIT = iunksdata, FILE = 'ksdata.fmt')
+      IF (eig_read) OPEN(UNIT = iunksdata, FILE = TRIM(fnm))
       WRITE(crystal,*) nat
       WRITE(crystal,*) nmodes
       WRITE(crystal,*) nelec, nbndskip
@@ -365,7 +365,7 @@
     USE input,     ONLY : nbndsub, eig_read, etf_mem, lifc, lwfpt, lsda
     USE pwcom,     ONLY : ef
     USE global_var,ONLY : chw, rdw, epmatwp, cdmew, cvmew, chw_ks, zstar, &
-                          epsi, crrw, dwmatwe, cpmew, epmatwp_dist,       &
+                          epsi, crrw, dwmatwe, cpmew,                     &
                           irn_start, irn_stop, nirn_loc, nirg_loc, imode_start
     USE ions_base, ONLY : nat
     USE modes,     ONLY : nmodes
@@ -550,11 +550,12 @@
       filint = TRIM(tmp_dir) // TRIM(prefix) // '.epmatwp'
       IF (TRIM(lsda) == 'down') filint = TRIM(tmp_dir) // TRIM(prefix) // '.down.epmatwp'
       !
-#if defined(__MPI)
-      !
+      ! nirg_loc is the number of WS vectors held by this pool. Without MPI it equals nrr_g.
       ALLOCATE(epmatwp(nbndsub, nbndsub, nrr_k, nmodes, nirg_loc), STAT = ierr)
       IF (ierr /= 0) CALL errore('epw_read', 'Error allocating epmatwp', 1)
       epmatwp = czero
+      !
+#if defined(__MPI)
       !
       CALL MPI_TYPE_CONTIGUOUS((nbndsub**2) * nrr_k, MPI_DOUBLE_COMPLEX, epmatwp_block_dtype, ierr)
       IF (ierr /= 0) CALL errore('epw_read', 'Error creating epmatwp_block_dtype', 1)

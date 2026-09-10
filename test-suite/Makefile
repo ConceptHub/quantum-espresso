@@ -189,7 +189,7 @@ clean:
 		epw_*/*.win epw_*/*.imag_iso* epw_*/*.chk epw_*/*.freq  \
 		epw_*/*.epmatwp epw_*/*.epwane epw_*/*.ephmat epw_*/epsilon2* \
 		epw_*/*.H epw_*/*.epb* epw_*/*self epw_*/*.res* epw_*/*.01 \
-		epw_*/*.kpt epw_*/*.gnu epw_*/*.lambda_FS epw_*/*.sigma_restart* \
+		epw_*/*.kpt epw_*/*.gnu epw_*/*.lambda_FS epw_*/*.sigma_restart* epw_*/*sc_restart*\
 		epw_*/specfun* epw_*/linewidth.*  epw_*/*.tau_restart* epw_*/lambda.phself* \
 		epw_*/*_elcond_* epw_*/fort.* epw_*/decay.* epw_*/scattering_rate* \
 		epw_*/*.fc.* epw_*/*_band.dat epw_*/*F_restart* epw_*/*F_restart_CB* \
@@ -199,7 +199,7 @@ clean:
 		epw_*/Fepmatkq1* epw_*/Fepmatkqcb1* epw_*/Fsparse* epw_*/Fsparsecb* \
 		epw_*/*.cube epw_*/EPW.bib \
 		epw_*/*_hr.dat epw_*/*_wsvec.dat epw_*/epwdata*.fmt epw_*/IBTEvel_sup*.fmt \
-		epw_*/restart*.fmt epw_*/vmedata*.fmt \
+		epw_*/restart*.fmt epw_*/vmedata*.fmt epw_*/AC* \
 		epw_*/selecq.fmt epw_*/dmedata*.fmt epw_*/band*.eig epw_*/ksdata*.fmt \
 		epw_*/mobility_nk*.fmt epw_*/mobility_nuq*.fmt epw_*/inv_tau* \
 		epw_*/wigner*.fmt epw_*/*.dos epw_*/*.dmat* epw_*/*.qmap epw_*/*.dwmatwe* \
@@ -212,7 +212,9 @@ clean:
 		epw_mob/save epw_mob_ibte/save epw_mob_ibte_sym/save epw_mob_polar/save epw_mob_U/save \
 		epw_qdpt/save epw_2D/save epw_hall/save epw_qdpt/*.dat epw_wfpt/save \
 		epw_wfpt/matdyn.modes epw_plrn/*.plrn epw_plrn/plrn_tmp epw_plrn/save \
-		epw_plrn/dtau.plrn.xsf epw_tdbe/ie_ph.dat epw_tdbe/iph_e.dat          \
+		epw_plrn/dtau.plrn.xsf epw_plrn/psir_plrn.xsf                         \
+		epw_plrn/psir_plrn.scell.csv                                          \
+		epw_tdbe/ie_ph.dat epw_tdbe/iph_e.dat                                 \
 		epw_tdbe/felec epw_tdbe/nphon epw_tdbe/*points epw_tdbe/selecq_tdbe.fmt \
 	    epw_tdbe/inv_tau_rta* epw_tdbe/ph_freq epw_tdbe/save epw_lsda_metal/save
 

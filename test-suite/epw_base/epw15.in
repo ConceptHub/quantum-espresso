@@ -1,0 +1,55 @@
+--
+&inputepw
+  prefix      = 'diam'
+  amass(1)    = 12.01078
+  outdir      = './'
+
+  iverbosity  = 3
+
+  elph        = .true.
+  etf_mem     = 0
+  vme         = 'dipole'
+  epwwrite    = .false.
+  epwread     = .true.
+
+  nbndsub     =  4
+
+  wannierize  = .false.
+  num_iter    = 300
+  iprint      = 2
+  dis_win_max = 12
+  dis_froz_max= 7
+  proj(1)     = 'f=0,0,0:l=-3'
+
+  elecselfen  = .false.
+  specfun_el   = .true.
+  wmin_specfun = -0.9
+  wmax_specfun = 0.9
+  nw_specfun   = 30
+  fsthick = 0.8
+
+  opt_cond = .true.
+  efermi_read = .true.
+  fermi_energy = 13.4
+ 
+  temps       = 500 ! K 
+  degaussw    = 0.1 ! eV
+  
+  dvscf_dir   = './save/'
+
+  nkf1        = 8
+  nkf2        = 8
+  nkf3        = 8
+
+  nqf1        = 4
+  nqf2        = 4
+  nqf3        = 4
+
+  nk1         = 3
+  nk2         = 3
+  nk3         = 3
+
+  nq1         = 3
+  nq2         = 3
+  nq3         = 3
+ /

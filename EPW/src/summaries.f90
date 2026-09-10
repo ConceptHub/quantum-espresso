@@ -70,29 +70,18 @@
   REAL(KIND = DP) :: xkg(3)
   !! k point in crystal coordinates
   !
-  ! S. Tiwari: Here we add the warning regarding image parallelization
-  !   
-  IF ((nimage > 1) .AND. ((.NOT. laniso))) THEN
+  ! S. Tiwari: Here we add the info regarding image parallelization
+  !
+  IF (nimage > 1) THEN
     WRITE(stdout, '(/5x,"+============================================================+")')
     WRITE(stdout, '( 5x,"|                           INFO                             |")')
     WRITE(stdout, '( 5x,"+============================================================+")')
     WRITE(stdout, '( 5x,"| Image parallelization is enabled.                          |")')
     WRITE(stdout, '( 5x,"| Tested for optics, transport, self-energies, polaron,      |")')
-    WRITE(stdout, '( 5x,"| and isotropic Eliashberg calculations.                     |")')
+    WRITE(stdout, '( 5x,"| isotropic and anisotropic Eliashberg calculations.         |")')
     WRITE(stdout, '( 5x,"| See benchmarks at:                                         |")')
     WRITE(stdout, '( 5x,"| https://docs.epw-code.org/doc/Benchmarks.html              |")')
     WRITE(stdout, '( 5x,"+============================================================+")')
-  ELSEIF ((nimage > 1) .AND. (laniso)) THEN
-    WRITE(stdout, '(/5x,"+============================================================+")')
-    WRITE(stdout, '( 5x,"|                          ERROR                             |")')
-    WRITE(stdout, '( 5x,"+============================================================+")')
-    WRITE(stdout, '( 5x,"| Image parallelization over the q-grid is enabled.          |")')
-    WRITE(stdout, '( 5x,"| This is not supported for anisotropic Eliashberg or        |")')
-    WRITE(stdout, '( 5x,"| polaron calculations.                                      |")')
-    WRITE(stdout, '( 5x,"| Please restart using pool parallelization only.            |")')
-    WRITE(stdout, '( 5x,"| The calculation will now stop.                             |")')
-    WRITE(stdout, '( 5x,"+============================================================+")')
-    CALL stop_epw() 
   ENDIF
   !
   IF ((nimage > 1) .AND. (epwwrite)) THEN
@@ -102,17 +91,6 @@
     WRITE(stdout, '( 5x,"| Image parallelization over the q-grid is enabled.          |")')
     WRITE(stdout, '( 5x,"| Irreducible q-points are distributed across images.        |")')
     WRITE(stdout, '( 5x,"+============================================================+")')
-  ENDIF 
-  IF ((nimage > 1) .AND. (ephwrite)) THEN
-    WRITE(stdout, '(/5x,"+============================================================+")')
-    WRITE(stdout, '( 5x,"|                          ERROR                             |")')
-    WRITE(stdout, '( 5x,"+============================================================+")')
-    WRITE(stdout, '( 5x,"| Image parallelization over the q-grid is enabled.          |")')
-    WRITE(stdout, '( 5x,"| This is not supported when ephwrite = .true..              |")')
-    WRITE(stdout, '( 5x,"| Please restart using pool parallelization only.            |")')
-    WRITE(stdout, '( 5x,"| The calculation will now stop.                             |")')
-    WRITE(stdout, '( 5x,"+============================================================+")')
-    CALL stop_epw() 
   ENDIF
   ! 
   WRITE(stdout, 100) title, ibrav, alat, omega, nat, ntyp, ecutwfc, ecutwfc * dual

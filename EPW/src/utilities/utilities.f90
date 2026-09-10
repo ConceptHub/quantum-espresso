@@ -545,7 +545,7 @@
     !! k+q point on that core
     REAL(KIND = DP), INTENT(in) :: w(nmodes)
     !! Phonon frequencies
-    REAL(KIND = DP), INTENT(out) :: eta(nmodes, nbndfst, nkf)
+    REAL(KIND = DP), INTENT(inout) :: eta(nmodes, nbndfst, nkf)
     !! Adaptative smearing value
     COMPLEX(KIND = DP), INTENT(in) :: vmefp(3, nmodes, nmodes)
     !! Phonon velocity
@@ -603,11 +603,11 @@
     !
     ! Average electron velocity
     DO ibnd = 1, nbndfst
-      e_1 = etf(ibndmin - 1 + ibnd, ikk)
+      e_1 = etf(ibndmin - 1 + ibnd, ikq)
       vmek_av(:) = zero
       n_av   = 0
       DO jbnd = 1, nbndfst
-        e_2 = etf(ibndmin - 1 + jbnd, ikk)
+        e_2 = etf(ibndmin - 1 + jbnd, ikq)
         IF (ABS(e_2 - e_1) < eps4) THEN
           n_av = n_av + 1
           vmek_av(:) = vmek_av(:) + REAL(vmef(:, ibndmin - 1 + jbnd, ibndmin - 1 + jbnd, ikq), KIND = DP)
@@ -967,7 +967,8 @@
     USE pwcom,     ONLY : nelec
     USE input,     ONLY : int_mob, ncarrier, nstemp, fermi_energy, &
                           system_2d, carrier, efermi_read, assume_metal, ngaussw, &
-                          lfast_kmesh, lsda, isk_dummy, gap_energy
+                          lfast_kmesh, lsda, isk_dummy, gap_energy, specfun_el,  &
+                          specfun_el_scgd0
     USE transport, ONLY : nelec_to_ncarrier
     USE mp,        ONLY : mp_barrier, mp_sum, mp_max, mp_min
     USE mp_global, ONLY : inter_pool_comm
@@ -1041,7 +1042,12 @@
     REAL(KIND = DP) :: ncarrierp
     !! ncarrier*fraction of ionized impurities
     !
-    ncarrierp = ncarrier * partion(itemp)
+    IF (specfun_el_scgd0 .OR. specfun_el) THEN
+      ncarrierp = ncarrier  ! for the spectral function or spectral transport calculations, we enable the usage of ncarrier
+      !                     ! but without ionized impurities, this means that 'partion' array is not allocated.
+    ELSE
+      ncarrierp = ncarrier * partion(itemp)
+    ENDIF
     !
     IF (assume_metal) THEN
       !! set conduction band chemical potential to 0 since it is irrelevent

@@ -294,7 +294,7 @@
     USE ep_constants,     ONLY : zero, one, two, pi, kelvin2eV, ryd2ev, eps10, &
                                  bohr2ang, ang2cm, hbarJ, eps6, eps8, byte2Mb, &
                                  eps2, eps4, eps20, eps80, eps160, hbar, cm2m, &
-                                 electronvolt_si, ry2thz_sr
+                                 electronvolt_si, ry2thz_sr, e2
     USE mp,               ONLY : mp_barrier, mp_sum, mp_bcast
     USE mp_world,         ONLY : world_comm
     USE mp_global,        ONLY : inter_pool_comm, inter_image_comm
@@ -509,6 +509,8 @@
             ekk = etf_all(ibnd, ik) - ef0(itemp)
             dfnk = w0gauss(ekk / etemp, -99) / etemp
             ! (-) sign is because w0gauss is - df/de
+            ! f_serta, f_in, f_out and f_in_b, f_out_b computes df/d(eE), instead of df/dE
+            ! the missing e is multiplied back in subroutine prtmob  
             f_crta(:, ibnd, ik, itemp) = - dfnk * vkk_all(:, ibnd, ik) / (inv_tau_crta)
             f_serta(:, ibnd, ik, itemp) = - dfnk * vkk_all(:, ibnd, ik) / (inv_tau(ibnd, ik, itemp))
             !
@@ -877,11 +879,13 @@
                 vb(1) = vkk_all_b(2, ibnd, ikbz, itemp) * bfieldz - vkk_all_b(3, ibnd, ikbz, itemp) * bfieldy
                 vb(2) = vkk_all_b(3, ibnd, ikbz, itemp) * bfieldx - vkk_all_b(1, ibnd, ikbz, itemp) * bfieldz
                 vb(3) = vkk_all_b(1, ibnd, ikbz, itemp) * bfieldy - vkk_all_b(2, ibnd, ikbz, itemp) * bfieldx
-                f_out_b(1, ibnd, ikbz, itemp) =  DOT_PRODUCT(vb(:), df_in_b(:, 1, ibnd, ikbz, itemp)) &
+                ! electron charge e in Rydberg units gives a SQRT(2) factor
+                ! [the one in the bracket in Eq. (9) in Phys. Rev. Research 3, 043022]
+                f_out_b(1, ibnd, ikbz, itemp) =  SQRT(e2) * DOT_PRODUCT(vb(:), df_in_b(:, 1, ibnd, ikbz, itemp)) &
                                 / (inv_tau_b(ibnd, ikbz, itemp)) + f_out_b(1, ibnd, ikbz, itemp)
-                f_out_b(2, ibnd, ikbz, itemp) =  DOT_PRODUCT(vb(:), df_in_b(:, 2, ibnd, ikbz, itemp)) &
+                f_out_b(2, ibnd, ikbz, itemp) =  SQRT(e2) * DOT_PRODUCT(vb(:), df_in_b(:, 2, ibnd, ikbz, itemp)) &
                                 / (inv_tau_b(ibnd, ikbz, itemp)) + f_out_b(2, ibnd, ikbz, itemp)
-                f_out_b(3, ibnd, ikbz, itemp) =  DOT_PRODUCT(vb(:), df_in_b(:, 3, ibnd, ikbz, itemp)) &
+                f_out_b(3, ibnd, ikbz, itemp) =  SQRT(e2) * DOT_PRODUCT(vb(:), df_in_b(:, 3, ibnd, ikbz, itemp)) &
                                 / (inv_tau_b(ibnd, ikbz, itemp)) + f_out_b(3, ibnd, ikbz, itemp)
               ENDIF ! inv_tau_b
             ENDDO ! ibnd

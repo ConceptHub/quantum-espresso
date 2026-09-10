@@ -49,7 +49,7 @@
             iufilfelec, iufilnphon, iukmeshf, iuqmeshf, iuselecqfd, io_error,  &
             iufelecrestart, iunphonrestart, iunphindx, iun3rdfc, iurpa,        &
             iuahcsth, iuahcgkk, iuahcet, iuahcdw, iusymk, iufilmu_meff,        &
-            iufilvkk, iufileigdiff, iufileigplrn,                              &  
+            iufilvkk, iufileigdiff, iufileigplrn, iufilesigmasc_all,           &  
             iundnsbare, iunocc, iundnsscf                                 
   !
   ! Output of physically relevant quantities (60-100)
@@ -159,6 +159,7 @@
   INTEGER :: iuahcet         = 156  ! File unit for Band energy from ph.x
   INTEGER :: iuahcdw         = 157  ! File unit for Debye-Waller matrix from ph.x
   INTEGER :: iusymk          = 158  ! Unit for reading and writing symk file
+  INTEGER :: iufilesigmasc_all = 159 ! eSigmar_all and eSigmai_all file to retart scgd0 spectral calculation
   !
   ! Output quantites related to Wannier (201-250)
   !

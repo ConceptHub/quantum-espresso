@@ -3200,7 +3200,7 @@
     !!
     USE kinds,            ONLY : DP
     USE input,            ONLY : etf_mem
-    USE global_var,       ONLY : epmatwp_dist, epmatwp
+    USE global_var,       ONLY : epmatwp
     USE ep_constants,     ONLY : twopi, ci, czero, cone
     USE mp,               ONLY : mp_sum
     USE mp_pools,         ONLY : inter_pool_comm

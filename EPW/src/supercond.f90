@@ -28,7 +28,7 @@
     !!
     USE kinds,            ONLY : DP
     USE mp_global,        ONLY : world_comm
-    USE io_global,        ONLY : stdout, ionode_id, ionode
+    USE io_global,        ONLY : stdout, ionode_id, ionode, ionode
     USE mp_world,         ONLY : mpime
     USE mp,               ONLY : mp_barrier, mp_bcast
     USE input,            ONLY : eliashberg, nkf1, nkf2, nkf3, nsiter, &
@@ -363,7 +363,7 @@
     !
     IF (gridsamp == 2) THEN
       !
-      !! allocate nsiw but not determine the value here; 
+      !! allocate nsiw but not determine the value here;
       !! nsiw will be determined for each itemp
       !
       ALLOCATE(nsiw(nstemp), STAT = ierr)
@@ -411,10 +411,10 @@
                               wkfs, dwsph, ixkff, ekfs_all, nbndfs_all, ibnd_kfs_all_to_kfs, &
                               ixkf
     USE ep_constants,  ONLY : ryd2ev, eps2, zero, eps16, eps5
-    USE io_global,     ONLY : ionode_id, ionode
-    USE mp_global,     ONLY : inter_pool_comm, my_pool_id, npool
+    USE io_global,     ONLY : ionode_id, ionode, stdout, meta_ionode
+    USE mp_global,     ONLY : inter_pool_comm, inter_image_comm, my_pool_id, npool
     USE mp_world,      ONLY : mpime
-    USE mp,            ONLY : mp_bcast, mp_barrier, mp_sum
+    USE mp,            ONLY : mp_bcast, mp_barrier, mp_sum, mp_max
     USE parallelism,   ONLY : fkbounds
     !
     IMPLICIT NONE
@@ -448,6 +448,10 @@
     !! minimum of ibin
     INTEGER :: ibinmax
     !! maximum of ibin
+    INTEGER :: ibmin, ibmax
+    !! Bin window with non-negligible w0gauss weight in histogram loops
+    INTEGER :: iwmin, iwmax
+    !! Frequency-bin window with non-negligible w0gauss weight
     INTEGER :: nbin, nbink
     !! Number of bins
     INTEGER :: i, j, k
@@ -542,7 +546,10 @@
                         lambda_eph = lambda_eph + g2(ik, iq, ibnd, jbnd, imode) / wf(imode, iq0)
                       ENDIF
                       weight2 = weight * g2(ik, iq, ibnd, jbnd, imode)
-                      DO iwph = 1, nqstep
+                      ! SM: only bins with |wsph - wf| <= 10*sigma contribute (w0gauss ~ 0 beyond)
+                      iwmin = MAX(1, CEILING((wf(imode, iq0) - 10.d0 * sigma) / dwsph))
+                      iwmax = MIN(nqstep, FLOOR((wf(imode, iq0) + 10.d0 * sigma) / dwsph))
+                      DO iwph = iwmin, iwmax
                         weightq  = w0gauss((wsph(iwph) - wf(imode, iq0)) / sigma, 0) / sigma
                         a2f(iwph, ismear) = a2f(iwph, ismear) + weight2 * weightq
                         IF (ismear == 1) THEN
@@ -574,15 +581,22 @@
     lambda_k(:, :) = 2.d0 * lambda_k(:, :)
     lambda_max(:) = 2.d0 * dosef * lambda_max(:)
     !
-    ! collect contributions from all pools (sum over k-points)
+    ! collect contributions from all pools and images (sum over k-points)
     CALL mp_sum(l_sum, inter_pool_comm)
     CALL mp_sum(a2f, inter_pool_comm)
     CALL mp_sum(a2f_modeproj, inter_pool_comm)
     CALL mp_sum(lambda_max, inter_pool_comm)
     CALL mp_sum(lambda_k, inter_pool_comm)
+    CALL mp_sum(l_sum, inter_image_comm)
+    CALL mp_sum(a2f, inter_image_comm)
+    CALL mp_sum(a2f_modeproj, inter_image_comm)
+    ! SM: lambda_max is a max over (k,q) pairs -> combine across images with mp_max
+    CALL mp_max(lambda_max, inter_image_comm)
+    CALL mp_sum(lambda_k, inter_image_comm)
     CALL mp_barrier(inter_pool_comm)
+    CALL mp_barrier(inter_image_comm)
     !
-    IF (ionode) THEN
+    IF (meta_ionode) THEN
       !
       !
       name1 = TRIM(prefix) // '.a2f'
@@ -614,6 +628,8 @@
       WRITE(iua2ffil, '("  #         ", 15f12.7)') ((degaussq + (ismear - 1) * delta_qsmear) * 1000.d0, ismear = 1, nqsmear)
       WRITE(iua2ffil, '("Electron smearing (eV)", f12.7)') degaussw
       WRITE(iua2ffil, '("Fermi window (eV)", f12.7)') fsthick
+      ! SM: Output DOS to file
+      WRITE(iua2ffil, '("DOS (eV)", f12.7)') dosef
       WRITE(iua2ffil, '("Summed el-ph coupling ", f12.7)') l_sum
       CLOSE(iua2ffil)
       !
@@ -656,9 +672,8 @@
     dbin = zero
     IF (iverbosity == 2) THEN
       IF (.NOT. old_version) THEN
-        !nbin = 300
-        !dbin = 1.1d0 * MAXVAL(lambda_max(:)) / DBLE(nbin)
-        nbin = NINT(1.1d0 * MAXVAL(lambda_max(:)) / eps2) + 1
+        ! SM: fixed nbin; the old nbin ~ MAXVAL(lambda_max)/eps2 explodes for soft modes
+        nbin = 300
         dbin = 1.1d0 * MAXVAL(lambda_max(:)) / DBLE(nbin)
         smear = 5.0d-1 * dbin
       ELSE
@@ -690,7 +705,10 @@
                 lambda_k(ik, ibnd) = lambda_k(ik, ibnd) +  weight * lambda_eph
                 IF (iverbosity == 2) THEN
                   IF (.NOT. old_version) THEN
-                    DO ibin = 1, nbin
+                    ! SM: only bins within 10*smear of lambda_eph contribute
+                    ibmin = MAX(1, CEILING((lambda_eph - 10.d0 * smear) / dbin) + 1)
+                    ibmax = MIN(nbin, FLOOR((lambda_eph + 10.d0 * smear) / dbin) + 1)
+                    DO ibin = ibmin, ibmax
                       lambda_step = dbin * DBLE(ibin - 1)
                       weight2 = wkfs(ik) * wqf(iq) * w0gauss((lambda_step - lambda_eph) / smear, 0) / smear
                       weight2 = weight2 * w0g(ibnd, ik) * w0g(jbnd,ixkqf(ik, iq0))
@@ -705,8 +723,29 @@
               ENDIF
             ENDDO ! jbnd
           ENDDO ! iq
+        ENDIF
+      ENDDO ! ibnd
+    ENDDO ! ik
+    !
+    ! SM: complete the q-sum (images) and k-sum (pools) BEFORE binning lambda_k
+    CALL mp_sum(lambda_k, inter_image_comm)
+    CALL mp_sum(lambda_k, inter_pool_comm)
+    IF (iverbosity == 2) THEN
+      ! lambda_pairs bins each (k,q) pair independently; every pair lives on exactly
+      ! one image, so summing the histograms over pools and images is correct.
+      CALL mp_sum(lambda_pairs, inter_pool_comm)
+      CALL mp_sum(lambda_pairs, inter_image_comm)
+    ENDIF
+    !
+    ! bin lambda_k now that it is fully q-summed; each pool-local k is binned once.
+    DO ik = lower_bnd, upper_bnd
+      DO ibnd = 1, nbndfs
+        IF (ABS(ekfs(ibnd, ik) - ef0) < fsthick) THEN
           IF (.NOT. old_version) THEN
-            DO ibin = 1, nbink
+            ! SM: restrict to the bins within 10*smeark of lambda_k (see lambda_pairs).
+            ibmin = MAX(1, CEILING((lambda_k(ik, ibnd) - 10.d0 * smeark) / dbink) + 1)
+            ibmax = MIN(nbink, FLOOR((lambda_k(ik, ibnd) + 10.d0 * smeark) / dbink) + 1)
+            DO ibin = ibmin, ibmax
               lambda_step = dbink * DBLE(ibin - 1)
               weight3 = wkfs(ik) * w0gauss((lambda_step - lambda_k(ik, ibnd)) / smeark, 0) / smeark * w0g(ibnd, ik)
               lambda_k_bin(ibin) = lambda_k_bin(ibin) + weight3
@@ -720,15 +759,12 @@
       ENDDO ! ibnd
     ENDDO ! ik
     !
-    ! collect contributions from all pools
-    CALL mp_sum(lambda_k, inter_pool_comm)
-    IF (iverbosity == 2) THEN
-      CALL mp_sum(lambda_pairs, inter_pool_comm)
-    ENDIF
+    ! collect the histogram across pools only (each k was binned exactly once).
     CALL mp_sum(lambda_k_bin, inter_pool_comm)
     CALL mp_barrier(inter_pool_comm)
+    CALL mp_barrier(inter_image_comm)
     !
-    IF (ionode) THEN
+    IF (meta_ionode) THEN
       !
       ! SP: Produced if user really wants it
       IF (iverbosity == 2) THEN
@@ -773,7 +809,6 @@
         ENDDO
       ENDIF
       CLOSE(iufillambda)
-      !
       ! SP: Produced if user really wants it
       IF (iverbosity == 2) THEN
         name1 = TRIM(prefix) // '.lambda_pairs'
@@ -833,10 +868,11 @@
           WRITE(iufillambdaFS, '(i5, 3f12.6)') nkf2, (bg(i, 2) / DBLE(nkf2), i = 1, 3)
           WRITE(iufillambdaFS, '(i5, 3f12.6)') nkf3, (bg(i, 3) / DBLE(nkf3), i = 1, 3)
           WRITE(iufillambdaFS, '(i5, 4f12.6)') 1, 1.0d0, 0.0d0, 0.0d0, 0.0d0
-          !WRITE(iufillambdaFS, '(6f12.6)') (lambda_k(ixkff(ik), ibnd), ik = 1, nkf1 * nkf2 * nkf3)
           i = 1
           DO ik = 1, nkf1 * nkf2 * nkf3
-            ikfs = ixkf(bztoibz(ik))
+            ! SM: bztoibz(ik) == 0 -> outside the lfast_kmesh window
+            ikfs = 0
+            IF (bztoibz(ik) > 0) ikfs = ixkf(bztoibz(ik))
             IF (ikfs == 0) THEN
               rdum = 0.0d0
             ELSE
@@ -852,6 +888,7 @@
           ENDDO
           CLOSE(iufillambdaFS)
         ENDDO
+        !
         ! HP: Write in .frmsf format compatible with fermisurfer program
         WRITE(name1, '(a, a13)') TRIM(prefix), '.lambda.frmsf'
         OPEN(UNIT = iufillambdaFS, FILE = name1, STATUS = 'unknown', FORM = 'formatted', IOSTAT = ios)
@@ -864,10 +901,11 @@
         WRITE(iufillambdaFS, '(3f12.6)') (bg(i, 2), i = 1, 3)
         WRITE(iufillambdaFS, '(3f12.6)') (bg(i, 3), i = 1, 3)
         ! HM: Outputting a dummy value in the .frmsf file may form fake Fermi surfaces.
-        !     To avoid using a dummy value for the states outside of fsthick window, 
+        !     To avoid using a dummy value for the states outside of fsthick window,
         !     use ekfs_all instead of ekfs.
         !WRITE(iufillambdaFS, '(6f12.6)') ((ekfs(ibnd, ixkff(ik)) - ef0, ik = 1, nkf1 * nkf2 * nkf3), ibnd = 1, nbndfs)
         !WRITE(iufillambdaFS, '(6f12.6)') ((lambda_k(ixkff(ik), ibnd), ik = 1, nkf1 * nkf2 * nkf3), ibnd = 1, nbndfs)
+        !
         i = 1
         DO ibnd = 1, nbndfs_all
           DO ik = 1, nkf1 * nkf2 * nkf3
@@ -883,7 +921,8 @@
         i = 1
         DO ibnd = 1, nbndfs_all
           DO ik = 1, nkf1 * nkf2 * nkf3
-            ikfs = ixkf(bztoibz(ik))
+            ikfs = 0
+            IF (bztoibz(ik) > 0) ikfs = ixkf(bztoibz(ik))
             IF (ikfs == 0) THEN
               rdum = 0.0d0
             ELSE
@@ -934,6 +973,7 @@
       !
     ENDIF
     CALL mp_barrier(inter_pool_comm)
+    CALL mp_barrier(inter_image_comm)
     !
     DEALLOCATE(lambda_k, STAT = ierr)
     IF (ierr /= 0) CALL errore('evaluate_a2f_lambda', 'Error deallocating lambda_k', 1)
@@ -960,7 +1000,7 @@
     !! SH: Updated to write the machine learning estimate for Tc, and
     !!       to limit the "gap0" to 6 decimal digits (Nov 2021).
     !!
-    !! SM: update to write Allen and Dynes modified McMillan’s semiempirical result, 
+    !! SM: update to write Allen and Dynes modified McMillan’s semiempirical result,
     !! and is needed when lambda > 1.5  [Alen and Dyne, PRB 12, 3, 1975]
     !
     USE kinds,            ONLY : DP
@@ -969,8 +1009,8 @@
     USE supercond_common,        ONLY : wsph, dwsph, a2f_tmp, gap0, spin_fac
     USE ep_constants,     ONLY : kelvin2eV, zero
     USE noncollin_module, ONLY : noncolin
-    USE io_global,        ONLY : stdout, ionode_id, ionode
-    USE mp_global,        ONLY : inter_pool_comm
+    USE io_global,        ONLY : stdout, meta_ionode_id, meta_ionode
+    USE mp_world,         ONLY : world_comm
     USE mp,               ONLY : mp_bcast, mp_barrier, mp_sum
     !
     IMPLICIT NONE
@@ -999,7 +1039,7 @@
     REAL(KIND = DP):: muc_local
     !! alternative value for muc: 0.15
     !
-    IF (ionode) THEN
+    IF (meta_ionode) THEN
       l_a2f  = zero
       logavg = zero
       momavg = zero
@@ -1016,12 +1056,12 @@
       WRITE(stdout,'(a)') ' '
       !
       IF ((icoulomb > 0) .AND. (muc > 0.15d0)) THEN
-        ! HM: In the case of icoulomb > 0, because we use a value relatively larger than mu^*, 
-        !     gap0 is estimated as too small if the input muc value is used in the estimations. 
+        ! HM: In the case of icoulomb > 0, because we use a value relatively larger than mu^*,
+        !     gap0 is estimated as too small if the input muc value is used in the estimations.
         !     To avoid that, we will use muc = 0.15 in the estimations.
         muc_local = 0.15d0
         WRITE(stdout, '(5x, a/)') 'muc = 0.15 is used in the following estimations'
-      ELSE 
+      ELSE
         muc_local = muc
       ENDIF
       !
@@ -1030,7 +1070,7 @@
       tc = logavg / 1.2d0 * EXP(-1.04d0 * (1.d0 + l_a2f) &
                                   / (l_a2f - muc_local * (1.d0 + 0.62d0 * l_a2f)))
       !
-      ! SM: Allen-Dynes modified McMillan formula with strong-coupling corrections 
+      ! SM: Allen-Dynes modified McMillan formula with strong-coupling corrections
       ! [Eqs. (34-38) of Allen and Dyne, PRB 12,3 (1975)]
       !
       lambda1 = 2.46d0 * (1.d0 + 3.8d0 * muc_local)
@@ -1092,7 +1132,7 @@
       !
       ! HP: muc needs to be divided by 2 to make consistent with the el-ph contribution
       ! in the SOC calculation
-      ! HM: Dividing muc by two is necessary only in the anisotropic calculations. 
+      ! HM: Dividing muc by two is necessary only in the anisotropic calculations.
       ! Directly substituting half the value into muc poses a significant risk.
       ! spin_fac will be multiplied by the Coulomb term only in the anisotropic calculations.
       IF (noncolin) THEN
@@ -1102,10 +1142,10 @@
       ENDIF
       !
     ENDIF
-    CALL mp_bcast(muc, ionode_id, inter_pool_comm)
-    CALL mp_bcast(gap0, ionode_id, inter_pool_comm)
-    CALL mp_bcast(spin_fac, ionode_id, inter_pool_comm)
-    CALL mp_barrier(inter_pool_comm)
+    CALL mp_bcast(muc, meta_ionode_id, world_comm)
+    CALL mp_bcast(gap0, meta_ionode_id, world_comm)
+    CALL mp_bcast(spin_fac, meta_ionode_id, world_comm)
+    CALL mp_barrier(world_comm)
     !
     RETURN
     !
@@ -1122,11 +1162,13 @@
     !!     This is to save time once starting the iso/aniso runs (3/2022).
     !!
     USE kinds,         ONLY : DP
-    USE io_global,     ONLY : stdout
+    USE io_global,     ONLY : stdout, meta_ionode, meta_ionode_id
     USE io_files,      ONLY : prefix
     USE input,         ONLY : fila2f, degaussq, delta_qsmear
     USE supercond_common,     ONLY : wsphmax, wsph
     USE ep_constants,  ONLY : ryd2ev
+    USE mp_world,      ONLY : world_comm
+    USE mp,            ONLY : mp_bcast
     !
     IMPLICIT NONE
     !
@@ -1137,7 +1179,11 @@
     !! Error status
     !
     IF (fila2f == ' ') WRITE(fila2f, '(a, a4)') TRIM(prefix), '.a2f'
-    INQUIRE(FILE = fila2f, EXIST = exst)
+    ! SM: INQUIRE on meta_ionode only + bcast to avoid rank disagreement/deadlock
+    IF (meta_ionode) THEN
+      INQUIRE(FILE = fila2f, EXIST = exst)
+    ENDIF
+    CALL mp_bcast(exst, meta_ionode_id, world_comm)
     IF (exst) THEN
       WRITE(stdout, '(5x,a)') 'a2f file is found and will be used to estimate initial gap'
       WRITE(stdout, '(a)')    ' '
@@ -1208,10 +1254,11 @@
     !!
     !! SH: Modified for sparse sampling of Matsubara frequencies (Nov 2021).
     !!
+    !! SM: Modified to include proper weights for sparse sampling (Nov 2025).
+    !!
     !! =====================================================================
     !! SH: A note about definition of Matsubara indices/frequencies in epw
     !! RM: updated (Jan 2022)
-    !! SM: corrected weight factor for sparse sampling (Mar 2026)
     !!
     !! In epw, the nsiw(itemp) is the cutoff for Matsubara indicies; i.e.,
     !!   the largest positive Matsubara index "n" is nsiw(itemp)-1.
@@ -1247,17 +1294,17 @@
     !! =====================================================================
     !!
     !
+    USE kinds,         ONLY : DP
     USE input,         ONLY : lpade, lacon, laniso, gridsamp, griddens, tc_linear, &
                               positive_matsu
     USE global_var,    ONLY : gtemp
     USE supercond_common,     ONLY : nsw, nsiw, ws, wsi, dwsi, dwsph, wsn
-    USE ep_constants,  ONLY : zero, one
-    USE ep_constants,  ONLY : pi
+    USE ep_constants,  ONLY : zero, one, pi
     USE low_lvl,       ONLY : mem_size_eliashberg
     USE io_var,        ONLY : iufilmat
     USE mp,            ONLY : mp_bcast, mp_barrier
     USE mp_global,     ONLY : inter_pool_comm, inter_image_comm
-    USE io_global,     ONLY : stdout, ionode_id, ionode
+    USE io_global,     ONLY : stdout, ionode_id, ionode, meta_ionode
     USE control_flags, ONLY : iverbosity
     USE mp_world,      ONLY : mpime
     USE sparse_ir,     ONLY : IR
@@ -1278,12 +1325,14 @@
     !! Matsubara frequency index
     INTEGER :: nsiw_half
     !! INT(0.5d0 * (wscut / pi / gtemp(itemp) - 1.d0)) + 1
+    INTEGER :: nsiw_uni
+    !! Original (uniform) nsiw before sparse grid reduces it
     INTEGER(8) :: imelt
     !! Required allocation of memory
-    INTEGER :: nsiw_uni
-    !! Original uniform grid size before sparse sampling
     INTEGER :: ierr
     !! Error status
+    REAL(KIND = DP) :: griddens_eff
+    !! Effective griddens used for the sparse (gridsamp=1) loop
     !
     IF (laniso) THEN
       ! memory allocated for wsi, wsn, and ws
@@ -1347,7 +1396,7 @@
         END DO
       END IF
       ! uniform sampling to consider negative freq.
-      IF (((gridsamp == 0) .OR. (gridsamp == 3)) .AND. (.NOT.positive_matsu)) THEN 
+      IF (((gridsamp == 0) .OR. (gridsamp == 3)) .AND. (.NOT.positive_matsu)) THEN
         nsiw_half = nsiw(itemp) / 2
         DO iw = 1, nsiw(itemp)
           n = iw - nsiw_half - 1
@@ -1358,13 +1407,14 @@
       ! sparse sampling
       IF ((gridsamp == 1) .AND. positive_matsu) THEN
         nsiw_uni = nsiw(itemp)  ! save original uniform grid size for dwsi weights
+        griddens_eff = griddens
         n  = 0
         iw = 0
         DO WHILE (n < nsiw_uni)
           iw      = iw + 1
           wsn(iw) = n
           wsi(iw) = DBLE(2 * n + 1) * pi * gtemp(itemp)
-          n = n + NINT(EXP(DBLE(n) / DBLE(nsiw(itemp)) / griddens))
+          n = n + NINT(EXP(DBLE(n) / DBLE(nsiw_uni) / griddens_eff))
         ENDDO
         ! update the number of freqs. to the true value
         nsiw(itemp) = iw
@@ -1418,7 +1468,9 @@
       ENDIF
       !
       ! output the indices to "matsu-freq*.out" file, if iverbosity = 2
-      IF (iverbosity == 2) CALL write_matsubara_freq(itemp)
+      ! SM: meta_ionode only - all ranks hold identical wsn and an unguarded
+      !     write from every rank races on the same file
+      IF ((iverbosity == 2) .AND. meta_ionode) CALL write_matsubara_freq(itemp)
       !
       ! print actual number of Matsubara frequencies
       IF (.NOT. tc_linear) &
@@ -1506,6 +1558,7 @@
     !-----------------------------------------------------------------------
     !!
     !! Computes the quasiparticle density of states in the superconducting state
+    !! SM: Updated to include the image parallelization of the q-points (Aug 2026)
     !!
     USE kinds,         ONLY : DP
     USE io_var,        ONLY : iuqdos
@@ -1515,8 +1568,8 @@
     USE supercond_common,     ONLY : nsw, dwsph, ws, delta, adelta, &
                               wkfs, w0g, nkfs, nbndfs, ef0, ekfs
     USE ep_constants,  ONLY : kelvin2eV, zero, ci
-    USE io_global,     ONLY : ionode_id
-    USE mp_global,     ONLY : inter_pool_comm
+    USE io_global,     ONLY : meta_ionode, meta_ionode_id
+    USE mp_global,     ONLY : inter_pool_comm, inter_image_comm
     USE mp,            ONLY : mp_barrier, mp_sum
     USE mp_world,      ONLY : mpime
     USE parallelism,   ONLY : fkbounds
@@ -1528,7 +1581,7 @@
     !
     CHARACTER(LEN = 256) :: fildos
     !! name dos file
-
+    !
     INTEGER :: iw
     !! Counter over frequency real-axis
     INTEGER :: ik
@@ -1585,7 +1638,7 @@
           ENDIF
         ENDDO
       ENDDO
-      ! collect contributions from all pools
+      ! collect k-contributions across pools (dos_qp is a pure-k sum)
       CALL mp_sum(dos_qp, inter_pool_comm)
       CALL mp_barrier(inter_pool_comm)
       !
@@ -1596,7 +1649,7 @@
       ENDDO
     ENDIF
     !
-    IF (mpime == ionode_id) THEN
+    IF (meta_ionode) THEN
       OPEN(iuqdos, FILE = fildos, STATUS = 'unknown', FORM = 'formatted', IOSTAT = ios)
       IF (ios /= 0) CALL errore('dos_quasiparticle', 'error opening file ' // fildos, iuqdos)
       WRITE(iuqdos, '(5a20)') 'w [eV]', 'N_S/N_F'
