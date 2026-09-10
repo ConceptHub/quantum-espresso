@@ -104,11 +104,11 @@
                             ef_c_tdbe, init_sigma_tdbe, prtvkk, prteigdiff,            &
                             plot_psir_plrn, lsign_psir_plrn, eigen_solver_plrn,        &
                             istate_relax_plrn, eval_hplrn, eval_eplrn,                 &
-                            lsda, interpolate, prtuf
+                            lsda, interpolate, prtuf, specfun_el_scgd0, opt_cond
   USE global_var,    ONLY : elph, num_wannier_plot, wanplotlist, gtemp, qrpl, nk_loc,  &
                             nkpts, ldfptu
   USE ep_constants,  ONLY : ryd2mev, ryd2ev, ev2cmm1, kelvin2eV, zero, eps20, ang2m,   &
-                            one, bohr2nm, ry2thz_sr, eps6, bohr2ang, hbarJ
+                            one, bohr2nm, ry2thz_sr, eps6, bohr2ang, hbarJ, e2
   USE constants,     ONLY : electron_si, AMU_RY, eps16
   USE io_files,      ONLY : tmp_dir, prefix
   USE control_flags, ONLY : iverbosity, modenum, gamma_only
@@ -230,7 +230,7 @@
        step_k1_explrn, step_k2_explrn, step_k3_explrn, only_pos_modes_explrn,  &
        calc_nelec_wann, lopt_w2b, epw_memdist, lfast_kmesh, dos_tetra, fd,     &
        a2f_iso, max_seconds,  ltrans_crta, sr_crta, lsda, interpolate,         &
-       eval_hplrn, eval_eplrn,                                                 &
+       eval_hplrn, eval_eplrn, specfun_el_scgd0, opt_cond,                     &
        !Added for calculating time-dependent Boltzmann transport Equation
        do_tdbe, dt_tdbe, nt_tdbe, twrite_tdbe, temp_el_tdbe, temp_ph_tdbe,     &
        init_type_tdbe, init_sigma_tdbe, ef_c_tdbe, ef_v_tdbe,                  &
@@ -300,6 +300,10 @@
   ! nest_fn      : if .TRUE., calculate the nesting function for a given set of q's
   ! nsmear       : number of smearing values to use for the selfen_phon call
   ! delta_smear  : change in energy for each additional nsmear ( units of eV)
+  !
+  ! Added by Nina G. Erhardt
+  ! specfun_el_scgd0 : if .TRUE. calculate electron spectral function due to e-p interaction self-consistently
+  ! opt_cond : if .TRUE. compute optical conductivity 
   !
   ! Added by Roxana Margine
   ! ephwrite    : if .TRUE. write el-phonon matrix elements on the fine mesh to file
@@ -375,6 +379,10 @@
   !
   ! Added by Shashi Mishra
   ! a2f_iso         : if .TRUE. isotropic a2f is calculated on the fly without storing g2 to file
+  ! dos_tetra       : if .TRUE. compute density of states using tetrahedron method
+  ! fd              : if .TRUE. , IFC came from finite displacement calculation like ZG method
+  !                   This tag is needed when we use 3x3x3 or 4x4x4 supercell calculation using ZG method
+  !                   to get the IFCs.
   !
   ! Added by Carla Verdi & Samuel Pon\'e
   ! lpolar     : if .TRUE. enable the correct Wannier interpolation in the case of polar material.
@@ -441,12 +449,6 @@
   !
   ! Added by Zhe Liu
   ! calc_nelec_wann : compute number of electrons in wannierized band
-  !
-  ! Added by S. Mishra
-  ! dos_tetra       : if .TRUE. compute density of states using tetrahedron method
-  ! fd              : if .TRUE. , IFC came from finite displacement calculation like ZG method
-  !                   This tag is needed when we use 3x3x3 or 4x4x4 supercell calculation using ZG method
-  !                   to get the IFCs.
   !
   ! Added by Manos Kioupakis
   ! omegamin        : Photon energy minimum
@@ -548,6 +550,7 @@
   phonselfen             = .FALSE.
   plselfen               = .FALSE.
   specfun_el             = .FALSE.
+  specfun_el_scgd0       = .FALSE.
   specfun_ph             = .FALSE.
   specfun_pl             = .FALSE.
   epbread                = .FALSE.
@@ -672,9 +675,9 @@
   wscut                  = 0.d0
   broyden_beta           = 0.7d0
   broyden_ndim           = 8
-  conv_thr_raxis         = 5.d-04
-  conv_thr_iaxis         = 1.d-05
-  conv_thr_racon         = 5.d-04
+  conv_thr_raxis         = 1.d-04
+  conv_thr_iaxis         = 1.d-04
+  conv_thr_racon         = 1.d-04
   gap_edge               = 0.d0
   positive_matsu         = .TRUE.
   icoulomb               = 0
@@ -706,6 +709,7 @@
   scissor                = 0.d0 ! eV
   carrier                = .FALSE.
   ncarrier               = 0.d0 ! cm^-3
+  opt_cond               = .FALSE.
   longrange_only         = .FALSE.
   shortrange             = .FALSE.
   prtgkk                 = .FALSE.
@@ -793,9 +797,9 @@
   edos_max_plrn          = 0.0 ! eV
   pdos_max_plrn          = 0.0 ! meV
   edos_sigma_plrn        = 0.01d0 ! eV
-  pdos_sigma_plrn        = 0.1_DP ! meV
+  pdos_sigma_plrn        = 0.1 ! meV
   type_plrn              = -1
-  init_sigma_plrn        = 4.6_DP
+  init_sigma_plrn        = 4.6
   init_k0_plrn           = (/1000.d0, 1000.d0, 1000.d0/)
   ethrdg_plrn            = 1E-6
   time_rev_A_plrn        = .FALSE.
@@ -823,7 +827,7 @@
   DW                     = 0
   mode_res               = 0
   QD_bin                 = 0.0
-  QD_min                 = 0.005_DP
+  QD_min                 = 0.005
   lwfpt                  = .FALSE.
   ldfptu                 = .FALSE.
   compute_dmat           = .FALSE.
@@ -857,7 +861,7 @@
   twrite_tdbe            = 30
   temp_el_tdbe           = 1000.d0
   temp_ph_tdbe           = 100.d0
-  init_sigma_tdbe        = 0.1_DP
+  init_sigma_tdbe        = 0.1
   init_type_tdbe         = 'FD'
   solver_tdbe            = 'euler'
   ef_v_tdbe              = -9999.0
@@ -969,6 +973,17 @@
       'Electron-plasmon self-energy cannot be computed with electron-phonon', 1)
   IF (specfun_el .AND. plselfen) CALL errore('readin', &
       'Electron-plasmon self-energy cannot be computed with el-ph spectral function', 1)
+  IF (specfun_el_scgd0) THEN 
+    IF (.NOT. (ephwrite .OR. restart)) CALL errore('readin', &
+      'self-consistent iterations require ephwrite =.true.', 1)
+    IF (specfun_el) CALL errore('readin', &
+      'El-ph self-energy can be computed using one method at a time', 1)
+    IF (ephwrite .AND. restart) CALL errore('readin', &
+      'Restart option for scGD0 method is done by using ephwrite without scGD0 &
+       and then in the second run do the scGD0 calculation without ephwrite.',1)
+  ENDIF
+  IF (opt_cond .AND. (.NOT. (specfun_el .OR. specfun_el_scgd0))) CALL errore('readin', &
+      'spectral function needs to be computed for optical conductivity', 1)
   IF (specfun_ph .AND. plselfen) CALL errore('readin', &
       'Electron-plasmon self-energy cannot be computed with el-ph spectral function', 1)
   IF (elecselfen .AND. specfun_pl ) CALL errore('readin', &
@@ -1000,6 +1015,8 @@
     CALL errore('readin', 'electron self-energy only works with full uniform q-mesh', 1)
   IF (mp_mesh_k .AND. mp_mesh_q) &
     CALL errore('readin', 'both mp_mesh_k and mp_mesh_q cannot be True, use either', 1)
+  IF (specfun_el_scgd0 .AND. mp_mesh_q) &
+    CALL errore('readin', 'Error: self-consistent spectral function requires full fine q-grids.', 1)
   IF (ephwrite) THEN
     IF (.NOT. ep_coupling .AND. .NOT. elph) CALL errore('readin', &
       'ephwrite requires ep_coupling=.TRUE., elph=.TRUE.', 1)
@@ -1019,7 +1036,7 @@
     CALL errore('readin', 'temps(:) must be specified if nstemp > 0', 1)
   IF (nstemp > ntempxx) &
     CALL errore('readin', 'Maximum value of nstemp that can be used is 50', 1)
-  IF ((ABS(ncarrier) > 1E+5) .AND. .NOT. carrier) CALL errore('readin', &
+  IF ((ABS(ncarrier) > 1E+5) .AND. (.NOT. carrier)) CALL errore('readin', &
       'carrier must be .TRUE. if you specify ncarrier.', 1)
   IF (carrier .AND. (ABS(ncarrier) < 1E+5))  CALL errore('readin', &
       'The absolute value of the doping carrier concentration must be larger than 1E5 cm^-3', 1)
@@ -1307,6 +1324,10 @@
     CALL errore('readin', 'invalid value eigen_solver_plrn = "'//TRIM(eigen_solver_plrn)//'"', 1)
   ENDIF
   CALL mp_bcast(eigen_solver_plrn, meta_ionode_id, world_comm)
+  ! Interpolation needs the diagonal k/q grid, which a scell run does not write.
+  IF (scell_mat_plrn .AND. (interp_Ank_plrn .OR. interp_Bqu_plrn)) THEN
+    CALL errore('readin', 'interp_Ank_plrn and interp_Bqu_plrn are not implemented for scell_mat_plrn', 1)
+  ENDIF
   !
   ! thickness and smearing width of the Fermi surface
   ! from eV to Ryd
@@ -1337,12 +1358,12 @@
   ENDIF
   !
   ! Corrected by JC & TY
-  ! bfield: input in Tesla, convert to eB in [1/bohr^2] (Rydberg atomic units)
-  ! The atomic unit of B is hbar/(e*a0^2) = 2.354e5 T
-  ! So, eB [1/bohr^2] = B [T] * e * a0^2 / hbar
-  bfieldx = bfieldx * electron_si * (bohr2ang * ang2m)**2 / hbarJ
-  bfieldy = bfieldy * electron_si * (bohr2ang * ang2m)**2 / hbarJ
-  bfieldz = bfieldz * electron_si * (bohr2ang * ang2m)**2 / hbarJ
+  ! bfield: input in Tesla, convert to B in Rydberg atomic units
+  ! The Rydberg atomic unit of B is sqrt(2)*hbar/(e*a0^2) = 3.324e5 T
+  ! So, B [Ry. a.u.] = B [T] * e * a0^2 / (sqrt(2) * hbar)
+  bfieldx = bfieldx * electron_si * (bohr2ang * ang2m)**2 / (SQRT(e2) * hbarJ)
+  bfieldy = bfieldy * electron_si * (bohr2ang * ang2m)**2 / (SQRT(e2) * hbarJ)
+  bfieldz = bfieldz * electron_si * (bohr2ang * ang2m)**2 / (SQRT(e2) * hbarJ)
   !
   ! eptemp : temperature for the electronic Fermi occupations in the e-p calculation (units of Kelvin)
   ! 1 K in eV = 8.6173423e-5

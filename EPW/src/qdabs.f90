@@ -154,7 +154,7 @@
     nomega = INT((omegamax - omegamin) / omegastep) + 1
     !
     !
-    cfac = 16.d0 * pi**2
+    cfac = 8.d0 * pi**2
     adaptive_grid = .FALSE.
     ! END allocating variables for qdabs
     !
@@ -2833,7 +2833,7 @@
     ! for spin (weights for k-points are divided by 2 to be normalized to 1)
     ! C = 8*pi^2*e^2 = 8*pi^2*2 approx 157.9136704
     !
-    cfac = 16.d0 * pi**2
+    cfac = 8.d0 * pi**2
     check = -1
     nktotf = nkf1 * nkf2 * nkf3
     itemp = 1
@@ -3044,14 +3044,14 @@
                     DO ipol = 1, 3
                       !  
                       epsilon2_qdirect2(ipol, 1:tot,1) = epsilon2_qdirect2(ipol, 1:tot,1) +         &
-                                                   DSQRT(wkf(ikk) / 2.0) * DSQRT(wqf(iq)) *         &
+                                                   DSQRT(wkf(ikk)) * DSQRT(wqf(iq)) *         &
                               (DSQRT(pfac)  * (Ae(ipol) + Be(ipol) + Ce(ipol) + De(ipol)) *         &
                               CONJG(Eigenvec_alloc_pool(indexq, 1:tot)) / DSQRT(2.0 * wf(imode, iq)))
                       IF (imode <= mode_res) THEN
                         !
                         epsilon2_qdirect2(ipol, 1:tot, imode + 1) =  &
                                           epsilon2_qdirect2(ipol, 1:tot, imode + 1)     +           &
-                                          DSQRT(wkf(ikk) / 2.0) * DSQRT(wqf(iq))        *           &
+                                          DSQRT(wkf(ikk)) * DSQRT(wqf(iq))        *           &
                              (DSQRT(pfac) * (Ae(ipol) + Be(ipol) + Ce(ipol) + De(ipol)) *           &
                              CONJG(Eigenvec_alloc_pool(indexq, 1:tot)) / DSQRT(2.0 * wf(imode, iq)))
                       ENDIF
@@ -3062,7 +3062,7 @@
                               CONJG(Eigenvec_alloc_pool(indexq, 1:tot)) / DSQRT(2.0 * wf(imode,iq)))
                       !
                       epsilon2_qdirect2_DW(ipol, 1:tot) = epsilon2_qdirect2_DW(ipol, 1:tot) +       &
-                                                               (wkf(ikk) / 2.0) * (wqf(iq)) *       &
+                                                               wkf(ikk) * (wqf(iq)) *       &
                                        ((pfac)  * CONJG(Eigenvec_alloc_pool(indexq, 1:tot)) *       &
                                                                     (Dwca(ipol)+DWva(ipol)) *       &
                                 Eigenvec_alloc_pool(indexq, 1:tot) / (2.0 * wf(imode, iq)))
@@ -3093,11 +3093,11 @@
                       !
                       Qa(ipol) = vkk(ipol, cbnd, vbnd)!*CONJG(Eigenvec_alloc_pool(indexq,vec))
                       epsilon2_qdirect2(ipol, 1:tot, 1) = epsilon2_qdirect2(ipol, 1:tot, 1) +   &
-                                                         (Qa(ipol)) * DSQRT(wkf(ikk) / 2.0) *   & 
+                                                         (Qa(ipol)) * DSQRT(wkf(ikk)) *   & 
                                                    CONJG(Eigenvec_alloc_pool(indexq, 1:tot))
                       !   
                       c_dir_v(ipol, 1:tot) = c_dir_v(ipol, 1:tot) +  Qa(ipol) *                 &
-                           DSQRT(wkf(ikk) / 2.0) * CONJG(Eigenvec_alloc_pool(indexq, 1:tot))
+                           DSQRT(wkf(ikk)) * CONJG(Eigenvec_alloc_pool(indexq, 1:tot))
                       !
                     ENDDO ! ipol
                     !
@@ -3106,7 +3106,7 @@
                     DO vec = 1, tot
                       Qa(:) = vkk(:, cbnd, vbnd) * CONJG(Eigenvec_alloc_pool(indexq, vec))
                       epsilon2_qdirect2(:, vec, 1) = epsilon2_qdirect2(:, vec, 1) +             &
-                                                    (Qa(:)) * DSQRT(wkf(ikk)/2.0)
+                                                    (Qa(:)) * DSQRT(wkf(ikk))
                       !  
                       DO l = 1, tot
                         IF (l /= vec) THEN
@@ -3269,7 +3269,7 @@
     ! (weights for k-points are divided by 2 to be normalized to 1)
     ! C = 8*pi^2*e^2 = 8*pi^2*2 approx 157.9136704
     !
-    cfac = 16.d0 * pi**2
+    cfac = 8.d0 * pi**2
     check=-1
     nktotf=nkf1 * nkf2 * nkf3
     !
@@ -3482,14 +3482,14 @@
                           DO ipol = 1, 3
                             IF ((tot == 0) .OR. (calc == 2)) THEN
                               epsilon2_qdirect(ipol, iw, 1, itemp) = epsilon2_qdirect(ipol, iw, 1, itemp) + &
-                                                                            (wkf(ikk) / 2.0) * wqf(iq)    * &
+                                                                            wkf(ikk) * wqf(iq)    * &
                                                                          (((cfac / omegap(iw)**2) * pfac  * &
                                                                        weighta * ABS(Ae(ipol) + Be(ipol)  + &
                                                      Ce(ipol) + De(ipol))**2 / (2 * wf(imode,iq) * omega)))
                               IF (calc /= 2) THEN
 
                                 epsilon2_qdirect(ipol, iw, 2, itemp) = epsilon2_qdirect(ipol, iw, 1, itemp) + &
-                                                                                 (wkf(ikk) / 2.0) * wqf(iq) * &
+                                                                                 wkf(ikk) * wqf(iq) * &
                                                                  (((cfac / omegap(iw)**2) * pfac  * weighta * &
                                                                 ABS(Ae(ipol) + Be(ipol)+Ce(ipol)+De(ipol))**2 &
                                                                   / (2 * wf(imode,iq) * omega)))
@@ -3498,18 +3498,18 @@
                               IF (imode <= mode_res) THEN
                                 epsilon2_qdirect(ipol, iw, neta+imode, itemp) =                     &  
                                               epsilon2_qdirect(ipol, iw, neta + imode, itemp) +     &
-                                                                   (wkf(ikk) / 2.0) * wqf(iq) *     &
+                                                                   wkf(ikk) * wqf(iq) *     &
                                     (((cfac / omegap(iw)**2) * pfac  * weighta * ABS(Ae(ipol) +     &
                                   Be(ipol) + Ce(ipol) + De(ipol))**2 / (2 * wf(imode, iq) * omega)))
                               ENDIF
                               !  
-                              c_ph(ipol, iw) = c_ph(ipol, iw) + (wkf(ikk) / 2.0) * wqf(iq) *        &
+                              c_ph(ipol, iw) = c_ph(ipol, iw) + wkf(ikk) * wqf(iq) *        &
                                   (((cfac / omegap(iw)**2) * pfac  * weighta * ABS(Ae(ipol) +       &
                                   Be(ipol) + Ce(ipol) + De(ipol))**2 / (2 * wf(imode, iq) * omega)))
                               !          
                             ENDIF
                             epsilon2_qdirect(ipol, iw, 4, itemp) = epsilon2_qdirect(ipol, iw, 4, itemp) + &
-                                                                             (wkf(ikk) / 2.0) * wqf(iq) * &
+                                                                             wkf(ikk) * wqf(iq) * &
                                                 ((cfac / omegap(iw)**2 * pfac  * weighta * ABS(Ae(ipol) + &
                                    Be(ipol) + Ce(ipol) + De(ipol))**2 / (2 * wf(imode,iq) * omega)))
                             ! 
@@ -3544,7 +3544,7 @@
                     DO iw=1, nomega
                       !   
                       weightq= (w0gauss((ekkcb - ekkvb - omegap(iw)) / degaussw, 0) / degaussw) * &
-                               (wkf(ikk) / 2.0)
+                               wkf(ikk)
                       !
                       DO ipol = 1, 3
                         IF ((tot == 0) .OR. (calc == 2)) THEN
@@ -3793,11 +3793,11 @@
     !
     inv_degaussw = 1.0 / degaussw
     !
-    ! Epsilon2 prefactor for velocity matrix elements, including factor of 2 
-    ! for spin (weights for k-points are divided by 2 to be normalized to 1)
+    ! Epsilon2 prefactor for velocity matrix elements, 
+    ! The spin degeneracy is already included in the integration weights
     ! C = 8*pi^2*e^2 = 8*pi^2*2 approx 157.9136704
     !
-    cfac = 16.d0 * pi**2
+    cfac = 8.d0 * pi**2
     !
     DO itemp = 1, nstemp
       DO ik = 1, nkf
@@ -3904,25 +3904,25 @@
                         weightd = w0gauss((ekkcb-ekkvb-omegap(iw)) / (degaussw), 0) / (degaussw)
                         DO ipol = 1, 3
                           epsilon2_indirect(ipol, iw, m, itemp) = epsilon2_indirect(ipol, iw, m, itemp) + &
-                                                                             (wkf(ikk) / 2.0) * wqf(iq) * &
+                                                                             wkf(ikk) * wqf(iq) * &
                                                                ((cfac / omegap(iw)**2 * pfac  * weighta * &
                               ABS(Aa(ipol) + Ba(ipol) + Ca(ipol) + Da(ipol))**2 / (2 * wq(imode) * omega)))
                           !
                           epsilon2_indirect(ipol, iw, m, itemp) = epsilon2_indirect(ipol, iw, m, itemp) + &
-                                                                             (wkf(ikk) / 2.0) * wqf(iq) * &
+                                                                             wkf(ikk) * wqf(iq) * &
                                                                ((cfac / omegap(iw)**2 * pface * weighte * &
                               ABS(Ae(ipol) + Be(ipol) + Ce(ipol) + De(ipol))**2 / (2 * wq(imode) * omega)))
                           !
                           IF ((iq == nqtotf) .AND. (imode == 1) .AND. (m == 1)) THEN
                             epsilon2_direct(ipol, iw, 1, itemp) = epsilon2_direct(ipol, iw, 1, itemp) + &
                                                                             ((cfac / (omegap(iw)**2)) * &
-                                        weightd * ABS(vkk(ipol, cbnd, vbnd))**2 / omega) * (wkf(ikk)/2.0)
+                                        weightd * ABS(vkk(ipol, cbnd, vbnd))**2 / omega) * wkf(ikk)
                             !
                             epsilon2_direct(ipol, iw, 2, itemp) = epsilon2_direct(ipol, iw, 2, itemp) + &
-                              ((cfac) * weightd * ABS(vkk(ipol, cbnd, vbnd))**2 / omega) * (wkf(ikk)/2.0)
+                              ((cfac) * weightd * ABS(vkk(ipol, cbnd, vbnd))**2 / omega) * wkf(ikk)
                             !
                             epsilon2_direct(ipol, iw, 3, itemp) = epsilon2_direct(ipol,iw, 3, itemp) + &
-                              ((cfac) * ABS(vkk(ipol,cbnd,vbnd))**2 / omega) * (wkf(ikk)/2.0)
+                              ((cfac) * ABS(vkk(ipol,cbnd,vbnd))**2 / omega) * wkf(ikk)
                             !
                           ENDIF
                         ENDDO  !ipol

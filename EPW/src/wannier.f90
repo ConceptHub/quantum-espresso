@@ -43,7 +43,7 @@
     USE global_var,       ONLY : cu, cuq, lwin, lwinq, chw, chw_ks, cvmew, cdmew,    &
                                  rdw, epmatwp, epmatq, dynq, et_ks, dmec, exband,    &
                                  xkq, nbndep, qrpl, crrw, cpmew, nbndskip, nk_loc,   &
-                                 epmatwp_dist, nkpts, nirg_loc
+                                 nkpts, nirg_loc
     USE bloch2wannier,    ONLY : hambloch2wan, dmebloch2wan, dynbloch2wan,           &
                                  vmebloch2wan, ephbloch2wane, ephbloch2wanp,         &
                                  ephbloch2wanp_mem

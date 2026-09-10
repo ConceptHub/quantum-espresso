@@ -1177,11 +1177,11 @@
     USE io_global,     ONLY : stdout
     USE input,         ONLY : max_memlt, nqstep, fbw, gridsamp
     USE supercond_common,     ONLY : nkfs, nbndfs, nsiw, nqfs, limag_fly, &
-                              lacon_fly, memlt_pool, wsn
-    USE mp_global,     ONLY : inter_pool_comm, my_pool_id
+                              lacon_fly, memlt_pool, wsn, nqfs_pool_max
+    USE mp_global,     ONLY : inter_pool_comm, my_pool_id, inter_image_comm
     USE mp,            ONLY : mp_bcast, mp_barrier, mp_sum
-    USE parallelism,   ONLY : fkbounds
     USE ep_constants,  ONLY : zero
+    USE parallelism,   ONLY : fkbounds
     !
     IMPLICIT NONE
     !
@@ -1193,17 +1193,13 @@
     !Local variables
     INTEGER(8) :: imelt
     !! size array
+    INTEGER :: ik
+    !! Counter on k-points
     INTEGER :: lower_bnd, upper_bnd
     !! Lower/upper bound index after k parallelization
     !
     REAL(KIND = DP) :: rmelt
     !! change in memory
-    !
-    ! This is only a quick fix since the routine was written for parallel
-    ! execution - FG June 2014
-#if !defined(__MPI)
-    my_pool_id = 0
-#endif
     !
     limag_fly = .FALSE.
     lacon_fly = .FALSE.
@@ -1213,17 +1209,25 @@
       !
     ELSE
       !
+      ! SM: match the akeri allocation in kernel_aniso_iaxis (image x pool distribution)
       CALL fkbounds(nkfs, lower_bnd, upper_bnd)
       !
-      imelt = (upper_bnd - lower_bnd + 1) * MAXVAL(nqfs(:)) * nbndfs**2
+      ! SM: max q-count over pool-local k-points for akeri sizing
+      nqfs_pool_max = 0
+      DO ik = lower_bnd, upper_bnd
+        nqfs_pool_max = MAX(nqfs_pool_max, nqfs(ik))
+      ENDDO
+      !
       IF (cname == 'imag') THEN
-        ! get the size of the akeri that needa to be stored in each pool
-        ! imelt = imelt * (2 * nsiw(itemp))
-        !
+        ! get the size of the akeri that needs to be stored in each pool
+        ! SM: Use nqfs_pool_max instead of MAXVAL(nqfs(:)) for pool-local akeri
+        imelt = (upper_bnd - lower_bnd + 1) * nqfs_pool_max * nbndfs**2
         ! SH: This is adjusted to accommodate the sparse sampling case
         imelt = imelt * 2 * (wsn(nsiw(itemp)) + 1)
       ELSEIF (cname == 'acon') THEN
         ! get the size of a2fij that needs to be stored in each pool
+        ! a2fij uses full q-range (no pool splitting)
+        imelt = (upper_bnd - lower_bnd + 1) * MAXVAL(nqfs(:)) * nbndfs**2
         imelt = imelt * nqstep
       ENDIF
       rmelt = DBLE(imelt) * 8.d0 / 1073741824.d0 ! 8 bytes per number, value in Gb

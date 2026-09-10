@@ -160,10 +160,11 @@
     inv_degaussw = 1.0 / degaussw
     !
     ! 300 K
-    ! Epsilon2 prefactor for velocity matrix elements, including factor of 2 for spin (weights for k-points are divided by 2 to be normalized to 1)
+    ! Epsilon2 prefactor for velocity matrix elements, The spin degeneracy factor is already included
+    ! in the integration weights
     ! C = 8*pi^2*e^2 = 8*pi^2*2 approx 157.9136704
     !
-    cfac = 16.d0 * pi**2
+    cfac = 8.d0 * pi**2
     !
     IF (iqq == iq_restart) THEN
       !
@@ -334,16 +335,16 @@
                           weighta = w0gauss((ekq - ekk - omegap(iw) - wq(imode)) / degaussw, 0) / degaussw
                           !
                           DO ipol = 1, 3
-                            epsilon2_abs(ipol, iw, m, itemp) = epsilon2_abs(ipol, iw, m, itemp) + (wkf(ikk) / 2.0) * wqf(iq) * &
+                            epsilon2_abs(ipol, iw, m, itemp) = epsilon2_abs(ipol, iw, m, itemp) + wkf(ikk) * wqf(iq) * &
                                  cfac / omegap(iw)**2 * pfac  * weighta * ABS(s1a(ipol) + s2a(ipol))**2 / (2 * wq(imode) * omega)
-                            epsilon2_abs(ipol, iw, m, itemp) = epsilon2_abs(ipol, iw, m, itemp) + (wkf(ikk) / 2.0) * wqf(iq) * &
+                            epsilon2_abs(ipol, iw, m, itemp) = epsilon2_abs(ipol, iw, m, itemp) + wkf(ikk) * wqf(iq) * &
                                  cfac / omegap(iw)**2 * pface * weighte * ABS(s1e(ipol) + s2e(ipol))**2 / (2 * wq(imode) * omega)
                             epsilon2_abs_lorenz(ipol, iw, m, itemp) = epsilon2_abs_lorenz(ipol, iw, m, itemp) + &
-                                  (wkf(ikk) / 2.0) * wqf(iq) * &
+                                  wkf(ikk) * wqf(iq) * &
                                  cfac / omegap(iw)**2 * pfac  * ABS(s1a(ipol) + s2a(ipol))**2 / (2 * wq(imode) * omega) * &
                                  (degaussw / (degaussw**2 + (ekq - ekk - omegap(iw) - wq(imode))**2)) / pi
                             epsilon2_abs_lorenz(ipol, iw, m, itemp) = epsilon2_abs_lorenz(ipol, iw, m, itemp)  + &
-                                 (wkf(ikk) / 2.0) * wqf(iq) * &
+                                 wkf(ikk) * wqf(iq) * &
                                  cfac / omegap(iw)**2 * pface * ABS(s1e(ipol) + s2e(ipol))**2 / (2 * wq(imode) * omega) * &
                                  (degaussw / (degaussw**2 + (ekq - ekk - omegap(iw) + wq(imode))**2 )) / pi
                           ENDDO ! ipol
@@ -381,11 +382,11 @@
                         weighta = w0gauss((ekq - ekk - omegap(iw)) / degaussw, 0) / degaussw
                         !
                         DO ipol = 1, 3
-                          epsilon2_abs_imp(ipol, iw, m, itemp) = epsilon2_abs_imp(ipol, iw, m, itemp) + (wkf(ikk) / 2.0) * &
+                          epsilon2_abs_imp(ipol, iw, m, itemp) = epsilon2_abs_imp(ipol, iw, m, itemp) + wkf(ikk) * &
                                wqf(iq) * cfac / omegap(iw)**2 * pfac  * weighta * &
                                ABS(s1imp(ipol) + s2imp(ipol))**2 * n_imp_au(itemp)
                           epsilon2_abs_lorenz_imp(ipol, iw, m, itemp) = epsilon2_abs_lorenz_imp(ipol, iw, m, itemp) + &
-                               (wkf(ikk) / 2.0) * wqf(iq) * &
+                               wkf(ikk) * wqf(iq) * &
                                cfac / omegap(iw)**2 * pfac  * ABS(s1imp(ipol) + s2imp(ipol))**2 * n_imp_au(itemp) * &
                                (degaussw / (degaussw**2 + (ekq - ekk - omegap(iw))**2)) / pi
                         ENDDO ! ipol
@@ -604,10 +605,11 @@
     !! Define inverse so that multiply is more efficient
     !
     inv_degaussw = 1.0 / degaussw
-    ! Epsilon2 prefactor for velocity matrix elements, including factor of 2 for spin (weights for k-points are divided by 2 to be normalized to 1)
+    ! Epsilon2 prefactor for velocity matrix elements, the spin degeneracy factor is already included
+    ! in the integration weights.
     ! C = 8*pi^2*e^2 = 8*pi^2*2 approx 157.9136704
     !
-    cfac = 16.d0 * pi**2
+    cfac = 8.d0 * pi**2
     !
     WRITE(stdout, '(/5x,a/)') REPEAT('=',67)
     WRITE(stdout, '(5x,"Direct absorption with independent particle approximation")')
@@ -676,9 +678,9 @@
                   weighta = w0gauss((ekkj - ekki - omegap(iw)) / degaussw, 0) / degaussw
                   !
                   DO ipol = 1, 3
-                    epsilon2_abs_dir(ipol, iw, itemp) = epsilon2_abs_dir(ipol, iw, itemp) + (wkf(ikk) / 2.0) * cfac / &
+                    epsilon2_abs_dir(ipol, iw, itemp) = epsilon2_abs_dir(ipol, iw, itemp) + wkf(ikk) * cfac / &
                         omegap(iw) ** 2 * pfac * weighta * ABS(optmat(ipol)) ** 2 / omega
-                    epsilon2_abs_lorenz_dir(ipol, iw, itemp) = epsilon2_abs_lorenz_dir(ipol, iw, itemp) + (wkf(ikk) / 2.0) * &
+                    epsilon2_abs_lorenz_dir(ipol, iw, itemp) = epsilon2_abs_lorenz_dir(ipol, iw, itemp) + wkf(ikk) * &
                         cfac / omegap(iw) ** 2 * pfac * ABS(optmat(ipol)) ** 2  / omega * &
                         (degaussw / (degaussw**2 + (ekkj - ekki - omegap(iw))**2)) / pi
                   ENDDO ! ipol
@@ -878,7 +880,6 @@
     USE global_var,       ONLY : nkf, nkqf, evbm, ecbm, spin_fac
     USE ep_constants,     ONLY : ryd2ev, bohr2ang, ang2cm, eps5, kelvin2eV, &
                                  zero, eps80, eps6
-    USE noncollin_module, ONLY : noncolin
     USE pwcom,            ONLY : nelec
     USE input,            ONLY : ncarrier, nstemp, system_2d, assume_metal, &
                                  ngaussw, isk_dummy, lsda
@@ -1181,7 +1182,7 @@
     USE input,             ONLY : fsthick, system_2d, nstemp, &
                                   mp_mesh_k, nkf1, nkf2, nkf3, nomega, sigma_ref
     USE global_var,        ONLY : ibndmin, etf, nkf, wkf, vmef, bztoibz,  &
-                                  gtemp, nbndfst, nktotf, s_bztoibz, omegap
+                                  gtemp, nbndfst, nktotf, s_bztoibz, omegap, spin_fac
     USE ep_constants,      ONLY : zero, one, bohr2ang, ryd2ev, ang2cm, czero, &
                                   kelvin2eV, hbar, Ang2m, hbarJ, eps6, eps4, pi, &
                                   ryd2mev, meV2invps
@@ -1191,7 +1192,6 @@
     USE mp_world,          ONLY : mpime
     USE parallelism,       ONLY : poolgatherc4, poolgather2, fkbounds
     USE symm_base,         ONLY : s
-    USE noncollin_module,  ONLY : noncolin
     USE pwcom,             ONLY : ef
     USE io_var,            ONLY : iuindabs
     !
@@ -1331,23 +1331,13 @@
                     DO i = 1, 3
                       ij = ij + 1
                       ! The factor two in the weight at the end is to account for spin
-                      IF (noncolin) THEN
-                        tdf_sigma(ij) = tdf_sigma(ij) + (v_rot(i) * v_rot(j)) * 1.0 / (nkf1 * nkf2 * nkf3)
-                      ELSE
-                        tdf_sigma(ij) = tdf_sigma(ij) + (v_rot(i) * v_rot(j)) * 2.0 / (nkf1 * nkf2 * nkf3)
-                      ENDIF
+                      tdf_sigma(ij) = tdf_sigma(ij) + (v_rot(i) * v_rot(j)) * spin_fac / (nkf1 * nkf2 * nkf3)
                     ENDDO
                   ENDDO
                 ENDIF
               ENDDO ! ikbz
-              IF (noncolin) THEN
-                IF (ABS(nb * 1.0 / (nkf1 * nkf2 * nkf3) - wkf(ikk)) > eps6) THEN
-                  CALL errore('transport', ' The number of kpoint in the IBZ is not equal to the weight', 1)
-                ENDIF
-              ELSE
-                IF (ABS(nb * 2.0 / (nkf1 * nkf2 * nkf3) - wkf(ikk)) > eps6) THEN
-                  CALL errore('transport', ' The number of kpoint in the IBZ is not equal to the weight', 1)
-                ENDIF
+              IF (ABS(nb * spin_fac / (nkf1 * nkf2 * nkf3) - wkf(ikk)) > eps6) THEN
+                CALL errore('conduc_fca', ' The number of kpoint in the IBZ is not equal to the weight', 1)
               ENDIF
             ! withtout symmetries
             ELSE
@@ -1399,7 +1389,7 @@
                                         inv_cell * tau
       WRITE(stdout, '(5x, a)') 'Calculate and Write the resistive contribution (Drude term).'
       !
-      !4*pi*sigma/(w*(1+w^2*tau^2)), an additional factor of two comes from e^2
+      !4*pi*sigma/(w*(1+w^2*tau^2)), an additional factor of two comes from e^2 = 2 in Rydberg units.
       !
       DO iww = 1, nomega
         epsilon2_resistive(iww) = 8.d0 * pi * sigma_ref_au / (omegap(iww) * (1 + omegap(iww)**2.d0 * tau**2.d0))

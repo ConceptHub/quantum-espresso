@@ -4,30 +4,6 @@
 ! License. See the file `LICENSE' in the root directory of the               
 ! present distribution, or http://www.gnu.org/copyleft.gpl.txt .
 !
-Module ifconstants
-  ! This code generates ZG displacements
-  !
-  !! All variables read from file that need dynamical allocation.
-  !
-  USE kinds, ONLY: DP
-  !
-  REAL(DP), ALLOCATABLE :: frc(:,:,:,:,:,:,:)
-  !! interatomic force constants in real space
-  REAL(DP), ALLOCATABLE :: frc_lr(:,:,:,:,:,:,:)
-  !! long-range part of interatomic force constants in real space
-  REAL(DP), ALLOCATABLE :: tau_blk(:,:)
-  !! atomic positions for the original cell
-  REAL(DP), ALLOCATABLE :: zeu(:,:,:)
-  !! effective charges for the original cell
-  REAL(DP), ALLOCATABLE :: m_loc(:,:)
-  !! the magnetic moments of each atom
-  INTEGER, ALLOCATABLE  :: ityp_blk(:)
-  !! atomic types for each atom of the original cell
-  !
-  CHARACTER(LEN=6), ALLOCATABLE :: atm(:)
-  !
-end Module ifconstants
-!
 !-------------------------------------------------------------------------
 PROGRAM ZG
   !-----------------------------------------------------------------------
@@ -272,7 +248,7 @@ PROGRAM ZG
   USE parser,           ONLY : read_line
   USE rigid,            ONLY : dyndiag, nonanal, nonanal_ifc
   !
-  USE ifconstants,      ONLY : frc, frc_lr, atm, zeu, tau_blk, ityp_blk, m_loc
+  USE ifconstants_zg,   ONLY : frc, frc_lr, atm, zeu, tau_blk, ityp_blk, m_loc
   !
   IMPLICIT NONE
   !
@@ -428,11 +404,11 @@ PROGRAM ZG
      poly            = .FALSE.
      poly_fd_forces  = .FALSE.
      mixing          = .FALSE.
-     fd_displ        = 0.01058353_DP ! 0.01058353 in Ang = 0.02 Bohr
+     fd_displ        = 0.01058353 ! 0.01058353 in Ang = 0.02 Bohr 
      incl_epsil       = .FALSE. ! for read_fd_forces
      iter_idx        = 1
      iter_idx0       = 0
-     qhat_in         = 0.1_DP
+     qhat_in         = 0.1
      !
      nrots           = 1
      kres1           = 250
@@ -1024,7 +1000,7 @@ SUBROUTINE readfc ( flfrc, nr1, nr2, nr3, epsil, nat,    &
   !-----------------------------------------------------------------------
   !
   USE kinds,      ONLY : DP
-  USE ifconstants,ONLY : tau => tau_blk, ityp => ityp_blk, frc, frc_lr, zeu, atm
+  USE ifconstants_zg,ONLY : tau => tau_blk, ityp => ityp_blk, frc, frc_lr, zeu, atm
   USE cell_base,  ONLY : celldm
   USE io_global,  ONLY : ionode, ionode_id, stdout
   USE mp,         ONLY : mp_bcast 
@@ -2461,7 +2437,7 @@ SUBROUTINE find_representations_mode_q ( nat, ntyp, xq, w2, u, tau, ityp, &
   IF (.NOT.time_reversal) minus_q=.FALSE.
 
   sym(1:nsym) =.TRUE.
-  call smallg_q (xq, 0, at, bg, nsym, s, ft, sym, minus_q)
+  call smallg_q (xq, 0, at, bg, nsym, s, sym, minus_q)
   nsymq= copy_sym(nsym, sym )
   call s_axis_to_cart ()
   CALL set_giq (xq, s, nsymq, nsym, irotmq,minus_q,gi,gimq)

@@ -84,6 +84,25 @@ condnewzz=`sed -n -e "/SR                 Conductivity/ {n;n;n;n;n;n;p}" $fname 
 ratmax=`grep "Maximum Im/Re Ratio =" $fname | awk '{print $9}'`
 hall=`sed -n -e "/     Hall factor/ {n;p}" $fname | awk '{print $2}'`
 eplrn=`grep 'Formation Energy (eV):' $fname | awk '{print $4}'`
+edtauplrn=`grep 'Formation Energy at this' $fname | awk '{print $NF}'`
+eigplrn=`grep '      Eigenvalue (eV): ' $fname | awk '{print $3}'`
+ephplrn=`grep '     Phonon part (eV): ' $fname | awk '{print $4}'`
+eelplrn=`grep '   Electron part (eV): ' $fname | awk '{print $4}'`
+ampctr=`grep 'The largest Amp' $fname | awk '{print $4; print $5; print $6; print $7}'`
+nrpplrn=`grep 'Number of unit cells within supercell:' $fname | awk '{print $7}'`
+# Fold the 0..1 center into (-0.5, 0.5] so a center near the cell edge does not
+# flip between 0.0001 and 0.9999 from one run to the next.
+rplrn=`grep 'in crystal coordinates' $fname | awk '{for (i = 1; i <= 3; i++) {v = $i - int($i); if (v < 0) v += 1; if (v > 0.5) v -= 1; print v}}'`
+# Every polaron run prints these same lines, so one set of tags would force one
+# tolerance on all of them. Only scell_mat_plrn (epw5/epw6) prints nRp, so use it
+# to move that run onto *scell tags, which userconfig.tmp sets wider.
+if test "$nrpplrn" != ""; then
+        eplrnscell="$eplrn";      eplrn=""
+        eigplrnscell="$eigplrn";  eigplrn=""
+        ephplrnscell="$ephplrn";  ephplrn=""
+        eelplrnscell="$eelplrn";  eelplrn=""
+        rplrnscell="$rplrn";      rplrn=""
+fi
 specfun=`grep "A(k,w) = " $fname | awk '{print $10}'`
 temperature=`grep Temperature $fname | awk '{print substr($2, 1, length($2)-1)}'`
 
@@ -343,6 +362,66 @@ fi
 if test "$eplrn" != ""; then
         echo eplrn
         for x in $eplrn; do echo $x; done
+fi
+
+if test "$edtauplrn" != ""; then
+        echo edtauplrn
+        for x in $edtauplrn; do echo $x; done
+fi
+
+if test "$eigplrn" != ""; then
+        echo eigplrn
+        for x in $eigplrn; do echo $x; done
+fi
+
+if test "$ephplrn" != ""; then
+        echo ephplrn
+        for x in $ephplrn; do echo $x; done
+fi
+
+if test "$eelplrn" != ""; then
+        echo eelplrn
+        for x in $eelplrn; do echo $x; done
+fi
+
+if test "$ampctr" != ""; then
+        echo ampctr
+        for x in $ampctr; do echo $x; done
+fi
+
+if test "$nrpplrn" != ""; then
+        echo nrpplrn
+        for x in $nrpplrn; do echo $x; done
+fi
+
+if test "$rplrn" != ""; then
+        echo rplrn
+        for x in $rplrn; do echo $x; done
+fi
+
+if test "$eplrnscell" != ""; then
+        echo eplrnscell
+        for x in $eplrnscell; do echo $x; done
+fi
+
+if test "$eigplrnscell" != ""; then
+        echo eigplrnscell
+        for x in $eigplrnscell; do echo $x; done
+fi
+
+if test "$ephplrnscell" != ""; then
+        echo ephplrnscell
+        for x in $ephplrnscell; do echo $x; done
+fi
+
+if test "$eelplrnscell" != ""; then
+        echo eelplrnscell
+        for x in $eelplrnscell; do echo $x; done
+fi
+
+if test "$rplrnscell" != ""; then
+        echo rplrnscell
+        for x in $rplrnscell; do echo $x; done
 fi
 
 if test "$specfun" != ""; then

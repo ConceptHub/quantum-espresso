@@ -1,0 +1,683 @@
+                                                                                      
+                                       ``:oss/                                        
+                           `.+s+.     .+ys--yh+     `./ss+.                           
+                          -sh//yy+`   +yy   +yy    -+h+-oyy                           
+                          -yh- .oyy/.-sh.   .syo-.:sy-  /yh                           
+                 `.-.`    `yh+   -oyyyo.     `/syys:    oys      `.`                  
+               `/+ssys+-` `sh+      `                   oys`   .:osyo`                
+               -yh- ./syyooyo`                          .sys+/oyo--yh/                
+               `yy+    .-:-.                             `-/+/:`  -sh-                
+                /yh.                                              oys                 
+          ``..---hho---------`   .---------..`      `.-----.`    -hd+---.             
+       `./osmNMMMMMMMMMMMMMMMs. +NNMMMMMMMMNNmh+.   yNMMMMMNm-  oNMMMMMNmo++:`        
+       +sy--/sdMMMhyyyyyyyNMMh- .oyNMMmyyyyyhNMMm+` -yMMMdyyo:` .oyyNMMNhs+syy`       
+       -yy/   /MMM+.`-+/``mMMy-   `mMMh:`````.dMMN:` `MMMy-`-dhhy```mMMy:``+hs        
+        -yy+` /MMMo:-mMM+`-oo/.    mMMh:     `dMMN/`  dMMm:`dMMMMy..MMMo-.+yo`        
+         .sys`/MMMMNNMMMs-         mMMmyooooymMMNo:   oMMM/sMMMMMM++MMN//oh:          
+          `sh+/MMMhyyMMMs- `-`     mMMMMMMMMMNmy+-`   -MMMhMMMsmMMmdMMd/yy+           
+    `-/+++oyy-/MMM+.`/hh/.`mNm:`   mMMd+/////:-.`      NMMMMMd/:NMMMMMy:/yyo/:.`      
+   +os+//:-..-oMMMo:--:::-/MMMo. .-mMMd+---`           hMMMMN+. oMMMMMo. `-+osyso:`   
+   syo     `mNMMMMMNNNNNNNNMMMo.oNNMMMMMNNNN:`         +MMMMs:`  dMMMN/`     ``:syo   
+   /yh`     :syyyyyyyyyyyyyyyy+.`+syyyyyyyyo:`         .oyys:`   .oyys:`        +yh   
+   -yh-        ````````````````    `````````              ``        ``          oys   
+   -+h/------------------------::::::::://////++++++++++++++++++++++///////::::/yd:   
+   shdddddddddddddddddddddddddddddhhhhhhhhyyyyyssssssssssssssssyyyyyyyhhhhhhhddddh`   
+                                                                                      
+ Lee, H., Poncé, S., Bushick, K., Hajinazar, S., Lafuente-Bartolome, J.,Leveillee, J.,
+    Lian, C., Lihm, J., Macheda, F., Mori, H., Paudyal, H., Sio, W., Tiwari, S.,      
+ Zacharias, M., Zhang, X., Bonini, N., Kioupakis, E., Margine, E.R., and Giustino F., 
+                                                     npj Comput Mater 9, 156 (2023)   
+                                                                                      
+
+     Program EPW v.6.0 starts on 21May2026 at 11:49:39 
+
+     This program is part of the open-source Quantum ESPRESSO suite
+     for quantum simulation of materials; please cite
+         "P. Giannozzi et al., J. Phys.:Condens. Matter 21 395502 (2009);
+         "P. Giannozzi et al., J. Phys.:Condens. Matter 29 465901 (2017);
+         "P. Giannozzi et al., J. Chem. Phys. 152 154105 (2020);
+          URL http://www.quantum-espresso.org", 
+     in publications or presentations arising from this work. More details at
+     http://www.quantum-espresso.org/quote
+
+     Parallel version (MPI), running on     1 processors
+
+     MPI processes distributed on     1 nodes
+     97200 MiB available memory on the printing compute node when the environment starts
+
+     Reading input from epw14.in
+
+     Suggestion: epw_memdist == .true. can reduce the memory usage when etf_mem == 0.
+
+     Reading supplied temperature list.
+                      
+     ------------------------------------------------------------------------ 
+                   RESTART - RESTART - RESTART - RESTART                         
+     Restart is done without reading PWSCF save file.                  
+     Be aware that some consistency checks are therefore not done.                  
+     ------------------------------------------------------------------------ 
+                      
+
+     --                                                                         
+
+     bravais-lattice index     =            0
+     lattice parameter (a_0)   =       0.0000  a.u.
+     unit-cell volume          =       0.0000 (a.u.)^3
+     number of atoms/cell      =            0
+     number of atomic types    =            0
+     kinetic-energy cut-off    =       0.0000  Ry
+     charge density cut-off    =       0.0000  Ry
+     Exchange-correlation= not set
+                           (  -1  -1  -1  -1  -1  -1  -1)
+
+
+     celldm(1)=    0.00000  celldm(2)=    0.00000  celldm(3)=    0.00000
+     celldm(4)=    0.00000  celldm(5)=    0.00000  celldm(6)=    0.00000
+
+     crystal axes: (cart. coord. in units of a_0)
+               a(1) = (  0.0000  0.0000  0.0000 )  
+               a(2) = (  0.0000  0.0000  0.0000 )  
+               a(3) = (  0.0000  0.0000  0.0000 )  
+
+     reciprocal axes: (cart. coord. in units 2 pi/a_0)
+               b(1) = (  0.0000  0.0000  0.0000 )  
+               b(2) = (  0.0000  0.0000  0.0000 )  
+               b(3) = (  0.0000  0.0000  0.0000 )  
+
+
+     Atoms inside the unit cell: 
+
+   Cartesian axes
+
+     site n.  atom      mass           positions (a_0 units)
+
+
+     No symmetry!
+
+     G cutoff =    0.0000  (      0 G-vectors)     FFT grid: (  0,  0,  0)
+     number of k points=    0
+                       cart. coord. in units 2pi/a_0
+     EPW          :      0.00s CPU      0.00s WALL
+
+     EPW          :      0.00s CPU      0.00s WALL
+
+
+     -------------------------------------------------------------------
+     Using diam.ukk from disk
+     -------------------------------------------------------------------
+
+     HDF5 is NOT used in the current build. Exciton-phonon coupling calculations are disabled.
+     Symmetries of Bravais lattice:  48
+     Symmetries of crystal:          48
+
+     Do not need to read .epb files; read .fmt files
+
+     Use zone-centred Wigner-Seitz cells 
+     Number of WS vectors for electrons       43
+     Number of WS vectors for phonons       43
+     Number of WS vectors for electron-phonon       43
+     Maximum number of cores for efficient parallelization      258
+     Results may improve by using use_ws == .TRUE. 
+
+     Reading Hamiltonian, Dynamical matrix and EP vertex in Wann rep from file
+
+
+     Finished reading Wann rep data from file
+
+     ===================================================================
+     Memory usage:  VmHWM =       149Mb
+                   VmPeak =       675Mb
+     ===================================================================
+     
+     Using uniform q-mesh:     6    6    6
+     Size of q point mesh for interpolation:        216
+     Using uniform k-mesh:     6    6    6
+     Size of k point mesh for interpolation:        216
+     Max number of k points per pool:              216
+
+     Fermi energy coarse grid =  14.009579 eV
+
+     ===================================================================
+
+     Fermi energy is read from the input file: Ef =  14.000000 eV
+
+     ===================================================================
+
+              ibndmin =     2  ebndmin =    13.891 eV
+              ibndmax =     4  ebndmax =    13.891 eV
+
+
+     Number of ep-matrix elements per pool :        11664 ~=   91.12 Kb (@ 8 bytes/ DP)
+      
+     A selecq.fmt file was found but re-created because selecqread == .FALSE.  
+     We only need to compute        1 q-points
+      
+     Gaussian   Broadening:   0.030000 eV, ngauss=   1
+ 
+
+     ===================================================================
+     Electron Spectral Function in the Migdal Approximation
+     ===================================================================
+
+ 
+     The sum rule to conserve the number of electron is enforced.
+     The self energy is rescaled so that its real part is zero at the Fermi level.
+     The sum rule replace the explicit calculation of the Debye-Waller term.
+ 
+
+     Fermi Surface thickness =   0.700000 eV
+
+     Golden Rule strictly enforced with T =   0.430867 eV
+
+     Nr. of k-points on the uniform grid:       216
+
+
+     Finish mapping k+sign*q onto the fine k-mesh and and writing .ikamp file
+
+
+     Nr k-points within the Fermi shell =         1 out of       216
+
+                  Fermi level (eV) =    0.140000000000000D+02
+     DOS(states/spin/eV/Unit Cell) =   -0.537174056362197D-05
+            Electron smearing (eV) =    0.300000000000000D-01
+                 Fermi window (eV) =    0.700000000000000D+00
+      
+     Finish writing .ephmat files
+
+     WARNING: only the eigenstates within the Fermi window are meaningful
+
+     -------------------------------------------------------------------
+     K-point        Energy (eV)         Spectral function (1/meV)
+     -------------------------------------------------------------------
+
+     ik =       1  w =   -1.0000 eV   A(k,w) =   2.32298E-06 meV^-1
+     ik =       1  w =   -0.8947 eV   A(k,w) =   3.97909E-06 meV^-1
+     ik =       1  w =   -0.7895 eV   A(k,w) =   7.48807E-06 meV^-1
+     ik =       1  w =   -0.6842 eV   A(k,w) =   1.61890E-05 meV^-1
+     ik =       1  w =   -0.5789 eV   A(k,w) =   4.40252E-05 meV^-1
+     ik =       1  w =   -0.4737 eV   A(k,w) =   1.91327E-04 meV^-1
+     ik =       1  w =   -0.3684 eV   A(k,w) =   4.21204E-03 meV^-1
+     ik =       1  w =   -0.2632 eV   A(k,w) =   1.71253E-03 meV^-1
+     ik =       1  w =   -0.1579 eV   A(k,w) =   1.59560E-03 meV^-1
+     ik =       1  w =   -0.0526 eV   A(k,w) =   2.58005E-03 meV^-1
+     ik =       1  w =    0.0526 eV   A(k,w) =   1.34291E-03 meV^-1
+     ik =       1  w =    0.1579 eV   A(k,w) =   2.74914E-02 meV^-1
+     ik =       1  w =    0.2632 eV   A(k,w) =   4.03210E-04 meV^-1
+     ik =       1  w =    0.3684 eV   A(k,w) =   6.96734E-05 meV^-1
+     ik =       1  w =    0.4737 eV   A(k,w) =   2.27879E-05 meV^-1
+     ik =       1  w =    0.5789 eV   A(k,w) =   9.86428E-06 meV^-1
+     ik =       1  w =    0.6842 eV   A(k,w) =   5.01875E-06 meV^-1
+     ik =       1  w =    0.7895 eV   A(k,w) =   2.84038E-06 meV^-1
+     ik =       1  w =    0.8947 eV   A(k,w) =   1.73461E-06 meV^-1
+     ik =       1  w =    1.0000 eV   A(k,w) =   1.12186E-06 meV^-1
+
+
+     Additional k-points are provided in the specfun.elself file
+
+     -------------------------------------------------------------------
+
+
+     ===================================================================
+     Computing optical conductivity in the bubble approximation.
+     ===================================================================
+
+     Number of electrons computed:  N =     0.01816531 N_target=     0.01563998
+
+     Chemical potential is changed from            14.000000[eV] to            13.881250[eV] 
+
+     Drude conductivity_xx =     1.54177453E-07[1/(Ohm m)]
+
+     Drude conductivity_yy =     2.00955845E-07[1/(Ohm m)]
+
+     Drude conductivity_zz =     2.85108934E-07[1/(Ohm m)]
+     ===================================================================
+     Memory usage:  VmHWM =       153Mb
+                   VmPeak =       676Mb
+     ===================================================================
+
+
+     Finish writing phdos files diam.phdos and diam.phdos_proj
+
+
+     Finish reading freq file
+
+                  Fermi level (eV) =     1.4000000000E+01
+     DOS(states/spin/eV/Unit Cell) =    -5.3717405636E-06
+            Electron smearing (eV) =     3.0000000000E-02
+                 Fermi window (eV) =     7.0000000000E-01
+     Nr k-points within the Fermi shell =         1 out of       216
+
+           3 bands within the Fermi window
+
+
+     Finish reading egnv file 
+
+
+     Max nr of q-points =         1
+     Finish reading ikmap files
+
+
+     Start reading .ephmat files
+     Finish reading .ephmat files
+
+
+     -------------------------------------------------------------------
+     Electron spectral function will be computed using the self-consistent GD0 method.
+     -------------------------------------------------------------------
+
+     Maximum number of iterations is 100 and a convergence threshold is 0.01.
+     Final result will be printed out in the specfun.elself.TTT.TTTK_scGD0 file
+     specfun_iter.bin file contains all the iterations. 
+
+     Fermi level is recomputed from the spectral function using bisection. 
+     Number of electrons computed:  N =     0.01816529 N_target=     0.01563998
+
+     ===================================================================
+     Electron Spectral Function in the self-consistent Migdal Approximation
+
+     Currently doing iteration number        1
+     ===================================================================
+
+
+     The (updated) Fermi level is  13.976249 eV.
+     -------------------------------------------------------------------
+
+     Relative L2 error:           2.69425126
+     Convergence criterion: a stable relative error < 0.01
+
+     -------------------------------------------------------------------
+
+     Fermi level is recomputed from the spectral function using bisection. 
+     Number of electrons computed:  N =     0.00962766 N_target=     0.01563998
+
+     ===================================================================
+     Electron Spectral Function in the self-consistent Migdal Approximation
+
+     Currently doing iteration number        2
+     ===================================================================
+
+
+     The (updated) Fermi level is  14.131249 eV.
+     -------------------------------------------------------------------
+
+     Relative L2 error:           0.81929234
+     Convergence criterion: a stable relative error < 0.01
+
+     -------------------------------------------------------------------
+
+     Fermi level is recomputed from the spectral function using bisection. 
+     Number of electrons computed:  N =     0.01378534 N_target=     0.01563998
+
+     ===================================================================
+     Electron Spectral Function in the self-consistent Migdal Approximation
+
+     Currently doing iteration number        3
+     ===================================================================
+
+
+     The (updated) Fermi level is  14.166249 eV.
+     -------------------------------------------------------------------
+
+     Relative L2 error:           0.79361626
+     Convergence criterion: a stable relative error < 0.01
+
+     -------------------------------------------------------------------
+
+     Fermi level is recomputed from the spectral function using bisection. 
+     Number of electrons computed:  N =     0.01704788 N_target=     0.01563998
+
+     ===================================================================
+     Electron Spectral Function in the self-consistent Migdal Approximation
+
+     Currently doing iteration number        4
+     ===================================================================
+
+
+     The (updated) Fermi level is  14.146249 eV.
+     -------------------------------------------------------------------
+
+     Relative L2 error:           1.04840937
+     Convergence criterion: a stable relative error < 0.01
+
+     -------------------------------------------------------------------
+
+     Fermi level is recomputed from the spectral function using bisection. 
+     Number of electrons computed:  N =     0.01539902 N_target=     0.01563998
+
+     ===================================================================
+     Electron Spectral Function in the self-consistent Migdal Approximation
+
+     Currently doing iteration number        5
+     ===================================================================
+
+
+     The (updated) Fermi level is  14.151249 eV.
+     -------------------------------------------------------------------
+
+     Relative L2 error:           0.67729858
+     Convergence criterion: a stable relative error < 0.01
+
+     -------------------------------------------------------------------
+
+     Fermi level is recomputed from the spectral function using bisection. 
+     Number of electrons computed:  N =     0.01684477 N_target=     0.01563998
+
+     ===================================================================
+     Electron Spectral Function in the self-consistent Migdal Approximation
+
+     Currently doing iteration number        6
+     ===================================================================
+
+
+     The (updated) Fermi level is  14.133749 eV.
+     -------------------------------------------------------------------
+
+     Relative L2 error:           0.51871070
+     Convergence criterion: a stable relative error < 0.01
+
+     -------------------------------------------------------------------
+
+     Fermi level is recomputed from the spectral function using bisection. 
+     Number of electrons computed:  N =     0.01760080 N_target=     0.01563998
+
+     ===================================================================
+     Electron Spectral Function in the self-consistent Migdal Approximation
+
+     Currently doing iteration number        7
+     ===================================================================
+
+
+     The (updated) Fermi level is  14.106249 eV.
+     -------------------------------------------------------------------
+
+     Relative L2 error:           0.26153690
+     Convergence criterion: a stable relative error < 0.01
+
+     -------------------------------------------------------------------
+
+     Fermi level is recomputed from the spectral function using bisection. 
+     Number of electrons computed:  N =     0.01736366 N_target=     0.01563998
+
+     ===================================================================
+     Electron Spectral Function in the self-consistent Migdal Approximation
+
+     Currently doing iteration number        8
+     ===================================================================
+
+
+     The (updated) Fermi level is  14.083749 eV.
+     -------------------------------------------------------------------
+
+     Relative L2 error:           0.11501705
+     Convergence criterion: a stable relative error < 0.01
+
+     -------------------------------------------------------------------
+
+     Fermi level is recomputed from the spectral function using bisection. 
+     Number of electrons computed:  N =     0.01688663 N_target=     0.01563998
+
+     ===================================================================
+     Electron Spectral Function in the self-consistent Migdal Approximation
+
+     Currently doing iteration number        9
+     ===================================================================
+
+
+     The (updated) Fermi level is  14.066249 eV.
+     -------------------------------------------------------------------
+
+     Relative L2 error:           0.07414903
+     Convergence criterion: a stable relative error < 0.01
+
+     -------------------------------------------------------------------
+
+     Fermi level is recomputed from the spectral function using bisection. 
+     Number of electrons computed:  N =     0.01654036 N_target=     0.01563998
+
+     ===================================================================
+     Electron Spectral Function in the self-consistent Migdal Approximation
+
+     Currently doing iteration number       10
+     ===================================================================
+
+
+     The (updated) Fermi level is  14.053749 eV.
+     -------------------------------------------------------------------
+
+     Relative L2 error:           0.04438025
+     Convergence criterion: a stable relative error < 0.01
+
+     -------------------------------------------------------------------
+
+     Fermi level is recomputed from the spectral function using bisection. 
+     Number of electrons computed:  N =     0.01639792 N_target=     0.01563998
+
+     ===================================================================
+     Electron Spectral Function in the self-consistent Migdal Approximation
+
+     Currently doing iteration number       11
+     ===================================================================
+
+
+     The (updated) Fermi level is  14.043749 eV.
+     -------------------------------------------------------------------
+
+     Relative L2 error:           0.04158421
+     Convergence criterion: a stable relative error < 0.01
+
+     -------------------------------------------------------------------
+
+     Fermi level is recomputed from the spectral function using bisection. 
+     Number of electrons computed:  N =     0.01628958 N_target=     0.01563998
+
+     ===================================================================
+     Electron Spectral Function in the self-consistent Migdal Approximation
+
+     Currently doing iteration number       12
+     ===================================================================
+
+
+     The (updated) Fermi level is  14.036249 eV.
+     -------------------------------------------------------------------
+
+     Relative L2 error:           0.02867411
+     Convergence criterion: a stable relative error < 0.01
+
+     -------------------------------------------------------------------
+
+     Fermi level is recomputed from the spectral function using bisection. 
+     Number of electrons computed:  N =     0.01620366 N_target=     0.01563998
+
+     ===================================================================
+     Electron Spectral Function in the self-consistent Migdal Approximation
+
+     Currently doing iteration number       13
+     ===================================================================
+
+
+     The (updated) Fermi level is  14.028749 eV.
+     -------------------------------------------------------------------
+
+     Relative L2 error:           0.02942456
+     Convergence criterion: a stable relative error < 0.01
+
+     -------------------------------------------------------------------
+
+     Fermi level is recomputed from the spectral function using bisection. 
+     Number of electrons computed:  N =     0.01612437 N_target=     0.01563998
+
+     ===================================================================
+     Electron Spectral Function in the self-consistent Migdal Approximation
+
+     Currently doing iteration number       14
+     ===================================================================
+
+
+     The (updated) Fermi level is  14.021249 eV.
+     -------------------------------------------------------------------
+
+     Relative L2 error:           0.02936677
+     Convergence criterion: a stable relative error < 0.01
+
+     -------------------------------------------------------------------
+
+     Fermi level is recomputed from the spectral function using bisection. 
+     Number of electrons computed:  N =     0.01603530 N_target=     0.01563998
+
+     ===================================================================
+     Electron Spectral Function in the self-consistent Migdal Approximation
+
+     Currently doing iteration number       15
+     ===================================================================
+
+
+     The (updated) Fermi level is  14.016249 eV.
+     -------------------------------------------------------------------
+
+     Relative L2 error:           0.01905033
+     Convergence criterion: a stable relative error < 0.01
+
+     -------------------------------------------------------------------
+
+     Fermi level is recomputed from the spectral function using bisection. 
+     Number of electrons computed:  N =     0.01596586 N_target=     0.01563998
+
+     ===================================================================
+     Electron Spectral Function in the self-consistent Migdal Approximation
+
+     Currently doing iteration number       16
+     ===================================================================
+
+
+     The (updated) Fermi level is  14.011249 eV.
+     -------------------------------------------------------------------
+
+     Relative L2 error:           0.01692939
+     Convergence criterion: a stable relative error < 0.01
+
+     -------------------------------------------------------------------
+
+     Fermi level is recomputed from the spectral function using bisection. 
+     Number of electrons computed:  N =     0.01588673 N_target=     0.01563998
+
+     ===================================================================
+     Electron Spectral Function in the self-consistent Migdal Approximation
+
+     Currently doing iteration number       17
+     ===================================================================
+
+
+     The (updated) Fermi level is  14.008749 eV.
+     -------------------------------------------------------------------
+
+     Relative L2 error:           0.00646526
+     Convergence criterion: a stable relative error < 0.01
+
+     -------------------------------------------------------------------
+
+     Fermi level is recomputed from the spectral function using bisection. 
+     Number of electrons computed:  N =     0.01584644 N_target=     0.01563998
+
+     ===================================================================
+     Electron Spectral Function in the self-consistent Migdal Approximation
+
+     Currently doing iteration number       18
+     ===================================================================
+
+
+     The (updated) Fermi level is  14.006249 eV.
+     -------------------------------------------------------------------
+
+     Relative L2 error:           0.00766825
+     Convergence criterion: a stable relative error < 0.01
+
+     -------------------------------------------------------------------
+
+     Converged achieved after iteration number:    17
+     -------------------------------------------------------------------
+
+     WARNING: only the eigenstates within the Fermi window are meaningful
+
+     -------------------------------------------------------------------
+     K-point        Energy (eV)         Spectral function (1/meV)
+     -------------------------------------------------------------------
+
+     ik =       1  w =   -1.0000 eV   A(k,w) =   0.00000E+00 meV^-1
+     ik =       1  w =   -0.8947 eV   A(k,w) =   0.00000E+00 meV^-1
+     ik =       1  w =   -0.7895 eV   A(k,w) =   5.50700E-06 meV^-1
+     ik =       1  w =   -0.6842 eV   A(k,w) =   6.57626E-05 meV^-1
+     ik =       1  w =   -0.5789 eV   A(k,w) =   4.75016E-04 meV^-1
+     ik =       1  w =   -0.4737 eV   A(k,w) =   1.77349E-03 meV^-1
+     ik =       1  w =   -0.3684 eV   A(k,w) =   3.71294E-03 meV^-1
+     ik =       1  w =   -0.2632 eV   A(k,w) =   4.64704E-03 meV^-1
+     ik =       1  w =   -0.1579 eV   A(k,w) =   3.90973E-03 meV^-1
+     ik =       1  w =   -0.0526 eV   A(k,w) =   3.68616E-03 meV^-1
+     ik =       1  w =    0.0526 eV   A(k,w) =   6.00188E-03 meV^-1
+     ik =       1  w =    0.1579 eV   A(k,w) =   2.86172E-03 meV^-1
+     ik =       1  w =    0.2632 eV   A(k,w) =   1.33748E-03 meV^-1
+     ik =       1  w =    0.3684 eV   A(k,w) =   2.95065E-04 meV^-1
+     ik =       1  w =    0.4737 eV   A(k,w) =   8.07874E-05 meV^-1
+     ik =       1  w =    0.5789 eV   A(k,w) =   1.27199E-05 meV^-1
+     ik =       1  w =    0.6842 eV   A(k,w) =   2.68568E-06 meV^-1
+     ik =       1  w =    0.7895 eV   A(k,w) =   3.40114E-07 meV^-1
+     ik =       1  w =    0.8947 eV   A(k,w) =   5.67329E-08 meV^-1
+     ik =       1  w =    1.0000 eV   A(k,w) =   0.00000E+00 meV^-1
+
+
+     Additional k-points are provided in the specfun.elself file
+
+     -------------------------------------------------------------------
+
+
+     ===================================================================
+     Computing optical conductivity in the bubble approximation.
+     ===================================================================
+
+
+     Drude conductivity_xx =     5.94760568E-07[1/(Ohm m)]
+
+     Drude conductivity_yy =     7.75214601E-07[1/(Ohm m)]
+
+     Drude conductivity_zz =     1.09984663E-06[1/(Ohm m)]
+
+     Unfolding on the coarse grid
+     elphon_wrap  :      0.00s CPU      0.00s WALL (       1 calls)
+
+     INITIALIZATION: 
+
+
+
+
+     Electron-Phonon interpolation
+     ep-interp    :      0.00s CPU      0.01s WALL (       1 calls)
+
+     wigner_seitz :      0.00s CPU      0.00s WALL (       1 calls)
+     DynW2B       :      0.00s CPU      0.00s WALL (     217 calls)
+     HamW2B       :      0.00s CPU      0.00s WALL (    1080 calls)
+     ephW2Bp      :      0.00s CPU      0.00s WALL (       1 calls)
+     ephW2B       :      0.00s CPU      0.00s WALL (       1 calls)
+     selfen_elec_ :      0.00s CPU      0.00s WALL (       1 calls)
+
+
+
+     Total program execution
+     EPW          :      0.18s CPU      0.20s WALL
+
+     % Copyright (C) 2016-2023 EPW-Collaboration                                    
+                                                                                    
+     ===============================================================================
+     Please consider citing the following papers.                                   
+                                                                                                 
+     % Paper describing the method on which EPW relies                                           
+       F. Giustino and M. L. Cohen and S. G. Louie, Phys. Rev. B 76, 165108 (2007)               
+                                                                                                 
+     % Papers describing the EPW software                                                        
+       H. Lee et al., npj Comput. Mater. 9, 156 (2023)                                           
+       S. Ponc\'e, E.R. Margine, C. Verdi and F. Giustino, Comput. Phys. Commun. 209, 116 (2016) 
+       J. Noffsinger et al., Comput. Phys. Commun. 181, 2140 (2010)                              
+                                                                                                 
+                                                                                    
+     For your convenience, this information is also reported in the                 
+     functionality-dependent EPW.bib file.                                          
+     ===============================================================================
+                                                                                    

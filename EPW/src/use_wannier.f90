@@ -38,14 +38,15 @@
                                start_mesh, ii_lscreen, isk_dummy, lopt_w2b, lsda,  &
                                explrn, gb_scattering, lfast_kmesh,                 &
                                plot_explrn_e, plot_explrn_h, dos_tetra, a2f_iso,   &
-                               prtvkk, prteigdiff, prtuf
+                               prtvkk, prteigdiff, prtuf, specfun_el_scgd0,        &
+                               opt_cond, filkf, use_ws
   USE control_flags,    ONLY : iverbosity
   USE noncollin_module, ONLY : noncolin
   USE ep_constants,     ONLY : ryd2ev, ryd2mev, one, two, zero, czero, cone,       &
                                twopi, ci, eps6, eps16
   USE io_files,         ONLY : prefix, tmp_dir
   USE io_global,        ONLY : stdout, ionode, ionode_id
-  USE io_var,           ONLY : iuntaucb, iunepmatwp, iunepmatwp2, iunrestart,      &
+  USE io_var,           ONLY : iuntaucb, iunepmatwp, iunepmatwp2,                  &
                                iuntau, crystal, epwdata, iuwigner
   USE global_var,       ONLY : ifc, do_cutoff_2D_epw, chw, chw_ks, adapt_smearing, &
                                wf, etf, etf_ks, xqf, xkf, wkf, nqtotf, nkqf, epf17,&
@@ -64,7 +65,8 @@
                                E_grid, maxdim, dwf17, totq, sigmar_dw_all, bztoibz,& 
                                image_arr, startq, lastq, pi_0, ctype, xkf_irr,     &
                                pir_all, gammai_all, fermi_energies_t, wkf_irr,     &
-                               s_bztoibz, spin_fac
+                               s_bztoibz, spin_fac, esigmaisc_all, iter_scgd0,     &
+                               a_all_ibnd, mu_t
   USE global_setups,    ONLY : use_wannier_setup, lsda_setup
   USE wannier2bloch,    ONLY : dmewan2bloch, hamwan2bloch, dynwan2bloch,           &
                                ephwan2blochp, ephwan2bloch, vmewan2bloch,          &
@@ -74,8 +76,10 @@
                                ephwan2bloch_batch
   USE wigner,           ONLY : wigner_divide_ndegen
   USE io_supercond,     ONLY : write_ephmat, count_kpoints, kmesh_fine, kqmap_fine,&
-                               check_restart_ephwrite, write_dos, write_phdos,     &
+                               read_restart_ephwrite, write_dos, write_phdos,      &
                                file_open_ephmat, write_dos_tetra
+  USE io_selfen,        ONLY : spectral_write_scgd0, spectral_read_scgd0,          &
+                               spectral_read_scgd0_check                              
   USE transport_legacy, ONLY : transport_coeffs, scattering_rate_q
   USE bzgrid,           ONLY : qwindow_wrap, loadkmesh_fst, xqf_otf,               &
                                loadqmesh_serial, loadkmesh_para, load_rebal,       &
@@ -99,7 +103,8 @@
   USE selfen,           ONLY : selfen_phon_q, selfen_elec_q, selfen_pl_q,          &
                                nesting_fn_q, selfen_elec_print
   USE spectral,         ONLY : spectral_func_el_print, spectral_func_ph_q,         &
-                               a2f_main, spectral_func_pl_q
+                               a2f_main, spectral_func_pl_q,                       &
+                               spectral_func_el_interpolate
   USE longrange,        ONLY : rgd_imp_epw_fine
   USE screening,        ONLY : rpa_epsilon, tf_epsilon, calc_qtf2_therm,           &
                                calc_epstf_therm, calc_eps_static
@@ -179,6 +184,8 @@
   !! Mirror symmetry for q-points
   LOGICAL :: mirror_kpq
   !! Mirror symmetry for (k+q)-points
+  LOGICAL :: ephw_restarted
+  !! .TRUE. if an ephwrite restart file was read
   INTEGER :: ios
   !! INTEGER variable for I/O control
   INTEGER :: iq
@@ -223,10 +230,6 @@
   !! Index of the CBM
   INTEGER :: ipool
   !! Cpu index.
-  INTEGER :: npool_tmp
-  !! Temporary number of pools
-  INTEGER :: nimage_tmp
-  !! Temporary number of images
   INTEGER :: QD_mesh
   !! mesh index for quasidegenerate perturbation
   INTEGER :: mesh_dum, mesh_leng
@@ -300,6 +303,8 @@
   !! Q-points
   REAL(KIND = DP) :: nelec_aux
   !! Number of electrons in the second spin channel (LSDA case)
+  REAL(KIND = DP) :: nelec_w
+  !! number of electrons in the active window
   REAL(KIND = DP), EXTERNAL :: efermig
   !! External function to calculate the fermi energy
   REAL(KIND = DP), ALLOCATABLE :: etf_all(:, :)
@@ -342,8 +347,6 @@
   !! Interpolation position matrix elements on the fine mesh (ipol, nbnd, nbnd)
   COMPLEX(KIND = DP), ALLOCATABLE :: eimpmatf(:, :)
   !! carrier-ionized impurity matrix in smooth Bloch basis
-  CHARACTER(LEN = 256) :: my_image_id_ch
-  !! image id
   REAL(KIND = DP) :: xxq_tmp(3)
   !! Q-points
   REAL(KIND = DP), ALLOCATABLE :: rfac_batch(:, :)
@@ -396,13 +399,37 @@
   ! lfast_kmesh is a special optimization level to deal with ultra dense fine homogeneous grids.
   !
   ! Compute the Fermi energy as a function of temperature if required when using lfast_kmesh option
-  IF(lfast_kmesh .AND. (scattering .OR. scatread .OR. (carrier .AND. lindabs))) THEN
-    IF (TRIM(lsda) /='none') THEN
-      ALLOCATE(dos_lsda(nstemp), STAT = ierr)
-      IF (ierr /= 0) CALL errore('use_wannier', 'Error allocating dos_tmp', 1)
-      CALL fast_fermi(nrr_k, irvec_k, efcb, nbndsub_aux, nbndskip_aux, etf_aux, dos_lsda)
+  ! Also initialize k-point symmetry (nsym_k, s_k) which is needed by kpoint_grid_fst in load_mesh
+  IF (lfast_kmesh) THEN
+    IF (scattering .OR. scatread .OR. (carrier .AND. lindabs)) THEN
+      IF (TRIM(lsda) /='none') THEN
+        ALLOCATE(dos_lsda(nstemp), STAT = ierr)
+        IF (ierr /= 0) CALL errore('use_wannier', 'Error allocating dos_tmp', 1)
+        CALL fast_fermi(nrr_k, irvec_k, efcb, nbndsub_aux, nbndskip_aux, etf_aux, dos_lsda)
+      ELSE
+        CALL fast_fermi(nrr_k, irvec_k, efcb)
+      ENDIF
+    ELSEIF (efermi_read) THEN
+      ! SM: For superconductivity or other non-scattering runs with lfast_kmesh,
+      ! we need to initialize k-point symmetry before load_mesh.
+      ! This is normally done inside fast_fermi but skipped here because
+      ! scattering/scatread/carrier are not set.
+      CALL kpoints_time_reversal_init()
+      !
+      ! Allocate fermi_energies_t and partion so that downstream code works
+      ALLOCATE(fermi_energies_t(nstemp), STAT = ierr)
+      IF (ierr /= 0) CALL errore('use_wannier', 'Error allocating fermi_energies_t', 1)
+      ALLOCATE(partion(nstemp), STAT = ierr)
+      IF (ierr /= 0) CALL errore('use_wannier', 'Error allocating partion', 1)
+      DO itemp = 1, nstemp
+        fermi_energies_t(itemp) = fermi_energy
+        efcb(itemp) = zero
+        partion(itemp) = 1.0d0
+      ENDDO
     ELSE
-      CALL fast_fermi(nrr_k, irvec_k, efcb)
+      ! lfast_kmesh without efermi_read and without scattering:
+      ! Still need symmetry initialization for IBZ reduction
+      CALL kpoints_time_reversal_init()
     ENDIF
   ENDIF
   !
@@ -650,7 +677,7 @@
     !
     IF (TRIM(lsda) /= 'none') nelec = dummy(1)
     !
-    WRITE(stdout, '(/5x,a,f10.6,a)') &
+    WRITE(stdout, '(/5x,a,f18.14,a)') &
         'Fermi energy is calculated from the fine k-mesh: Ef = ', efnew * ryd2ev, ' eV'
     !
     ! if 'fine' Fermi level differs by more than 250 meV, there is probably something wrong
@@ -693,10 +720,12 @@
   ! Define it only once for the full run.
   CALL fkbounds(nktotf, lower_bnd, upper_bnd)
   !
-  ! Re-order the k-point according to weather they are in or out of the fshick windows
-  ! In the case of lfast_kmesh, we only have k-points within the fsthick (no need for re-ordering).
-  ! SM: using a2f_iso we calculate isotropic a2f without writing to file
-  IF ((iterative_bte .OR. ephwrite .OR. a2f_iso) .AND. mp_mesh_k .AND. (.NOT. lfast_kmesh)) THEN
+  ! Re-order the k-points according to whether they are in or out of the fsthick window.
+  ! SM: needed with lfast_kmesh too - w/o it k-points are
+  !     unevenly distributed over the pools (load imbalance); qwindow also applies
+  !     map_rebal to bztoibz, so load_rebal must run for the ikmap/.frmsf mapping
+  !
+  IF ((iterative_bte .OR. ephwrite .OR. a2f_iso) .AND. mp_mesh_k) THEN
     CALL load_rebal
   ENDIF
   !
@@ -728,7 +757,13 @@
     IF (ierr /= 0) CALL errore('use_wannier', 'error in MPI_FILE_OPEN', 1)
   ENDIF
 #else
-  lrepmatw = 2 * nbndsub * nbndsub * nrr_k * nmodes
+  ! One record is the block that ephwan2blochp reads at once: the 3 Cartesian
+  ! directions of a single atom if use_ws, a single mode otherwise.
+  IF (use_ws) THEN
+    lrepmatw = 2 * nbndsub * nbndsub * nrr_k * 3
+  ELSE
+    lrepmatw = 2 * nbndsub * nbndsub * nrr_k
+  ENDIF
   filint = TRIM(tmp_dir) // TRIM(prefix)// TRIM(fnm) //'.epmatwp'
   INQUIRE(IOLENGTH = direct_io_factor) dummy(1)
   unf_recl = direct_io_factor * INT(lrepmatw, KIND = KIND(unf_recl))
@@ -788,6 +823,7 @@
     ! -----------------------------------------------------------------------
     iq_restart = 1
     first_cycle = .FALSE.
+    ephw_restarted = .FALSE.
     !
     ! Fine mesh set of g-matrices.  It is large for memory storage
     ALLOCATE(epf17(nbndfst, nbndfst, nmodes, nkf), STAT = ierr)
@@ -805,13 +841,16 @@
     IF (phonselfen .OR. specfun_ph) THEN
       ALLOCATE(pi_0(nmodes), STAT = ierr)
       IF (ierr /= 0) CALL errore('use_wannier', 'Error allocating pi_0', 1)
-      ALLOCATE(lambda_all(nmodes, totq, nsmear, nstemp), STAT = ierr)
+      ! SM: addressed with the global index iq (selfen_phon_q) and summed over the
+      ! full q-grid in a2f, so they must span nqtotf. With totq, any q-point
+      ! discarded by fsthick made iq exceed the bounds (out-of-bounds writes).
+      ALLOCATE(lambda_all(nmodes, nqtotf, nsmear, nstemp), STAT = ierr)
       IF (ierr /= 0) CALL errore('use_wannier', 'Error allocating lambda_all', 1)
-      ALLOCATE(lambda_v_all(nmodes, totq, nsmear, nstemp), STAT = ierr)
+      ALLOCATE(lambda_v_all(nmodes, nqtotf, nsmear, nstemp), STAT = ierr)
       IF (ierr /= 0) CALL errore('use_wannier', 'Error allocating lambda_v_all', 1)
-      ALLOCATE(gamma_all(nmodes, totq, nsmear, nstemp), STAT = ierr)
+      ALLOCATE(gamma_all(nmodes, nqtotf, nsmear, nstemp), STAT = ierr)
       IF (ierr /= 0) CALL errore('use_wannier', 'Error allocating gamma_all', 1)
-      ALLOCATE(gamma_v_all(nmodes, totq, nsmear, nstemp), STAT = ierr)
+      ALLOCATE(gamma_v_all(nmodes, nqtotf, nsmear, nstemp), STAT = ierr)
       IF (ierr /= 0) CALL errore('use_wannier', 'Error allocating gamma_v_all', 1)
       pi_0(:)                  = zero
       lambda_all(:, :, :, :)   = zero
@@ -819,7 +858,7 @@
       gamma_all(:, :, :, :)    = zero
       gamma_v_all(:, :, :, :)  = zero
     ENDIF
-    IF (specfun_el .OR. specfun_pl) THEN
+    IF (specfun_el .OR. specfun_pl .OR. specfun_el_scgd0) THEN
       ALLOCATE(esigmar_all(nbndfst, nktotf, nw_specfun, nstemp), STAT = ierr)
       IF (ierr /= 0) CALL errore('use_wannier', 'Error allocating esigmar_all', 1)
       ALLOCATE(esigmai_all(nbndfst, nktotf, nw_specfun, nstemp), STAT = ierr)
@@ -829,6 +868,17 @@
       esigmar_all(:, :, :, :) = zero
       esigmai_all(:, :, :, :) = zero
       a_all(:, :, :) = zero
+    ENDIF
+    IF (opt_cond) THEN
+      ALLOCATE(a_all_ibnd(nw_specfun, nktotf, nbndfst, nstemp), STAT = ierr)
+      IF (ierr /= 0) CALL errore('use_wannier', 'Error allocating a_all_ibnd', 1)
+      a_all_ibnd(:, :, :, :) = zero
+    ENDIF
+    IF (specfun_el_scgd0) THEN
+      ALLOCATE(esigmaisc_all(nbndfst, nktotf, nw_specfun, nstemp), STAT = ierr)
+      IF (ierr /= 0) CALL errore('use_wannier', 'Error allocating esigmaisc_all', 1)
+      esigmaisc_all(:, :, :, :) = zero
+      iter_scgd0 = 0
     ENDIF
     IF (specfun_ph) THEN
       ALLOCATE(pir_all(nw_specfun, nmodes, nstemp, nsmear), STAT = ierr)
@@ -873,6 +923,11 @@
         sigmai_mode(:, :, :, :) = zero
       ENDIF
     ENDIF ! elecselfen
+    IF (elecselfen .OR. specfun_el .OR. specfun_el_scgd0) THEN
+      ALLOCATE(mu_t(nstemp),  STAT = ierr)
+      IF (ierr /= 0) CALL errore('use_wannier', 'Error allocating mu_t', 1)
+      mu_t(:) =zero
+    ENDIF
     !
     IF (loptabs) THEN
       nc = 2
@@ -905,6 +960,14 @@
       IF (specfun_el .OR. specfun_pl) THEN
         CALL spectral_read(iq_restart, totq, nktotf, esigmar_all, esigmai_all)
       ENDIF
+      IF (specfun_el_scgd0) THEN
+        CALL spectral_read_scgd0_check(iter_scgd0)
+        IF (iter_scgd0 > 0) THEN
+          WRITE(stdout,'(/5x,a,i8)') 'This is the iteration nr. ', iter_scgd0
+        ELSE
+          CALL spectral_read(iq_restart, totq, nktotf, esigmar_all, esigmai_all)
+        ENDIF
+      ENDIF
       IF (scattering) THEN
         IF (iterative_bte) CALL transport_read(iq_restart, totq, lrepmatw2_restart, lrepmatw5_restart, &
                                                ind_tot, ind_totcb, first_cycle)
@@ -931,58 +994,10 @@
     ! We just do one loop to get interpolated eigenenergies.
     IF (scatread) iq_restart = totq - 1
     !
-    ! Restart in Superconductivity case
-    ! SM: To do: Image paralleilization for anisotropic superconducvtvity calculations
+    ! SM: Restart in Superconductivity case
     IF (ephwrite) THEN
-      IF (ionode) THEN
-        INQUIRE(FILE = 'restart'// TRIM(fnm) // '.fmt', EXIST = exst)
-      ENDIF
-      CALL mp_bcast(exst, ionode_id, inter_pool_comm)
-      !
-      IF (exst) THEN
-        IF (ionode) THEN
-          OPEN(UNIT = iunrestart, FILE = 'restart'// TRIM(fnm) // '.fmt', STATUS = 'old', IOSTAT = ios)
-          READ(iunrestart, *) iq_restart
-          READ(iunrestart, *) ind_tot
-          READ(iunrestart, *) ind_totcb
-          READ(iunrestart, *) npool_tmp
-          DO ipool = 1, npool
-            READ(iunrestart, *) lrepmatw2_restart(ipool)
-          ENDDO
-          DO ipool = 1, npool
-            READ(iunrestart, *) lrepmatw5_restart(ipool)
-          ENDDO
-          CLOSE(iunrestart)
-        ENDIF
-        CALL mp_bcast(iq_restart, ionode_id, inter_pool_comm)
-        CALL mp_bcast(npool_tmp, ionode_id, inter_pool_comm)
-        CALL mp_bcast(lrepmatw2_restart, ionode_id, inter_pool_comm)
-        CALL mp_bcast(lrepmatw5_restart, ionode_id, inter_pool_comm)
-        IF (npool /= npool_tmp) CALL errore('use_wannier','Number of pools is different',1)
-        !
-#if defined(__MPI)
-        CALL MPI_BCAST(ind_tot,   1, MPI_OFFSET, ionode_id, inter_pool_comm, ierr)
-        CALL MPI_BCAST(ind_totcb, 1, MPI_OFFSET, ionode_id, inter_pool_comm, ierr)
-#endif
-        IF (ierr /= 0) CALL errore('use_wannier', 'error in MPI_BCAST', 1)
-        !
-        IF(iq_restart > 1) THEN
-          first_cycle = .TRUE.
-          IF (ephwrite .AND. iq_restart + 1 <= totq) THEN
-            CALL check_restart_ephwrite(iq_restart)
-          ENDIF
-        ENDIF
-        !
-        ! Now, the iq_restart point has been done, so we need to do the next
-        iq_restart = iq_restart + 1
-        !
-        IF (iq_restart <= totq) THEN
-          WRITE(stdout, '(5x,a,i8,a)')'We restart from ', iq_restart, ' q-points'
-        ELSE
-          WRITE(stdout, '(5x,a)')'All q-points are done, no need to restart !!'
-        ENDIF
-        !
-      ENDIF ! exst
+      CALL read_restart_ephwrite(totq, iq_restart, ind_tot, ind_totcb, &
+                                 lrepmatw2_restart, lrepmatw5_restart, first_cycle, ephw_restarted)
     ENDIF
     !
     !------------------------------------------------------------------------
@@ -1033,10 +1048,21 @@
     ! S.T: Below we divide the q-grid into images 
     !
     CALL image_division(totq, selecq, image_array, size_image_arr, size_image)
-    ! 
+    !
     totq = size_image
     lastq = image_array(totq)
     startq = image_array(1)
+    !
+    ! SM: iq_restart and totq are now both image-local.
+    IF (ephw_restarted) THEN
+      IF (iq_restart <= totq) THEN
+        WRITE(stdout, '(5x,a,i8,a,i8,a)') 'We restart from q-point ', iq_restart, &
+              ' /', totq, ' of this image'
+      ELSE
+        WRITE(stdout, '(5x,a)') 'All q-points of this image are done, no need to restart !!'
+      ENDIF
+      FLUSH(stdout)
+    ENDIF
     !
     DO mesh_dum = 1, mesh_leng
       QD_mesh = mesh_dum
@@ -1453,7 +1479,10 @@
           IF (prtvkk .AND. iq == 1) CALL print_vkk(iq)
           IF (prteigdiff) CALL print_eigdiff(iq)
           IF (phonselfen) CALL selfen_phon_q(iqq, iq, totq, nbndsub + nbndsub_aux, wkf_tot, etf_tot)
-          IF (elecselfen .OR. specfun_el) CALL selfen_elec_q(iqq, iq, totq, first_cycle)
+          IF ((elecselfen .OR. specfun_el) .AND. (.NOT. specfun_el_scgd0)) &
+             CALL selfen_elec_q(iqq, iq, totq, first_cycle)
+          IF (specfun_el_scgd0 .AND. iter_scgd0 == 0) &
+             CALL selfen_elec_q(iqq, iq, totq, first_cycle)
           IF (plselfen .AND. vme == 'dipole') CALL selfen_pl_q(iqq, iq, totq, first_cycle)
           IF (nest_fn   ) CALL nesting_fn_q(iqq, iq, nbndsub + nbndsub_aux, wkf_tot, etf_tot)
           IF (specfun_ph) CALL spectral_func_ph_q(iqq, iq, totq, nbndsub + nbndsub_aux, wkf_tot, etf_tot)
@@ -1619,13 +1648,22 @@
     !ZD-TODO: skip the wannier interpolation for epw3 calculation
     IF (explrn) CALL run_explrn(nrr_k, ndegen_k, irvec_r, nrr_q, ndegen_q, irvec_q, rws, nrws, dims) 
 #endif
-    IF (elecselfen .AND. lwfpt) THEN
+    IF (elecselfen .AND. lwfpt .OR. (specfun_el_scgd0 .AND. lwfpt .AND. iter_scgd0 == 0)) THEN
       CALL ahc_run_static_wfpt(nrr_k, nrr_q, nrr_g, irvec_k, irvec_q, irvec_g, &
                                ndegen_k, ndegen_q, ndegen_g, dims, dims2, rws, nrws)
     ENDIF
     !
     IF (elecselfen) CALL selfen_elec_print()
     IF (specfun_el) CALL spectral_func_el_print()
+    IF (specfun_el_scgd0 .AND. iter_scgd0 == 0) THEN
+      nelec_w = 0.0
+      IF (filkf /= '') THEN
+        CALL spectral_func_el_interpolate()
+      ELSE
+        CALL spectral_func_el_print()
+      ENDIF
+      CALL spectral_write_scgd0(totq, nktotf, esigmar_all, esigmai_all, nelec_w)
+    ENDIF
     !
     ! Check Memory usage
     CALL system_mem_usage(valueRSS)
@@ -1639,6 +1677,17 @@
     ! ---------------------------------------------------------------------------------------
     ! ---------------------------------------------------------------------------------------
     !
+    ! SM: gather the q-resolved quantities over images. wf must be summed here,
+    ! before write_phdos: that routine refills wf on the full q-grid on every
+    ! image, so summing afterwards would scale all frequencies by nimage.
+    IF (phonselfen) THEN
+      CALL mp_sum(lambda_all, inter_image_comm)
+      CALL mp_sum(lambda_v_all, inter_image_comm)
+      CALL mp_sum(gamma_all, inter_image_comm)
+      CALL mp_sum(gamma_v_all, inter_image_comm)
+      CALL mp_sum(wf, inter_image_comm)
+    ENDIF
+    !
     ! SH: Write the electronic and phonon dos files
     IF ((.NOT. band_plot) .AND. (eliashberg .OR. a2f_iso)) THEN
       ! SM: added dos calculated using tetrahedron method
@@ -1648,20 +1697,13 @@
         CALL write_dos(ef, nelec)
       ENDIF
     ENDIF
-    IF (((.NOT. band_plot) .AND. eliashberg) .OR. a2f .OR. a2f_iso) THEN
+    IF (((.NOT. band_plot) .AND. eliashberg) .OR. a2f .OR. a2f_iso .OR. (specfun_el_scgd0 .AND. iter_scgd0 == 0)) THEN
       ! HM: In write_phdos, the frequencies will be calculated
       !     for all the q points, including points excluded in qwindow.
       CALL write_phdos(nrr_q, irvec_q, ndegen_q, nrws, rws)
     ENDIF
     !
-    IF (phonselfen) THEN
-      CALL mp_sum(lambda_all, inter_image_comm)
-      CALL mp_sum(lambda_v_all, inter_image_comm)
-      CALL mp_sum(gamma_all, inter_image_comm)
-      CALL mp_sum(gamma_v_all, inter_image_comm)
-      CALL mp_sum(wf, inter_image_comm)
-      CALL selfen_ph_write()
-    ENDIF
+    IF (phonselfen) CALL selfen_ph_write()
     IF (band_plot)  CALL plot_band()
     IF (fermi_plot) CALL plot_fermisurface()
     IF (a2f)        CALL a2f_main()
@@ -1752,6 +1794,10 @@
         IF (ierr /= 0) CALL errore('use_wannier', 'Error deallocating sigmai_mode', 1)
       ENDIF
     ENDIF
+    IF (elecselfen .OR. specfun_el .OR. specfun_el_scgd0) THEN
+      DEALLOCATE(mu_t, STAT = ierr)
+      IF (ierr /= 0) CALL errore('use_wannier', 'Error deallocating mu_t', 1)
+    ENDIF
     IF (phonselfen .OR. specfun_ph) THEN
       DEALLOCATE(pi_0, STAT = ierr)
       IF (ierr /= 0) CALL errore('use_wannier', 'Error deallocating pi_0', 1)
@@ -1764,13 +1810,21 @@
       DEALLOCATE(gamma_v_all, STAT = ierr)
       IF (ierr /= 0) CALL errore('use_wannier', 'Error deallocating gamma_v_all', 1)
     ENDIF
-    IF (specfun_el .OR. specfun_pl) THEN
+    IF (specfun_el .OR. specfun_pl .OR. specfun_el_scgd0) THEN
       DEALLOCATE(esigmar_all, STAT = ierr)
       IF (ierr /= 0) CALL errore('use_wannier', 'Error deallocating esigmar_all', 1)
       DEALLOCATE(esigmai_all, STAT = ierr)
       IF (ierr /= 0) CALL errore('use_wannier', 'Error deallocating esigmai_all', 1)
       DEALLOCATE(a_all, STAT = ierr)
       IF (ierr /= 0) CALL errore('use_wannier', 'Error deallocating a_all', 1)
+    ENDIF
+    IF (opt_cond) THEN
+      DEALLOCATE(a_all_ibnd, STAT = ierr)
+      IF (ierr /= 0) CALL errore('use_wannier', 'Error deallocating a_all_ibnd', 1)
+    ENDIF
+    IF (specfun_el_scgd0) THEN
+      DEALLOCATE(esigmaisc_all, STAT = ierr)
+      IF (ierr /= 0) CALL errore('use_wannier', 'Error deallocating esigmai_all', 1)
     ENDIF
     IF (specfun_ph) THEN
       DEALLOCATE(pir_all, STAT = ierr)

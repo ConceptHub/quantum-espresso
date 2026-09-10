@@ -45,6 +45,7 @@ set(sources
     src/supercond_driver.f90
     src/selfen.f90
     src/spectral.f90
+    src/scgd0_driver.f90
     src/wannier.f90
     src/use_wannier.f90
     src/init.f90
@@ -52,6 +53,13 @@ set(sources
     src/setups.f90
     src/summaries.f90
     src/wann_common.f90
+    src/polaron_common.f90
+    src/utilities/polaron_grid.f90
+    src/polaron_hamiltonian.f90
+    src/polaron_diagonalization.f90
+    src/io/io_polaron.f90
+    src/polaron_interpolation.f90
+    src/polaron_scf_driver.f90
     src/polaron.f90
     src/qdabs.f90
     src/wfpt.f90
@@ -109,7 +117,7 @@ target_link_libraries(qe_epw_nscf2supercond_exe PRIVATE qe_pw qe_modules qe_pp q
 ###########################################################
 # ZG.x
 ###########################################################
-set(sources ZG/src/ZG.f90)
+set(sources ZG/src/ifconstants_zg.f90 ZG/src/ZG.f90)
 qe_add_executable(qe_zg_exe ${sources})
 set_target_properties(qe_zg_exe PROPERTIES OUTPUT_NAME ZG.x)
 target_link_libraries(qe_zg_exe PRIVATE qe_modules qe_pw qe_phonon_ph qe_lr_modules qe_lapack)
@@ -117,7 +125,7 @@ target_link_libraries(qe_zg_exe PRIVATE qe_modules qe_pw qe_phonon_ph qe_lr_modu
 ###########################################################
 # disca.x
 ###########################################################
-set(sources ZG/src/disca.f90)
+set(sources ZG/src/ifconstants_zg.f90 ZG/src/disca.f90)
 qe_add_executable(qe_zg_disca_exe ${sources})
 set_target_properties(qe_zg_disca_exe PROPERTIES OUTPUT_NAME disca.x)
 target_link_libraries(qe_zg_disca_exe PRIVATE qe_modules qe_pw qe_phonon_ph qe_lr_modules qe_lapack)

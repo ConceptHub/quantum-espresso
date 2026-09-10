@@ -17,6 +17,27 @@ else
   unset PARA_SUFFIX
 fi
 
+PLRN_TEST=0
+PLRN_INPUT=""
+if [[ "$(basename "$PWD")" == "epw_plrn" ]]; then
+  PLRN_TEST=1
+  PLRN_INPUT="$(basename "$2")"
+  case "$PLRN_INPUT" in
+    epw2.in)
+      rm -f Amp.plrn Ank.plrn Bmat.plrn dtau.plrn dos.plrn
+      ;;
+    epw3.in)
+      rm -f Ank.band.plrn Bmat.band.plrn psir_plrn*.xsf psir_plrn*.csv
+      ;;
+    epw5.in)
+      rm -f Amp.plrn Ank.plrn Bmat.plrn dtau.plrn dos.plrn
+      ;;
+    epw6.in)
+      rm -f psir_plrn*.xsf psir_plrn*.csv
+      ;;
+  esac
+fi
+
 echo $0" "$@
 echo $1
 if [[ "$1" == "0" ]]
@@ -125,14 +146,14 @@ elif [[ "$1" == "10" ]]
 then
   echo "Removing restart files ..."
   echo "Running EPW with images..."
-  rm -rf restart* F* sparse*
+  rm -rf restart* F* sparse* *.ephmat
   export PARA_SUFFIX_OLD=${PARA_SUFFIX}
   if [[ "$QE_USE_MPI" != "" ]]; then
     if (( QE_USE_MPI % 2 == 0 )); then
       export PARA_SUFFIX="-nk $((QE_USE_MPI / 2)) -ni 2"
     else
       export PARA_SUFFIX="-nk 1 -ni $QE_USE_MPI"
-    fi  
+    fi
   fi
  #echo "${PARA_PREFIX} ${ESPRESSO_BUILD}/bin/epw.x ${PARA_SUFFIX} -input $2 > $3 2> $4"
   ${PARA_PREFIX} ${ESPRESSO_BUILD}/bin/epw.x ${PARA_SUFFIX} -input $2 > $3 2> $4
@@ -151,7 +172,7 @@ then
       export PARA_SUFFIX="-nk $((QE_USE_MPI / 2)) -ni 2"
     else
       export PARA_SUFFIX="-nk 1 -ni $QE_USE_MPI"
-    fi  
+    fi
   fi
  #echo "${PARA_PREFIX} ${ESPRESSO_BUILD}/bin/epw.x ${PARA_SUFFIX} -input $2 > $3 2> $4"
   ${PARA_PREFIX} ${ESPRESSO_BUILD}/bin/epw.x ${PARA_SUFFIX} -input $2 > $3 2> $4
@@ -161,7 +182,37 @@ then
   then
     cat $3
   fi
+elif [[ "$1" == "12" ]]
+then
+  echo "Seeding dtau_disp.plrn from the previous polaron run ..."
+  if [[ ! -f dtau.plrn ]]
+  then
+    echo "dtau.plrn not found, run the preceding polaron stage first." | tee $3 >&2
+    exit 1
+  fi
+  cp dtau.plrn dtau_disp.plrn
+  echo "Running EPW ..."
+ #echo "${PARA_PREFIX} ${ESPRESSO_BUILD}/bin/epw.x ${PARA_SUFFIX} -input $2 > $3 2> $4"
+  ${PARA_PREFIX} ${ESPRESSO_BUILD}/bin/epw.x ${PARA_SUFFIX} -input $2 > $3 2> $4
+  if [[ -e CRASH ]]
+  then
+    cat $3
+  fi
+fi
+
+if [[ "$PLRN_TEST" == "1" ]]; then
+  PLRN_CHECK=""
+  case "$PLRN_INPUT" in
+    epw2.in) PLRN_CHECK="scf" ;;
+    epw3.in) PLRN_CHECK="interp" ;;
+    epw5.in) PLRN_CHECK="scf" ;;
+    epw6.in) PLRN_CHECK="psir" ;;
+  esac
+  if [[ "$PLRN_CHECK" != "" ]]; then
+    if ! python3 ./check_plrn_files.py "$PLRN_CHECK" >> "$3" 2>> "$4"; then
+      exit 1
+    fi
+  fi
 fi
 
 #rm -f input_tmp.in
-

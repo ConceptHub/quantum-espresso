@@ -66,6 +66,8 @@
   !! index of q-point on the full q-mesh for which k+sign*q is within the Fermi shell ixqfs(nkfs,nqfs(ik))
   INTEGER, ALLOCATABLE :: nqfs(:)
   !! nr of q-points at each k-point for which k+sign*q is within the Fermi shell nqfs(nkfs)
+  INTEGER :: nqfs_pool_max = 0
+  !! SM: Max pool-local q-count across all k-points (set in memlt_eliashberg)
   INTEGER, ALLOCATABLE :: ibnd_kfs_to_kfs_all(:, :)
   !! the function to convert an index of band of ekfs to the one of ekfs_all.
   INTEGER, ALLOCATABLE :: ibnd_kfs_all_to_kfs(:, :)
@@ -163,7 +165,7 @@
   REAL(KIND = DP) :: dosef
   !! density of states at the Fermi energy
   REAL(KIND = DP), ALLOCATABLE :: g2(:, :, :, :, :)
-  !! e-ph matrix element squared |g_ji^nu(k,q)|^2, g2(nkfs_pool,nqftot,nbndfs,nbndfs,nmodes)
+  !! e-ph matrix element squared |g_ji^nu(k,q)|^2, g2(lower_bnd:upper_bnd,MAXVAL(nqfs),nbndfs,nbndfs,nmodes); k over pools, q over images
   REAL(KIND = DP), ALLOCATABLE :: ekfs(:, :)
   !! eigenvalues at E_i(k), etf(nbndfs,nkfs)
   REAL(KIND = DP), ALLOCATABLE :: xkff(:, :)
@@ -179,7 +181,7 @@
   REAL(KIND = DP), ALLOCATABLE :: wkfs_all(:)
   !! weights of the irreducible k-points wkf(nkfs)
   REAL(KIND = DP), ALLOCATABLE :: a2fij(:, :, :, :, :)
-  !! spectral function a2fij(nqstep,nbndfs,nqftot,nbndfs,nkfs_pool)
+  !! spectral function a2fij(nqstep,nbndfs,nqfs_pool_max,nbndfs,lower_bnd:upper_bnd); k over pools, q over images
   REAL(KIND = DP), ALLOCATABLE :: w0g(:, :)
   !! approximation for delta function w0g(nbndfs,nkfs)
   REAL(KIND = DP), ALLOCATABLE :: agap(:, :)
@@ -193,7 +195,7 @@
   REAL(KIND = DP), ALLOCATABLE :: naznormi(:, :, :)
   !! normal state renormalization function on imag-axis at iw, naznormi(nsiw(itemp),nbndfs,nkfs)
   REAL(KIND = DP), ALLOCATABLE :: akeri(:, :, :, :, :)
-  !! phonon kernel on imag-axis, akeri(2*nsiw(nstemp),nbndfs,nqftot,nbndfs,nkfs)
+  !! phonon kernel on imag-axis, akeri(2*nsiw(nstemp),nbndfs,nqfs_pool_max,nbndfs,lower_bnd:upper_bnd); k over pools, q over images
   REAL(KIND = DP), ALLOCATABLE :: adsumi(:, :, :)
   !! contribution to delta eqn from the imaginary-axis in the analytic continuation adsumi(nsw,nbndfs,nkfs)
   REAL(KIND = DP), ALLOCATABLE :: azsumi(:, :, :)

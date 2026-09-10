@@ -1392,6 +1392,9 @@
     ELSE
       nden = carrier_density * inv_cell * (bohr2ang * ang2cm)**(-2.0d0)
     ENDIF
+    ! Conductivity tnesor is first calculated
+    ! the factor [1/(hbar*a0)] converts [vkk_all * f_out] in Rydberg units to [C/(V*s*cm)]
+    ! and [e^2] factor, one e is for the definition of conductivity and one e for f_out = df/d(eE) 
     mobility(:, :) = (sigma(:, :) * electron_si ** 2 * inv_cell) / (hbarJ * bohr2ang * ang2cm)
     IF (.NOT. assume_metal) THEN
       ! for insulators print mobility so just divide by carrier density
@@ -2233,7 +2236,7 @@
     USE cell_base,     ONLY : omega, at, alat
     USE global_var,    ONLY : gtemp
     USE ep_constants,  ONLY : zero, kelvin2eV, ryd2ev, eps80, cm2m, &
-                              bohr2ang, ang2cm, hbarJ
+                              bohr2ang, ang2cm, hbarJ, e2
     USE constants,     ONLY : electron_si
     !
     IMPLICIT NONE
@@ -2305,8 +2308,8 @@
       mobb_bte(:, :, itemp)   = (sigmab_bte(:, :, itemp) * electron_si * (bohr2ang * ang2cm)**2) &
                               / (carrier_density(itemp) * hbarJ)
       !
-      ! Convert conductivity tensor in SI units [Siemens m^-1=Coulomb s^-1 V^-1 m^-d ]
-      ! in 3d: cm^2 s^-1 V^-1 * (cm ^-2  cmtom^-1 C) = Coulomb s^-1 V^-1
+      ! Convert conductivity tensor in SI units [Siemens m^(-d+2)=Coulomb s^-1 V^-1 m^(-d+2) ]
+      ! in 3d: cm^2 s^-1 V^-1 * (C cm^-3) * cmtom^-1 = Coulomb s^-1 V^-1 m^-1
       IF (system_2d == 'no') THEN
         sigma_serta_si(:, :, itemp)  = mob_serta(:, :, itemp) * (electron_si * carrier_density_cm(itemp) * cm2m**(-1))
         sigma_bte_si(:, :, itemp)    = mob_bte(:, :, itemp) * (electron_si * carrier_density_cm(itemp) * cm2m**(-1))
@@ -2340,8 +2343,10 @@
         mob_inv(:, :, itemp) = matinv3(mob_serta(:, :, itemp))
         mob_inv(3, 3, :) = 0d0
       ENDIF
+      ! Convert bfield from Rydberg units back to [Vs/cm^2] 
+      ! a0 is in [cm] so that Hall mobility is in [cm^2/Vs]
       hall_serta(:, :, itemp) = MATMUL(MATMUL(mob_inv(:, :, itemp), mobb_serta(:, :, itemp)), &
-                          mob_inv(:, :, itemp)) / (b_norm * hbarJ ) * electron_si * (bohr2ang * ang2cm)**2
+                          mob_inv(:, :, itemp)) / (b_norm * SQRT(e2) * hbarJ ) * electron_si * (bohr2ang * ang2cm)**2
       !
       mob_hall(:, :)   = MATMUL(hall_serta(:, :, itemp),mob_serta(:, :, itemp))
       !
@@ -2384,8 +2389,10 @@
         mob_inv(:, :, itemp) = matinv3(mob_bte(:, :, itemp))
         mob_inv(3, 3, :) = 0d0
       ENDIF
+      ! Convert bfield from Rydberg units back to [Vs/cm^2] 
+      ! a0 is in [cm] so that Hall mobility is in [cm^2/Vs]
       hall(:, :, itemp) = MATMUL(MATMUL(mob_inv(:, :, itemp), mobb_bte(:, :, itemp)), &
-                          mob_inv(:, :, itemp)) / (b_norm * hbarJ ) * electron_si * (bohr2ang * ang2cm)**2
+                          mob_inv(:, :, itemp)) / (b_norm * SQRT(e2) * hbarJ ) * electron_si * (bohr2ang * ang2cm)**2
       mob_hall(:, :)   = MATMUL(hall(:, :, itemp),mob_bte(:, :, itemp))
       !
       WRITE(stdout, '(5x,a)') ' '

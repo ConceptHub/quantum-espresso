@@ -96,7 +96,8 @@
                             ltrans_crta, sr_crta, prtvkk, prteigdiff,         &
                             plot_psir_plrn, lsign_psir_plrn,                  & 
                             eigen_solver_plrn, istate_relax_plrn,             & 
-                            eval_hplrn, eval_eplrn, prtuf
+                            eval_hplrn, eval_eplrn, prtuf, specfun_el_scgd0,  &
+                            opt_cond
   ! -------------------------------------------------------------------------------------
   !Added for calculating time-dependent Boltzmann transport Equation
   USE input,         ONLY : do_tdbe, dt_tdbe, nt_tdbe, twrite_tdbe,           &
@@ -136,6 +137,7 @@
   CALL mp_bcast(epwread         , meta_ionode_id, world_comm)
   CALL mp_bcast(epwwrite        , meta_ionode_id, world_comm)
   CALL mp_bcast(specfun_el      , meta_ionode_id, world_comm)
+  CALL mp_bcast(specfun_el_scgd0, meta_ionode_id, world_comm)
   CALL mp_bcast(specfun_ph      , meta_ionode_id, world_comm)
   CALL mp_bcast(specfun_pl      , meta_ionode_id, world_comm)
   CALL mp_bcast(wannierize      , meta_ionode_id, world_comm)
@@ -307,6 +309,7 @@
   CALL mp_bcast(fermi_energy  , meta_ionode_id, world_comm)
   CALL mp_bcast(gap_energy    , meta_ionode_id, world_comm)
   CALL mp_bcast(scissor       , meta_ionode_id, world_comm)
+  CALL mp_bcast(opt_cond      , meta_ionode_id, world_comm)
   CALL mp_bcast(ncarrier      , meta_ionode_id, world_comm)
   CALL mp_bcast(nel           , meta_ionode_id, world_comm)
   CALL mp_bcast(meff          , meta_ionode_id, world_comm)

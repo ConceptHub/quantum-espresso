@@ -64,12 +64,12 @@
     USE pwcom,            ONLY : nelec
     USE cell_base,        ONLY : at, bg
     USE ions_base,        ONLY : nat
-    USE input,            ONLY : mp_mesh_k, lsda
+    USE input,            ONLY : mp_mesh_k, lsda, eig_read
     USE ep_constants,     ONLY : zero, czero, twopi, ci
     USE io_global,        ONLY : ionode_id, stdout
     USE io_var,           ONLY : crystal, epwdata, iuwigner
     USE global_var,       ONLY : xkf, wkf, nkqf, bztoibz, xkf_irr, wkf_irr, s_bztoibz, &
-                                 spin_fac
+                                 spin_fac, xkfd
     USE wannier2bloch,    ONLY : hamwan2bloch
     USE wigner,           ONLY : wigner_divide_ndegen
     USE bzgrid,           ONLY : loadkmesh_para
@@ -330,6 +330,10 @@
       IF (ierr /= 0) CALL errore('lsda_setup', 'Error deallocating bztoibz',1)
       DEALLOCATE(s_bztoibz, STAT = ierr)
       IF (ierr /= 0) CALL errore('lsda_setup', 'Error deallocating s_bztoibz', 1)
+    ENDIF                                                                             
+    IF (eig_read) THEN                                                                
+      DEALLOCATE(xkfd, STAT = ierr)                                                   
+      IF (ierr /= 0) CALL errore('lsda_setup', 'Error deallocating xkfd', 1)          
     ENDIF
     !
     END SUBROUTINE lsda_setup

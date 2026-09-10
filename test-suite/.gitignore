@@ -21,6 +21,7 @@ epw_*/*.nnkp
 epw_*/*.pade_*iso_*
 epw_*/*.phdos*
 epw_*/*.plrn
+epw_*/*.scell.csv
 epw_*/*.qdos_*
 epw_*/*.res.*
 epw_*/*.tau_restart*
