@@ -19,6 +19,7 @@ SUBROUTINE stres_gradcorr( rho, rho_core, rhog_core, nspin, domag, &
   USE mp,               ONLY: mp_sum
   USE fft_types,        ONLY: fft_type_descriptor
   USE fft_rho,          ONLY: rho_r2g
+  USE gvect,            ONLY: gg
   !
   IMPLICIT NONE
   !
@@ -128,7 +129,7 @@ SUBROUTINE stres_gradcorr( rho, rho_core, rhog_core, nspin, domag, &
   DO is = 1, nspin0
     CALL fft_gradient_g2r( dfft, rhogaux(:,is), g, grho(:,:,is) )
     IF ( needs_lapl ) THEN
-      CALL fft_graddot( dfft, grho(1,1,is), g, lapl(:,is) )
+      CALL fft_laplacian_g2r( dfft, rhogaux(:,is), gg, lapl(:,is) )
     ELSE
       !$acc parallel loop
       DO k = 1, nrxx
