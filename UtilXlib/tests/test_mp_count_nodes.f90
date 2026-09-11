@@ -14,7 +14,7 @@ PROGRAM test_mp_count_nodes
     INTEGER :: me, num_nodes, color, key, group, ierr, itoterr
     ! These are validated variables
     INTEGER :: shmcomm, valid_rank, valid_count, valid_n_nodes , is_rank0
-    INTEGER :: mpime
+    INTEGER :: mpime = 0
     group = 0
     valid_n_nodes = 1
     
