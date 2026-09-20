@@ -72,7 +72,7 @@ MODULE mp
   END INTERFACE
   ! 
   INTERFACE mp_get
-    MODULE PROCEDURE mp_get_r1, mp_get_rv, mp_get_cv, mp_get_i1, mp_get_iv, mp_get_rm, mp_get_cm
+    MODULE PROCEDURE mp_get_r1, mp_get_rv, mp_get_cv, mp_get_i1, mp_get_iv, mp_get_im, mp_get_rm, mp_get_cm
 #if defined(__CUDA)
     MODULE PROCEDURE mp_get_r1_gpu, mp_get_rv_gpu, mp_get_cv_gpu, mp_get_i1_gpu, mp_get_iv_gpu, &
       mp_get_rm_gpu, mp_get_cm_gpu
@@ -941,6 +941,53 @@ MODULE mp
 #endif
         RETURN
       END SUBROUTINE mp_get_iv
+!
+      SUBROUTINE mp_get_im(msg_dest, msg_sour, mpime, dest, sour, ip, gid)
+        USE parallel_include
+        IMPLICIT NONE
+        INTEGER :: msg_dest(:,:)
+        INTEGER, INTENT(IN) :: msg_sour(:,:)
+        INTEGER, INTENT(IN) :: dest, sour, ip, mpime
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: group
+#if defined(__MPI)
+        INTEGER :: istatus(MPI_STATUS_SIZE)
+#endif
+        INTEGER :: ierr, nrcv
+        INTEGER :: msglen
+
+#if defined(__MPI)
+        group = gid
+#endif
+
+        ! processors not taking part in the communication have 0 length message
+
+        msglen = 0
+
+        IF(sour .NE. dest) THEN
+#if defined(__MPI)
+           IF(mpime .EQ. sour) THEN
+             msglen = SIZE(msg_sour)
+             CALL MPI_SEND( msg_sour, SIZE(msg_sour), MPI_INTEGER, dest, ip, group, ierr)
+             IF (ierr/=0) CALL mp_stop( 8023 )
+           ELSE IF(mpime .EQ. dest) THEN
+             CALL MPI_RECV( msg_dest, SIZE(msg_dest), MPI_INTEGER, sour, ip, group, istatus, IERR )
+             IF (ierr/=0) CALL mp_stop( 8024 )
+             CALL MPI_GET_COUNT(istatus, MPI_INTEGER, nrcv, ierr)
+             IF (ierr/=0) CALL mp_stop( 8025 )
+             msglen = nrcv
+           END IF
+#endif
+        ELSEIF(mpime .EQ. sour)THEN
+          msg_dest(1:SIZE(msg_sour,1), 1:SIZE(msg_sour,2)) = msg_sour(:,:)
+          msglen = SIZE(msg_sour)
+        END IF
+#if defined(__MPI)
+        CALL MPI_BARRIER(group, IERR)
+        IF (ierr/=0) CALL mp_stop( 8026 )
+#endif
+        RETURN
+      END SUBROUTINE mp_get_im
 
 !------------------------------------------------------------------------------!
 
