@@ -69,7 +69,8 @@
                                  w90_get_proj, w90_get_centres, w90_get_spreads, w90_plot, &
                                  w90_set_eigval, w90_set_u_opt, w90_set_m_local,           &
                                  w90_set_u_matrix, w90_input_reader, w90_print_info,       &
-                                 w90_print_timings
+                                 w90_print_timings, w90_is_mpi_build
+    USE w90_library_extra, ONLY : write_chkpt
     USE kinds,            ONLY : DP
     USE cell_base,        ONLY : at, alat, bg 
     USE ions_base,        ONLY : nat, tau, ityp, atm
@@ -208,12 +209,25 @@
       symbol_all_atoms(iat) = atm(ityp(iat))
     ENDDO
     ! 
-    ! Setup library output streams. Dummy values on the non-ionode ranks, which
-    ! pass the units to the library but never write through them.
-    w90out = -1
-    w90err = -1
-    IF (ionode) OPEN(NEWUNIT = w90out, FILE = TRIM(seedname2)//'.wout', STATUS = 'replace')
-    IF (ionode) OPEN(NEWUNIT = w90err, FILE = TRIM(seedname2)//'.werr', STATUS = 'replace')
+    ! Setup library output streams. Only ionode holds the .wout/.werr files:
+    ! Wannier90 writes from rank 0 of its communicator only, but prterr flushes
+    ! both units on every rank, so the others need a unit that is connected.
+    IF (ionode) THEN
+      OPEN(NEWUNIT = w90out, FILE = TRIM(seedname2)//'.wout', STATUS = 'replace')
+      OPEN(NEWUNIT = w90err, FILE = TRIM(seedname2)//'.werr', STATUS = 'replace')
+    ELSE
+      w90out = stdout
+      w90err = stdout
+    ENDIF
+    !
+    ! The internal Wannier90 is built with MPI whenever QE is
+    ! (external/wannier90.cmake, install/make_wannier90.inc.in), but an external
+    ! one need not be. A serial library accepts w90_set_comm and ignores it, then
+    ! would reject the k-point distribution below and, without it, take one
+    ! rank's slice of m_mat for the whole matrix.
+    IF (npool > 1 .AND. .NOT. w90_is_mpi_build()) CALL errore('pw2wan90epw', &
+      'the Wannier90 library is not built with MPI: rebuild it with MPI &
+      &support, or run on a single process', 1)
     !
     ! Required settings for library
     CALL w90_set_comm(w90main, inter_pool_comm) ! Setup/copy communicator in W90 library
@@ -461,6 +475,12 @@
     !
     CALL w90_wannierise(w90main, w90out, w90err, ierr)
     IF (ierr /= 0) CALL errore('pw2wan90epw', 'Error in w90_wannierise call', ierr)
+    !
+    ! Write the .chk file, so that postw90.x and other readers can be run on the
+    ! Wannier functions EPW obtained. write_chkpt writes the complete checkpoint,
+    ! so the one call after the minimisation is enough.
+    CALL write_chkpt(w90main, 'postwann', w90out, w90err, ierr)
+    IF (ierr /= 0) CALL errore('pw2wan90epw', 'Error writing the postwann checkpoint', ierr)
     !
     CALL w90_plot(w90main, w90out, w90err, ierr)
     IF (ierr /= 0) CALL errore('pw2wan90epw', 'Error in w90_plot call', ierr)
