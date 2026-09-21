@@ -1211,7 +1211,6 @@ SUBROUTINE setup_nnkp
   USE cell_base, ONLY : at, bg, alat
   USE gvect,     ONLY : g, gg
   USE ions_base, ONLY : nat, tau, ityp, atm
-  USE klist,     ONLY : xk
   USE mp,        ONLY : mp_bcast, mp_sum
   USE mp,        ONLY : mp_get_comm_self
   USE w90_library, ONLY : w90_set_comm, w90_input_reader, w90_print_info,      &
@@ -1271,8 +1270,10 @@ SUBROUTINE setup_nnkp
 
   ! real lattice (Cartesians, Angstrom), for the cross-check against the .win
   rlatt(:,:) = transpose(at(:,:))*alat*bohr
-  ! convert Cartesian k-points to crystallographic co-ordinates
-  kpt_latt(:,1:iknum)=xk(:,1:iknum)
+  ! convert Cartesian k-points to crystallographic co-ordinates. xk_all is the
+  ! whole list: xk holds only this pool's k-points, and for spin_component='down'
+  ! the wanted ones start at ikstart
+  kpt_latt(:,1:iknum)=xk_all(:,ikstart:ikstop)
   CALL cryst_to_cart(iknum,kpt_latt,at,-1)
 
   ! MP grid dimensions
@@ -1610,7 +1611,10 @@ SUBROUTINE find_mp_grid()
   IF ( (mp_grid(2)==0) .or. (mp_grid(3)==0) ) &
        CALL errore('find_mp_grid',' one or more mp_grid dimensions is zero', 1)
 
-  mpg1=iknum/(mp_grid(2)*mp_grid(3))
+  ! both operands are integers, so the division has to be forced to real: as an
+  ! integer division it truncates, and the check below then compares nint of the
+  ! truncated value with itself and accepts any k-list
+  mpg1=real(iknum,kind=DP)/real(mp_grid(2)*mp_grid(3),kind=DP)
 
   mp_grid(1) = nint(mpg1)
 
