@@ -1368,9 +1368,11 @@ SUBROUTINE setup_nnkp
                        r_w, xaxis, zaxis, spin_qaxis, alpha_w,                &
                        w90out, w90err, ierr)
      IF (ierr /= 0) CALL errore('setup_nnkp', 'Error in w90_get_proj', ierr)
-     ! library mode cannot represent more projections than Wannier functions:
-     ! u_matrix_opt is (num_bands, num_wann, num_kpts), with no room for the
-     ! select_projections step standalone wannier90.x applies
+     ! select_projections is applied when the .amn is read, which library mode
+     ! never does, so it would be silently ignored. u_matrix_opt is
+     ! (num_bands, num_wann, num_kpts): no room for extra projections either.
+     IF (w90main%select_proj%lselproj) CALL errore('setup_nnkp', &
+        ' select_projections is not supported in library mode, use wan_mode=standalone', 1)
      IF (n_proj_found /= n_wannier) CALL errore('setup_nnkp', &
         ' number of projections in .win does not equal num_wann', n_proj_found)
      !
