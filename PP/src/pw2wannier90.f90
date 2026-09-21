@@ -1271,8 +1271,8 @@ SUBROUTINE setup_nnkp
   ! real lattice (Cartesians, Angstrom), for the cross-check against the .win
   rlatt(:,:) = transpose(at(:,:))*alat*bohr
   ! convert Cartesian k-points to crystallographic co-ordinates. xk_all is the
-  ! whole list: xk holds only this pool's k-points, and for spin_component='down'
-  ! the wanted ones start at ikstart
+  ! whole list, xk holds only this pool's k-points. ikstart and ikstop are
+  ! global indices.
   kpt_latt(:,1:iknum)=xk_all(:,ikstart:ikstop)
   CALL cryst_to_cart(iknum,kpt_latt,at,-1)
 
@@ -1374,6 +1374,18 @@ SUBROUTINE setup_nnkp
      IF (n_proj_found /= n_wannier) CALL errore('setup_nnkp', &
         ' number of projections in .win does not equal num_wann', n_proj_found)
      !
+     ! Wannier90 normalises the z and x axes of a projection but not its spin
+     ! quantisation axis, so [1,1,1] in the .win arrives here with length sqrt(3).
+     ! compute_amn and compute_spin build unit spinors from it and need it
+     ! normalised, which is what read_nnkp does for the standalone path.
+     IF (noncolin) THEN
+        DO iw = 1, n_wannier
+           xnorm = SQRT(SUM(spin_qaxis(:,iw)**2))
+           IF (xnorm < eps6) CALL errore('setup_nnkp', ' |spin_qaxis| < eps ', iw)
+           spin_qaxis(:,iw) = spin_qaxis(:,iw) / xnorm
+        ENDDO
+     ENDIF
+     !
      ! w90out and w90err stay open for run_wannier, which closes them
   ENDIF
 
@@ -1393,12 +1405,9 @@ SUBROUTINE setup_nnkp
   CALL mp_bcast(spin_qaxis,ionode_id, world_comm)
   CALL mp_bcast(exclude_bands,ionode_id, world_comm)
 
-  ! Wannier90 v4 spin-expands the projections block, so w90_get_proj returns one
-  ! entry per Wannier function, each with its own spin and quantisation axis --
-  ! the .nnkp convention read_nnkp uses. Both modes therefore have n_proj =
-  ! n_wannier, including for spinors. (v3's wannier_setup returned one entry per
-  ! projection line instead, so library mode needed n_proj = n_wannier/2.)
-  n_proj=n_wannier
+  ! Wannier90 v4 spin-expands the projections block. So the number of projections
+  ! equals the number of Wannier functions.
+  n_proj = n_wannier
 
   ALLOCATE( gf(npwx,n_proj), csph(16,n_proj), stat=ierr)
   IF (ierr /= 0) CALL errore('pw2wannier90', 'Error allocating gf/csph', 1)
@@ -1609,10 +1618,7 @@ SUBROUTINE find_mp_grid()
   IF ( (mp_grid(2)==0) .or. (mp_grid(3)==0) ) &
        CALL errore('find_mp_grid',' one or more mp_grid dimensions is zero', 1)
 
-  ! both operands are integers, so the division has to be forced to real: as an
-  ! integer division it truncates, and the check below then compares nint of the
-  ! truncated value with itself and accepts any k-list
-  mpg1=real(iknum,kind=DP)/real(mp_grid(2)*mp_grid(3),kind=DP)
+  mpg1 = real(iknum,kind=DP) / real(mp_grid(2)*mp_grid(3),kind=DP)
 
   mp_grid(1) = nint(mpg1)
 
@@ -5493,9 +5499,16 @@ END SUBROUTINE utility_open_output_file
 SUBROUTINE compute_amn
    !-----------------------------------------------------------------------
    !!
-   !! n_proj and n_wannier are always the same, in both modes and for both the
-   !! collinear and the noncollinear case: a spinor projection line counts once
-   !! per Wannier function, carrying its own spin_eig and spin_qaxis.
+   !! n_proj is the number of projections, n_wannier the number of Wannier
+   !! functions. A spinor projection line counts once per Wannier function,
+   !! carrying its own spin_eig and spin_qaxis, so the noncollinear case needs no
+   !! separate count.
+   !! 1) standalone mode: n_proj comes from the .nnkp and n_wannier is set equal
+   !!    to it. With wannier90's select_projections the .win may declare more
+   !!    projections than Wannier functions; wannier90 does that selection itself,
+   !!    afterwards, from the .amn.
+   !! 2) library mode: setup_nnkp requires the two to be equal, so
+   !!    select_projections is not available there.
    !! (n_wannier is used here only for SCDM projections.)
    !!
    !-----------------------------------------------------------------------

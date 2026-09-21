@@ -65,8 +65,8 @@ N.B.
  (iv) In library mode wannier90 reads its own input from seedname.win; no
       "wannier90.x -pp" prerun and no .nnkp/.amn/.mmn files. The k-point list,
       unit cell and number of k-points in the .win must match the nscf run;
-      they are checked and a mismatch stops the run. Spinor (noncollinear)
-      projections are not supported -- use wan_mode='standalone' for those.
+      they are checked and a mismatch stops the run. The number of projections
+      must equal num_wann, so wannier90's select_projections is not available.
 
 Input variables for pw2wannier90:
 

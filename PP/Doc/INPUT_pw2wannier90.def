@@ -66,8 +66,9 @@ input_description -distribution {Quantum ESPRESSO} -package PWscf -program pw2wa
                 input from "seedname".win; no "wannier90.x -pp" prerun and no
                 .nnkp/.amn/.mmn files. The k-point list, unit cell and number
                 of k-points in the .win must match the nscf run; they are
-                checked and a mismatch stops the run. Spinor (noncollinear)
-                projections are not supported: use 'standalone' for those.
+                checked and a mismatch stops the run. The number of
+                projections must equal num_wann, so wannier90's
+                select_projections is not available here.
             }
             default { 'standalone' }
         }

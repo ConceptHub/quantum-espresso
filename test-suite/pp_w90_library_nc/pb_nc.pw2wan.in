@@ -1,7 +1,7 @@
 &inputpp
  outdir   = './out/'
- prefix   = 'si_nc'
- seedname = 'si_nc'
+ prefix   = 'pb_nc'
+ seedname = 'pb_nc'
  wan_mode = 'library'
  write_unk = .false.
 /
