@@ -1393,13 +1393,11 @@ SUBROUTINE setup_nnkp
   CALL mp_bcast(spin_qaxis,ionode_id, world_comm)
   CALL mp_bcast(exclude_bands,ionode_id, world_comm)
 
-  ! n_proj = n_wannier/2 is the v3 convention, where wannier_setup returned one
-  ! entry per projection line. w90_get_proj instead returns num_wann entries for
-  ! spinors, two per line, so half of a_mat would be left zero here. Library
-  ! mode has never supported spinor projections; refuse it rather than return
-  ! silently wrong overlaps.
-  IF(noncolin) CALL errore('setup_nnkp', &
-     ' noncollinear spinor projections are not supported in library mode, use wan_mode=standalone', 1)
+  ! Wannier90 v4 spin-expands the projections block, so w90_get_proj returns one
+  ! entry per Wannier function, each with its own spin and quantisation axis --
+  ! the .nnkp convention read_nnkp uses. Both modes therefore have n_proj =
+  ! n_wannier, including for spinors. (v3's wannier_setup returned one entry per
+  ! projection line instead, so library mode needed n_proj = n_wannier/2.)
   n_proj=n_wannier
 
   ALLOCATE( gf(npwx,n_proj), csph(16,n_proj), stat=ierr)
@@ -5495,19 +5493,10 @@ END SUBROUTINE utility_open_output_file
 SUBROUTINE compute_amn
    !-----------------------------------------------------------------------
    !!
-   !! In the collinear case, n_proj and n_wannier are always the same.
-   !! In the noncollinear case,
-   !! 1) standalone mode: n_proj is the number of spinor projections.
-   !!                     n_wannier = n_proj, but is never used here.
-   !! 2) library mode: n_proj is the number of scaler projections.
-   !!                  n_wannier = 2 * n_proj
-   !! (For the standalone mode, n_wannier used only in SCDM projections.)
-   !!
-   !! library mode for noncollinear spinor projection is not working.
-   !!
-   !! nocolin: we have half as many projections g(r) defined as wannier
-   !!          functions. We project onto (1,0) (ie up spin) and then onto
-   !!          (0,1) to obtain num_wann projections. jry
+   !! n_proj and n_wannier are always the same, in both modes and for both the
+   !! collinear and the noncollinear case: a spinor projection line counts once
+   !! per Wannier function, carrying its own spin_eig and spin_qaxis.
+   !! (n_wannier is used here only for SCDM projections.)
    !!
    !-----------------------------------------------------------------------
    !

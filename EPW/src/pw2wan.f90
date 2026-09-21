@@ -23,40 +23,6 @@
   !
   CONTAINS
     !
-    !------------------------------------------------------------------------
-    SUBROUTINE kpool_bounds(ipool, nk_pool, nbase)
-    !------------------------------------------------------------------------
-    !!
-    !! Number of k-points held by pool ipool (0-based), and the global index of
-    !! the one before its first. Reproduces the distribution epw_readin applies
-    !! when it slices xk_all/et_all into xk_loc/et_loc, so that nbase + ik is the
-    !! global index of this pool's local k-point ik.
-    !!
-    USE mp_pools,   ONLY : npool, kunit
-    USE global_var, ONLY : nkpts
-    !
-    IMPLICIT NONE
-    !
-    INTEGER, INTENT(in) :: ipool
-    !! Pool index, counted from zero
-    INTEGER, INTENT(out) :: nk_pool
-    !! Number of k-points on that pool
-    INTEGER, INTENT(out) :: nbase
-    !! Global index of the k-point preceding that pool's first
-    !
-    ! Local variables
-    INTEGER :: rest
-    !! Number of pools carrying one extra kunit block
-    !
-    nk_pool = kunit * (nkpts / kunit / npool)
-    rest = (nkpts - nk_pool * npool) / kunit
-    IF (ipool < rest) nk_pool = nk_pool + kunit
-    nbase = nk_pool * ipool
-    IF (ipool >= rest) nbase = nbase + rest * kunit
-    !
-    !------------------------------------------------------------------------
-    END SUBROUTINE kpool_bounds
-    !------------------------------------------------------------------------
     !
     !------------------------------------------------------------------------
     SUBROUTINE pw2wan90epw
@@ -109,7 +75,8 @@
     USE ions_base,        ONLY : nat, tau, ityp, atm
     USE wvfct,            ONLY : nbnd, npwx
     USE gvect,            ONLY : g, gg
-    USE global_var,       ONLY : nbndep, nbndskip, ibndkept
+    USE global_var,       ONLY : nbndep, nbndskip, ibndkept, nkpts
+    USE parallelism,      ONLY : fkbounds
     USE pwcom,            ONLY : nelec
     !
     IMPLICIT NONE
@@ -138,10 +105,10 @@
     !! Cpu number
     INTEGER :: ik
     !! k-point index
-    INTEGER :: nk_pool
-    !! Number of k-points held by one pool
-    INTEGER :: nbase
-    !! Global index of the k-point preceding a pool's first
+    INTEGER :: lower_bnd
+    !! First k-point of a pool, in the global list
+    INTEGER :: upper_bnd
+    !! Last k-point of a pool, in the global list
     INTEGER :: iat
     !! Atom counter
     INTEGER :: ibnd
@@ -230,8 +197,8 @@
     ! and Wannier90 counts ranks from zero.
     kindex(:) = 0
     DO ipool = 0, npool - 1
-      CALL kpool_bounds(ipool, nk_pool, nbase)
-      kindex(nbase + 1:nbase + nk_pool) = ipool
+      CALL fkbounds(nkpts, lower_bnd, upper_bnd, ipool)
+      kindex(lower_bnd:upper_bnd) = ipool
     ENDDO
     !
     ALLOCATE(symbol_all_atoms(nat), STAT = ierr)
@@ -1608,10 +1575,11 @@
     USE f90_unix_io,     ONLY : flush
 #endif
     USE mp,              ONLY : mp_sum
-    USE mp_global,       ONLY : my_pool_id, npool, intra_pool_comm, inter_pool_comm
+    USE mp_global,       ONLY : npool, intra_pool_comm, inter_pool_comm
     USE kfold,           ONLY : ktokpmq
     USE io,              ONLY : readwfc
     USE global_var,      ONLY : nbndep, nk_loc, nkpts
+    USE parallelism,     ONLY : fkbounds
     USE uspp_init,       ONLY : init_us_2
     USE lsda_mod,        ONLY : current_spin
     !
@@ -1668,10 +1636,10 @@
     !! Starting index for k-point nearest neighbours in each pool
     INTEGER :: ierr
     !! Error status
-    INTEGER :: nk_pool
-    !! Number of k-points held by this pool
-    INTEGER :: nbase
-    !! Global index of the k-point preceding this pool's first
+    INTEGER :: lower_bnd
+    !! First k-point of this pool, in the global list
+    INTEGER :: upper_bnd
+    !! Last k-point of this pool, in the global list
     INTEGER, ALLOCATABLE  :: igkq(:)
     !!
     REAL(KIND = DP) :: arg
@@ -2018,8 +1986,8 @@
     ! rank: m_mat is the largest array here and a second one would double the
     ! high-water mark for the sake of a file written once.
     !
-    CALL kpool_bounds(my_pool_id, nk_pool, nbase)
-    IF (nk_pool /= nk_loc) CALL errore('compute_mmn_para', &
+    CALL fkbounds(nkpts, lower_bnd, upper_bnd)
+    IF (upper_bnd - lower_bnd + 1 /= nk_loc) CALL errore('compute_mmn_para', &
       'k-point distribution does not match the one epw_readin used', 1)
     !
     ALLOCATE(m_mat_k(num_bands, num_bands, nnb), STAT = ierr)
@@ -2035,7 +2003,7 @@
       !
       ! Only the owning pool contributes; the sum leaves that block on every rank
       m_mat_k(:, :, :) = czero
-      IF (ik > nbase .AND. ik <= nbase + nk_pool) m_mat_k(:, :, :) = m_mat(:, :, :, ik - nbase)
+      IF (ik >= lower_bnd .AND. ik <= upper_bnd) m_mat_k(:, :, :) = m_mat(:, :, :, ik - lower_bnd + 1)
       CALL mp_sum(m_mat_k, inter_pool_comm)
       !
       IF (ionode) THEN
