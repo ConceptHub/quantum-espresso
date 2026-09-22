@@ -255,7 +255,7 @@ MODULE io_kcw
      !
      USE io_global, ONLY : ionode, ionode_id
      USE mp_images, ONLY : intra_image_comm
-     USE mp,        ONLY : mp_put, mp_sum, mp_rank, mp_size
+     USE mp,        ONLY : mp_sum, mp_rank, mp_size
 #if defined(__HDF5)
       USE  qeh5_base_module
 #endif
