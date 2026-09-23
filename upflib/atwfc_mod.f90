@@ -21,7 +21,6 @@ MODULE atwfc_mod
   PRIVATE
   PUBLIC :: init_tab_atwfc
   PUBLIC :: deallocate_tab_atwfc
-  PUBLIC :: scale_tab_atwfc
   PUBLIC :: interp_atwfc
   PUBLIC :: interp_atdwfc
   !
@@ -39,14 +38,13 @@ MODULE atwfc_mod
 CONTAINS
   !
   !-----------------------------------------------------------------------
-  SUBROUTINE init_tab_atwfc( qmax_, omega, comm, ierr)
+  SUBROUTINE init_tab_atwfc( qmax_, comm, ierr)
   !-----------------------------------------------------------------------
   !! This routine computes a table with the radial Fourier transform 
   !! of the atomic wavefunctions.
   !
   USE upf_kinds,    ONLY : DP
   USE atom,         ONLY : rgrid, msh
-  USE upf_const,    ONLY : fpi
   USE uspp_param,   ONLY : nsp, upf, nwfcm, nsp
   USE mp,           ONLY : mp_sum
   !
@@ -54,8 +52,6 @@ CONTAINS
   !
   REAL(dp), INTENT(IN) :: qmax_
   !! Interpolate q up to qmax_ (sqrt(Ry), q^2 is an energy)
-  REAL(dp), INTENT(IN) :: omega
-  !! Unit-cell volume
   INTEGER, INTENT(IN)  :: comm
   !! MPI communicator, to split the workload
   INTEGER, INTENT(OUT) :: ierr
@@ -66,7 +62,7 @@ CONTAINS
   INTEGER :: nt, nb, iq, ir, l, startq, lastq, ndm
   !
   REAL(DP), ALLOCATABLE :: aux(:), vchi(:)
-  REAL(DP) :: vqint, pref, q
+  REAL(DP) :: vqint, q
   !
   IF ( .NOT. ALLOCATED(tab_atwfc) ) THEN
      !! table not yet allocated
@@ -91,11 +87,8 @@ CONTAINS
   ndm = MAXVAL(msh(1:nsp))
   ALLOCATE( aux(ndm), vchi(ndm) )
   !
-  ! chiq = radial fourier transform of atomic orbitals chi
+  ! chiq = radial fourier transform of atomic orbitals chi (times omega)
   !
-  pref = fpi / SQRT(omega)
-  ! needed to normalize atomic wfcs (not a bad idea in general and 
-  ! necessary to compute correctly lda+U projections)
   CALL divide( comm, nqx, startq, lastq )
   !
   tab_atwfc(:,:,:) = 0.0_DP
@@ -113,7 +106,7 @@ CONTAINS
                  vchi(ir) = upf(nt)%chi(ir,nb) * aux(ir) * rgrid(nt)%r(ir)
               ENDDO
               CALL simpson( msh(nt), vchi, rgrid(nt)%rab, vqint )
-              tab_atwfc( iq, nb, nt ) = vqint * pref
+              tab_atwfc( iq, nb, nt ) = vqint * fpi
            ENDDO
            !
         ENDIF
@@ -132,7 +125,7 @@ CONTAINS
 END SUBROUTINE init_tab_atwfc
   !
   !-----------------------------------------------------------------------
-  SUBROUTINE interp_atwfc ( npw, qg, nwfcm, chiq )
+  SUBROUTINE interp_atwfc ( npw, qg, nwfcm, omega, chiq )
   !-----------------------------------------------------------------------
   !
   ! computes chiq: radial fourier transform of atomic orbitals chi
@@ -142,6 +135,8 @@ END SUBROUTINE init_tab_atwfc
   INTEGER, INTENT(IN)  :: npw
   INTEGER, INTENT(IN)  :: nwfcm
   REAL(dp), INTENT(IN) :: qg(npw)
+  REAL(dp), INTENT(IN) :: omega
+  !! the volume of the unit cell
   REAL(dp), INTENT(OUT):: chiq(npw,nwfcm,nsp)
   !
   INTEGER :: nt, nb, ig
@@ -164,10 +159,10 @@ END SUBROUTINE init_tab_atwfc
               i2 = i0 + 2
               i3 = i0 + 3
               chiq(ig,nb,nt) = &
-                     tab_atwfc(i0,nb,nt) * ux * vx * wx / 6.d0 + &
-                     tab_atwfc(i1,nb,nt) * px * vx * wx / 2.d0 - &
-                     tab_atwfc(i2,nb,nt) * px * ux * wx / 2.d0 + &
-                     tab_atwfc(i3,nb,nt) * px * ux * vx / 6.d0
+                     ( tab_atwfc(i0,nb,nt) * ux * vx * wx / 6.d0 + &
+                       tab_atwfc(i1,nb,nt) * px * vx * wx / 2.d0 - &
+                       tab_atwfc(i2,nb,nt) * px * ux * wx / 2.d0 + &
+                       tab_atwfc(i3,nb,nt) * px * ux * vx / 6.d0 ) / SQRT(omega)
            END DO
            !
         END IF
@@ -177,7 +172,7 @@ END SUBROUTINE init_tab_atwfc
 END SUBROUTINE interp_atwfc
 !
 !-----------------------------------------------------------------------
-SUBROUTINE interp_atdwfc ( npw, qg, nwfcm, dchiq )
+SUBROUTINE interp_atdwfc ( npw, qg, nwfcm, omega, dchiq )
   !-----------------------------------------------------------------------
   !
   ! computes dchi/dq
@@ -188,6 +183,8 @@ SUBROUTINE interp_atdwfc ( npw, qg, nwfcm, dchiq )
   INTEGER, INTENT(IN)  :: npw
   INTEGER, INTENT(IN)  :: nwfcm
   REAL(dp), INTENT(IN) :: qg(npw)
+  REAL(dp), INTENT(IN) :: omega
+  !! the volume of the unit cell
   REAL(dp), INTENT(OUT):: dchiq(npw,nwfcm,nsp)
   !
   INTEGER :: nt, nb, ig
@@ -212,7 +209,7 @@ SUBROUTINE interp_atdwfc ( npw, qg, nwfcm, dchiq )
                  ( tab_atwfc(i0, nb, nt) * (-vx*wx-ux*wx-ux*vx)/6.d0 + &
                    tab_atwfc(i1, nb, nt) * (+vx*wx-px*wx-px*vx)/2.d0 - &
                    tab_atwfc(i2, nb, nt) * (+ux*wx-px*wx-px*ux)/2.d0 + &
-                   tab_atwfc(i3, nb, nt) * (+ux*vx-px*vx-px*ux)/6.d0 )/dq
+                   tab_atwfc(i3, nb, nt) * (+ux*vx-px*vx-px*ux)/6.d0 )/dq / SQRT(omega)
            ENDDO
         ENDIF
      ENDDO
@@ -237,14 +234,5 @@ SUBROUTINE interp_atdwfc ( npw, qg, nwfcm, dchiq )
     if( allocated( tab_atwfc ) )  deallocate( tab_atwfc )
     !
   end subroutine deallocate_tab_atwfc
-  !
-  subroutine scale_tab_atwfc( vol_ratio_m1 )
-    ! vol_ratio_m1 = omega_old / omega
-    implicit none
-    real(DP), intent(in) :: vol_ratio_m1
-    !
-    if ( allocated(tab_atwfc) ) tab_atwfc(:,:,:) = tab_atwfc(:,:,:) * SQRT(vol_ratio_m1)
-    !$acc update device ( tab_atwfc)
-  end subroutine scale_tab_atwfc
    !
 END MODULE atwfc_mod

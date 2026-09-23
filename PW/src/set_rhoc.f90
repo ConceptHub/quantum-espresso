@@ -63,7 +63,7 @@ SUBROUTINE set_rhoc
      !
      qmax = MAX (sqrt(qmax), sqrt(ecutrho)*cell_factor)
      IF (ANY( upf(1:ntyp)%nlcc) .OR. ANY( upf(1:ntyp)%with_metagga_info)) THEN
-         CALL init_tab_rhc  ( qmax, omega, intra_bgrp_comm, ir )
+         CALL init_tab_rhc  ( qmax, intra_bgrp_comm, ir )
       ENDIF
      !
      ALLOCATE (rhocg( ngl))
@@ -76,7 +76,7 @@ SUBROUTINE set_rhoc
            !
            ! interp_rhc computes the radial fourier transform for each shell of g vec
            !
-           CALL interp_rhc (nt, ngl, gl, tpiba2, rhocg)
+           CALL interp_rhc (nt, ngl, gl, tpiba2, omega, rhocg)
            !
            !     multiply by the structure factor and sum
            !
@@ -89,7 +89,7 @@ SUBROUTINE set_rhoc
             !
             ! interp_tac computes the kinetic energy density fourier transform for each shell of g vec
             !
-            CALL interp_tac (nt, ngl, gl, tpiba2, rhocg)
+            CALL interp_tac (nt, ngl, gl, tpiba2, omega, rhocg)
             !
             !     multiply by the structure factor and sum
             !

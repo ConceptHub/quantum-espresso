@@ -756,8 +756,8 @@
             !
             ! Compute the augmentation function
             !
-            CALL qvan2(ngvec, ih, jh, ntb, qmodg, qgm, ylmk0)
-            CALL qvan2(ngvec, ih, jh, ntb, qmod, qgmq, ylmkq)
+            CALL qvan2(ngvec, ih, jh, ntb, qmodg, omega, qgm, ylmk0)
+            CALL qvan2(ngvec, ih, jh, ntb, qmod, omega, qgmq, ylmkq)
             !
             ! NB: for this integral the moving atom and the atom of Q
             ! do not necessarily coincide
@@ -1007,7 +1007,7 @@
           DO ih = 1, nh(nt)
             DO jh = ih, nh(nt)
               !
-              CALL qvan2(ngvec, ih, jh, nt, qmod, qgm, ylmk0)
+              CALL qvan2(ngvec, ih, jh, nt, qmod, omega, qgm, ylmk0)
               !
               DO na = 1, nat
                 IF (ityp(na) == nt) THEN

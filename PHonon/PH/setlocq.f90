@@ -26,7 +26,7 @@ SUBROUTINE init_vlocq ( xq )
   REAL(dp), ALLOCATABLE :: qg(:)
   !
   qmax = sqrt ( tpiba2 * ( xq(1)**2+xq(2)**2+xq(3)**2 ) ) + sqrt(ecutrho)
-  CALL init_tab_vloc (qmax, do_cutoff_2d, omega, intra_bgrp_comm, ierr )
+  CALL init_tab_vloc (qmax, do_cutoff_2d, intra_bgrp_comm, ierr )
   IF ( ierr == 1 ) THEN
      CALL errore('init_vloc','Coulomb or GTH PPs incompatible with 2D cutoff &
              & (see upflib/vloc_mod.f90)',ierr)

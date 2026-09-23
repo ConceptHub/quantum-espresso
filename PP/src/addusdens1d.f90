@@ -73,7 +73,7 @@ SUBROUTINE addusdens1d (plan, prho)
            ijh = 0
            DO ih = 1, nh (nt)
               DO jh = ih, nh (nt)
-                 CALL qvan2 (ngm1d, ih, jh, nt, qmod, qgm, ylmk0)
+                 CALL qvan2 (ngm1d, ih, jh, nt, qmod, omega, qgm, ylmk0)
                  ijh = ijh + 1
                  DO na = 1, nat
 

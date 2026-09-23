@@ -48,7 +48,7 @@ SUBROUTINE force_corr( forcescc )
   !! Initialize the interpolation table if not done previously
   qmax = tpiba * SQRT ( MAXVAL ( gl ) )
   CALL mp_max (qmax, intra_bgrp_comm)
-  CALL init_tab_rhoat (qmax, omega, intra_bgrp_comm, ierr)
+  CALL init_tab_rhoat (qmax, intra_bgrp_comm, ierr)
   !  
   ! ... vnew is V_out - V_in
   !
@@ -76,7 +76,7 @@ SUBROUTINE force_corr( forcescc )
   !
   DO nt = 1, ntyp
      !
-     CALL interp_rhoat( nt, ngl, gl, tpiba**2, rhoatg )
+     CALL interp_rhoat( nt, ngl, gl, tpiba**2, omega, rhoatg )
      !
 #if defined(_OPENACC)
      !$acc parallel loop gang copy(forcescc)

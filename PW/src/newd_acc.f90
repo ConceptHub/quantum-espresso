@@ -237,7 +237,7 @@ SUBROUTINE newq_acc(vr,deeq,skip_vltot)
         DO ih = 1, nhnt
            DO jh = ih, nhnt
               ijh = ijh + 1
-              CALL qvan2 ( ngm_l, ih, jh, nt, qmod, qgm(1,ijh), ylmk0 )
+              CALL qvan2 ( ngm_l, ih, jh, nt, qmod, omega, qgm(1,ijh), ylmk0 )
            END DO
         END DO
         !

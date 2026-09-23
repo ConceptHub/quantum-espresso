@@ -21,7 +21,6 @@ MODULE rhoat_mod
   PRIVATE
   PUBLIC :: init_tab_rhoat
   PUBLIC :: interp_rhoat
-  PUBLIC :: scale_tab_rhoat
   !
   SAVE
   !
@@ -38,7 +37,7 @@ CONTAINS
   !
   
   !----------------------------------------------------------------------
-  SUBROUTINE init_tab_rhoat (qmax_, omega, comm, ierr)
+  SUBROUTINE init_tab_rhoat (qmax_, comm, ierr)
   !----------------------------------------------------------------------
   !
   !! Compute interpolation table for atomic charge density
@@ -57,8 +56,6 @@ CONTAINS
   !!              ierr =-2 if IT was already present and nothing is done
   REAL(dp), INTENT(IN) :: qmax_
   !! Interpolate q up to qmax_ (sqrt(Ry), q^2 is an energy)
-  REAL(dp), INTENT(IN) :: omega
-  !! Unit-cell volume
   !
   INTEGER :: ndm, startq, lastq, nt, iq, ir
   !! Various indices
@@ -108,7 +105,6 @@ CONTAINS
         ENDDO
         !
         CALL simpson ( msh(nt), aux, rgrid(nt)%rab, tab_rhoat(iq,nt) )
-        tab_rhoat (iq,nt) = tab_rhoat (iq,nt) / omega 
         !
      ENDDO
      !
@@ -122,7 +118,7 @@ CONTAINS
 END SUBROUTINE init_tab_rhoat
   !
   !-----------------------------------------------------------------------
-  SUBROUTINE interp_rhoat( nt, ngl, gl, tpiba2, rhoag )
+  SUBROUTINE interp_rhoat( nt, ngl, gl, tpiba2, omega, rhoag )
   !-----------------------------------------------------------------------
   !! Calculates the radial Fourier transform of the core charge.
   !
@@ -134,6 +130,8 @@ END SUBROUTINE init_tab_rhoat
   !! input: the number of G shells
   REAL(DP) :: tpiba2
   !! input: 2 times pi / alat
+  REAL(DP), INTENT(IN) :: omega
+  !! the volume of the unit cell
   REAL(DP) :: rhoag(ngl)
   !! output: the Fourier transform of the atomic charge
   !
@@ -157,26 +155,15 @@ END SUBROUTINE init_tab_rhoat
      i1 = i0 + 1
      i2 = i0 + 2
      i3 = i0 + 3
-     rhoag (igl) = tab_rhoat(i0, nt) * ux * vx * wx / 6.d0 + &
-                   tab_rhoat(i1, nt) * px * vx * wx / 2.d0 - &
-                   tab_rhoat(i2, nt) * px * ux * wx / 2.d0 + &
-                   tab_rhoat(i3, nt) * px * ux * vx / 6.d0
+     rhoag (igl) = ( tab_rhoat(i0, nt) * ux * vx * wx / 6.d0 + &
+                     tab_rhoat(i1, nt) * px * vx * wx / 2.d0 - &
+                     tab_rhoat(i2, nt) * px * ux * wx / 2.d0 + &
+                     tab_rhoat(i3, nt) * px * ux * vx / 6.d0 ) / omega
 
   ENDDO
   !$acc end data
   !
 END SUBROUTINE interp_rhoat
-  !
-  subroutine scale_tab_rhoat( vol_ratio_m1 )
-     ! vol_ratio_m1 = omega_old / omega
-     real(DP), intent(in) :: vol_ratio_m1
-     !
-     if ( allocated(tab_rhoat) ) then
-         tab_rhoat(:,:)  = tab_rhoat(:,:) * vol_ratio_m1
-         !$acc update device (tab_rhoat)
-     end if
-     !
-  end subroutine scale_tab_rhoat
   !
   subroutine deallocate_tab_rhoat(  )
      !

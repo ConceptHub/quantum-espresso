@@ -91,7 +91,7 @@ SUBROUTINE force_cc( forcecc )
   DO nt = 1, ntyp
      IF ( upf(nt)%nlcc ) THEN
         !
-        CALL interp_rhc( nt, ngl, gl, tpiba2, rhocg )
+        CALL interp_rhc( nt, ngl, gl, tpiba2, omega, rhocg )
         CALL add_nlcc_force( nt, 1.0_DP )
      ENDIF
   ENDDO
@@ -110,7 +110,7 @@ SUBROUTINE force_cc( forcecc )
      !$acc data create(rhocg) present(igtongl)
      DO nt = 1, ntyp
         IF ( upf(nt)%nlcc .AND. ALLOCATED(upf(nt)%tau_core) ) THEN
-           CALL interp_tac( nt, ngl, gl, tpiba2, rhocg )
+           CALL interp_tac( nt, ngl, gl, tpiba2, omega, rhocg )
            CALL add_nlcc_force( nt, e2 )
         ENDIF
      ENDDO

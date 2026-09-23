@@ -40,7 +40,7 @@ SUBROUTINE addusdens_g(rho)
   !
   USE kinds,                ONLY : DP
   USE ions_base,            ONLY : nat, ntyp => nsp, ityp
-  USE cell_base,            ONLY : tpiba
+  USE cell_base,            ONLY : tpiba, omega
   USE fft_base,             ONLY : dfftp
   USE fft_interfaces,       ONLY : invfft
   USE gvect,                ONLY : ngm, gg, g, &
@@ -166,7 +166,7 @@ SUBROUTINE addusdens_g(rho)
            DO ih = 1, nh(nt)
               DO jh = ih, nh(nt)
                  ijh = ijh + 1
-                 CALL qvan2( ngm_l, ih, jh, nt, qmod, qgm, ylmk0 )
+                 CALL qvan2( ngm_l, ih, jh, nt, qmod, omega, qgm, ylmk0 )
                  !$acc parallel loop
                  DO ig = 1, ngm_l
                     aux(ngm_s+ig-1,is) = aux(ngm_s+ig-1,is) + aux2(ig,ijh)*qgm(ig)

@@ -62,7 +62,7 @@ SUBROUTINE atomic_rho_g( rhocg, nspina )
   !! re-allocations of the interpolation table
   !
   qmax = MAX (sqrt(qmax), sqrt(ecutrho)*cell_factor)
-  CALL init_tab_rhoat (qmax, omega, intra_bgrp_comm, ierr)
+  CALL init_tab_rhoat (qmax, intra_bgrp_comm, ierr)
   !! Initialize  interpolation tables (if not already done)
   !
   ALLOCATE (rhoatg( ngl))
@@ -75,7 +75,7 @@ SUBROUTINE atomic_rho_g( rhocg, nspina )
      !
      ! interpolate atomic rho(G)
      !
-     CALL interp_rhoat( nt, ngl, gl, tpiba2, rhoatg )
+     CALL interp_rhoat( nt, ngl, gl, tpiba2, omega, rhoatg )
      !
      IF (upf(nt)%zp > eps8) THEN
         rhoscale = MAX(0.0_dp, upf(nt)%zp - starting_charge(nt)) / upf(nt)%zp

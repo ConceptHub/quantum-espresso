@@ -97,7 +97,7 @@ SUBROUTINE stres_cc( sigmaxcc )
   DO nt = 1, ntyp
      IF ( upf(nt)%nlcc ) THEN
         !
-        CALL interp_rhc( nt, ngl, gl, tpiba2, rhocg )
+        CALL interp_rhc( nt, ngl, gl, tpiba2, omega, rhocg )
         !
         ! ... diagonal term
         IF (gstart==2) THEN
@@ -114,7 +114,7 @@ SUBROUTINE stres_cc( sigmaxcc )
                                    strf(ng,nt)) * rhocg(igtongl(ng)) * fact
         ENDDO
         !
-        CALL interp_drhc( nt, ngl, gl, tpiba2, rhocg )
+        CALL interp_drhc( nt, ngl, gl, tpiba2, omega, rhocg )
         !
         ! ... non diagonal term (g=0 contribution missing)
         !
@@ -164,7 +164,7 @@ SUBROUTINE stres_cc( sigmaxcc )
         IF ( upf(nt)%nlcc .AND. ALLOCATED(upf(nt)%tau_core) ) THEN
            !
            ! ... measure (diagonal) term
-           CALL interp_tac( nt, ngl, gl, tpiba2, rhocg )
+           CALL interp_tac( nt, ngl, gl, tpiba2, omega, rhocg )
            IF (gstart==2) THEN
              !$acc kernels
              rhocg1 = e2 * rhocg(igtongl(1))
@@ -178,7 +178,7 @@ SUBROUTINE stres_cc( sigmaxcc )
            ENDDO
            !
            ! ... displacement term (g=0 contribution missing)
-           CALL interp_dtac( nt, ngl, gl, tpiba2, rhocg )
+           CALL interp_dtac( nt, ngl, gl, tpiba2, omega, rhocg )
            !$acc parallel loop reduction(+:sigma1,sigma2,sigma3,sigma4,sigma5,sigma6)
            DO ng = gstart, ngm
               sigma_rid = DBLE(CONJG(vaux(ng,1)) * strf(ng,nt)) * &

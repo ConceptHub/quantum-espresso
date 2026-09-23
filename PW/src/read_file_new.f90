@@ -361,11 +361,11 @@ SUBROUTINE post_xml_init (  )
   ! qmax is the maximum |q+G|, for all G needed by the wavefunctions
   !
   qmax = (qnorm + sqrt(ecutwfc))*cell_factor
-  CALL init_tab_beta ( qmax, omega, intra_bgrp_comm, ierr )
+  CALL init_tab_beta ( qmax, intra_bgrp_comm, ierr )
   !
   IF ( lda_plus_u .AND. ( Hubbard_projectors == 'pseudo' ) ) CALL init_q_aeps()
   !
-  CALL init_tab_atwfc( qmax, omega, intra_bgrp_comm, ierr )
+  CALL init_tab_atwfc( qmax, intra_bgrp_comm, ierr )
   !
   CALL struc_fact( nat, tau, nsp, ityp, ngm, g, bg, dfftp%nr1, dfftp%nr2,&
                    dfftp%nr3, strf, eigts1, eigts2, eigts3 )

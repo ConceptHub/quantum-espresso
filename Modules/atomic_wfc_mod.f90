@@ -115,7 +115,7 @@ SUBROUTINE atomic_wfc_acc( xk, npw, igk_k, nat, nsp, ityp, tau, &
   !
   ! chiq = radial fourier transform of atomic orbitals chi
   !
-  CALL interp_atwfc ( npw, qg, nwfcm, chiq )
+  CALL interp_atwfc ( npw, qg, nwfcm, omega, chiq )
   !
   !$acc kernels
   wfcatom(:,:,:) = (0.0_dp, 0.0_dp)

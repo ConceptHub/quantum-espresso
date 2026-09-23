@@ -75,10 +75,10 @@ SUBROUTINE hinit0()
   ! qmax as above, for all G needed by wavefunctions
   !
   qmax = (qnorm + sqrt(ecutwfc))*cell_factor
-  CALL init_tab_beta ( qmax, omega, intra_bgrp_comm, ierr )
+  CALL init_tab_beta ( qmax, intra_bgrp_comm, ierr )
   !
   IF ( lda_plus_U .AND. ( Hubbard_projectors == 'pseudo' ) ) CALL init_q_aeps()
-  CALL init_tab_atwfc ( qmax, omega, intra_bgrp_comm, ierr)
+  CALL init_tab_atwfc ( qmax, intra_bgrp_comm, ierr)
   !
   IF ( restart .AND. startingconfig == 'file' ) THEN
      !

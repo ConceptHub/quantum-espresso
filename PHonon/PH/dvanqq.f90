@@ -144,9 +144,9 @@ subroutine dvanqq
               !
               !    compute the augmentation function
               !
-              call qvan2 (ngm, ih, jh, ntb, qmodg, qgm, ylmk0)
+              call qvan2 (ngm, ih, jh, ntb, qmodg, omega, qgm, ylmk0)
               !
-              if (.not.lgamma) call qvan2 (ngm, ih, jh, ntb, qmod, qgmq, ylmkq)
+              if (.not.lgamma) call qvan2 (ngm, ih, jh, ntb, qmod, omega, qgmq, ylmkq)
               !
               !     NB: for this integral the moving atom and the atom of Q
               !     do not necessarily coincide

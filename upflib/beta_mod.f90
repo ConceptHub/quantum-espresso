@@ -21,7 +21,6 @@ MODULE beta_mod
   PRIVATE
   PUBLIC :: init_tab_beta
   PUBLIC :: deallocate_tab_beta
-  PUBLIC :: scale_tab_beta
   PUBLIC :: interp_beta
   PUBLIC :: interp_dbeta
   !
@@ -39,7 +38,7 @@ MODULE beta_mod
 CONTAINS
 !
 !----------------------------------------------------------------------
-SUBROUTINE init_tab_beta ( qmax_, omega, comm, ierr ) 
+SUBROUTINE init_tab_beta ( qmax_, comm, ierr ) 
   !----------------------------------------------------------------------
   !
   ! Compute interpolation table for beta(G) radial functions
@@ -54,8 +53,6 @@ SUBROUTINE init_tab_beta ( qmax_, omega, comm, ierr )
   !
   REAL(dp), INTENT(IN) :: qmax_
   !! Interpolate q up to qmax_ (sqrt(Ry), q^2 is an energy)
-  REAL(dp), INTENT(IN) :: omega
-  !! Unit-cell volume
   INTEGER, INTENT(IN)  :: comm
   !! MPI communicator, to split the workload
   INTEGER, INTENT(OUT) :: ierr
@@ -66,9 +63,9 @@ SUBROUTINE init_tab_beta ( qmax_, omega, comm, ierr )
   INTEGER :: ndm, startq, lastq, nt, l, nb, iq, ir
   REAL(dp) :: qi
   ! q-point grid for interpolation
-  REAL(dp) :: pref
-  ! the prefactor of the Q functions
-  real(DP) ::  vqint, d1
+  real(DP) ::  omega_ =1.0_dp
+  ! For GTH compatibility: effectively removes division by sqrt(omega)
+  real(DP) ::  vqint
   !
   REAL(dp), allocatable :: aux (:)
   ! work space
@@ -97,7 +94,6 @@ SUBROUTINE init_tab_beta ( qmax_, omega, comm, ierr )
   ndm = MAXVAL ( upf(:)%kkbeta )
   allocate( aux (ndm) )
   allocate (besr( ndm))
-  pref = fpi / sqrt (omega)
   call divide (comm, nqx, startq, lastq)
   tab_beta (:,:,:) = 0.d0
   do nt = 1, nsp
@@ -106,14 +102,14 @@ SUBROUTINE init_tab_beta ( qmax_, omega, comm, ierr )
         do iq = startq, lastq
            qi = (iq - 1) * dq
            if ( upf(nt)%is_gth ) then
-              CALL mk_ffnl_gth( nt, nb, 1, omega, [ qi ] , tab_beta(iq,nb,nt) )
+              CALL mk_ffnl_gth( nt, nb, 1, omega_, [ qi ] , tab_beta(iq,nb,nt) )
            else
               call sph_bes (upf(nt)%kkbeta, rgrid(nt)%r, qi, l, besr)
               do ir = 1, upf(nt)%kkbeta
                  aux (ir) = upf(nt)%beta (ir, nb) * besr (ir) * rgrid(nt)%r(ir)
               enddo
               call simpson (upf(nt)%kkbeta, aux, rgrid(nt)%rab, vqint)
-              tab_beta (iq, nb, nt) = vqint * pref
+              tab_beta (iq, nb, nt) = vqint * fpi
            end if
         enddo
      enddo
@@ -127,7 +123,7 @@ SUBROUTINE init_tab_beta ( qmax_, omega, comm, ierr )
 END SUBROUTINE init_tab_beta
 !
 !----------------------------------------------------------------------
-SUBROUTINE interp_beta( nt, npw_, qg, vq )
+SUBROUTINE interp_beta( nt, npw_, qg, omega, vq )
   !----------------------------------------------------------------------
   !
   USE upf_kinds,  ONLY : dp
@@ -136,6 +132,8 @@ SUBROUTINE interp_beta( nt, npw_, qg, vq )
   implicit none
   integer, intent(in) :: nt, npw_
   real(dp), intent(in ) :: qg(npw_)
+  real(dp), intent(in ) :: omega
+  !! the volume of the unit cell
   real(dp), intent(out) :: vq(npw_,nbetam)
   !
   integer :: i0, i1, i2, i3, nbnt, nb, ig
@@ -166,6 +164,7 @@ SUBROUTINE interp_beta( nt, npw_, qg, vq )
            !! (setting q_max to be large enough) - for compatibility with GWW
            vq(ig,nb) = 0.0_dp
         end if
+        vq(ig,nb) = vq(ig,nb) / SQRT(omega)
      END DO
   END DO
   !$acc end data
@@ -174,7 +173,7 @@ END SUBROUTINE interp_beta
 !----------------------------------------------------------------------
 !
 !----------------------------------------------------------------------
-SUBROUTINE interp_dbeta( nt, npw, qg, vq )
+SUBROUTINE interp_dbeta( nt, npw, qg, omega, vq )
   !----------------------------------------------------------------------
   !
   USE upf_kinds,  ONLY : dp
@@ -183,6 +182,8 @@ SUBROUTINE interp_dbeta( nt, npw, qg, vq )
   implicit none
   integer, intent(in) :: nt, npw
   real(dp), intent(in ) :: qg(npw)
+  real(dp), intent(in ) :: omega
+  !! the volume of the unit cell
   real(dp), intent(out) :: vq(npw,nbetam)
   !
   integer :: i0, i1, i2, i3, nbnt, nb, ig
@@ -208,8 +209,9 @@ SUBROUTINE interp_dbeta( nt, npw, qg, vq )
                           tab_beta(i2,nb,nt) * (+ux*wx-px*wx-px*ux)/2.0_dp + &
                           tab_beta(i3,nb,nt) * (+ux*vx-px*vx-px*ux)/6.0_dp )/dq
         ELSE
-            vq(ig,nb) = 0.0_dp 
+            vq(ig,nb) = 0.0_dp
         END IF
+        vq(ig,nb) = vq(ig,nb) / SQRT(omega)
      ENDDO
   END DO
   !$acc end data
@@ -223,14 +225,5 @@ END SUBROUTINE interp_dbeta
     if( allocated( tab_beta ) )  deallocate( tab_beta )
     !
   end subroutine deallocate_tab_beta
-  !
-  subroutine scale_tab_beta( vol_ratio_m1 )
-    ! vol_ratio_m1 = omega_old / omega
-    implicit none
-    real(DP), intent(in) :: vol_ratio_m1
-    !
-    tab_beta(:,:,:) = tab_beta(:,:,:) * SQRT(vol_ratio_m1)
-!$acc update device ( tab_beta)
-  end subroutine scale_tab_beta
    !
 END MODULE beta_mod

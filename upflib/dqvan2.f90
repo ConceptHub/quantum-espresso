@@ -6,7 +6,7 @@
 ! or http://www.gnu.org/copyleft/gpl.txt .
 !
 !-----------------------------------------------------------------------
-SUBROUTINE dqvan2( ih, jh, np, ipol, ngy, g, tpiba, qmod, ylmk0, dylmk0, dqg )
+SUBROUTINE dqvan2( ih, jh, np, ipol, ngy, g, tpiba, qmod, omega, ylmk0, dylmk0, dqg )
   !-----------------------------------------------------------------------
   !! This routine computes the derivatives of the Fourier transform of
   !! the Q function needed in stress assuming that the radial Fourier
@@ -40,6 +40,8 @@ SUBROUTINE dqvan2( ih, jh, np, ipol, ngy, g, tpiba, qmod, ylmk0, dylmk0, dqg )
   !! 2pi/a factor, multiplies G vectors
   REAL(DP), INTENT(IN) ::  qmod(ngy)
   !! moduli of q+G vectors
+  REAL(DP), INTENT(IN) ::  omega
+  !! the volume of the unit cell
   REAL(DP), INTENT(IN) ::  ylmk0(ngy,lmaxq*lmaxq)
   !! spherical harmonics
   REAL(DP), INTENT(IN) ::  dylmk0(ngy,lmaxq*lmaxq)
@@ -142,14 +144,14 @@ SUBROUTINE dqvan2( ih, jh, np, ipol, ngy, g, tpiba, qmod, ylmk0, dylmk0, dqg )
         !
         pwx = px * wx * 0.5d0
         !
-        work = tab_qrad(i0, ijv, l, np) * uvx * wx + &
-               tab_qrad(i1, ijv, l, np) * pwx * vx - &
-               tab_qrad(i2, ijv, l, np) * pwx * ux + &
-               tab_qrad(i3, ijv, l, np) * px * uvx
+        work = ( tab_qrad(i0, ijv, l, np) * uvx * wx + &
+                 tab_qrad(i1, ijv, l, np) * pwx * vx - &
+                 tab_qrad(i2, ijv, l, np) * pwx * ux + &
+                 tab_qrad(i3, ijv, l, np) * px * uvx ) / omega
         work1 = (- tab_qrad(i0, ijv, l, np) * (ux*vx + vx*wx + ux*wx) * sixth &
                  + tab_qrad(i1, ijv, l, np) * (wx*vx - px*wx - px*vx) * 0.5d0 &
                  - tab_qrad(i2, ijv, l, np) * (wx*ux - px*wx - px*ux) * 0.5d0 &
-                 + tab_qrad(i3, ijv, l, np) * (ux*vx - px*ux - px*vx) * sixth) * dqi
+                 + tab_qrad(i3, ijv, l, np) * (ux*vx - px*ux - px*vx) * sixth) * dqi / omega
         !
         IF (qmod(ig) > 1.d-9) THEN
           dqg_bgr = sig * ylmk0(ig,lp) * work1 * tpiba * g(ipol,ig) / qmod(ig)

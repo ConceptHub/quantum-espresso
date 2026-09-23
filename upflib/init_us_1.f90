@@ -231,7 +231,7 @@ subroutine init_us_1( nat, ityp, omega, qmax, intra_bgrp_comm )
   !   here for the US types we compute the Fourier transform of the
   !   Q functions.
   !
-  IF ( lmaxq > 0 ) CALL init_tab_qrad(qmax, omega, intra_bgrp_comm, ir)
+  IF ( lmaxq > 0 ) CALL init_tab_qrad(qmax, intra_bgrp_comm, ir)
   !
   !   and finally we compute the qq coefficients by integrating the Q.
   !   The qq are the g=0 components of Q

@@ -135,7 +135,7 @@ SUBROUTINE addusforce_g( forcenl )
         DO ih = 1, nh(nt)
            DO jh = ih, nh(nt)
               ijh = ijh + 1
-              CALL qvan2( ngm_l, ih, jh, nt, qmod, qgm(1,ijh), ylmk0 )
+              CALL qvan2( ngm_l, ih, jh, nt, qmod, omega, qgm(1,ijh), ylmk0 )
            ENDDO
         ENDDO
         !

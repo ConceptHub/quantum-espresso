@@ -7,7 +7,7 @@
 !
 !
 !-----------------------------------------------------------------------
-SUBROUTINE qvan2( ngy, ih, jh, np, qmod, qg, ylmk0 )
+SUBROUTINE qvan2( ngy, ih, jh, np, qmod, omega, qg, ylmk0 )
   !-----------------------------------------------------------------------
   !! This routine computes the Fourier transform of the Q functions.
   !
@@ -36,7 +36,9 @@ SUBROUTINE qvan2( ngy, ih, jh, np, qmod, qg, ylmk0 )
   REAL(DP), INTENT(IN) :: ylmk0(ngy,lmaxq*lmaxq)
   !! spherical harmonics
   REAL(DP), INTENT(IN) :: qmod(ngy)
-  !! moduli of the q+g vectors 
+  !! moduli of the q+g vectors
+  REAL(DP), INTENT(IN) :: omega
+  !! the volume of the unit cell
   REAL(DP), INTENT(OUT) :: qg(2,ngy)
   !! the Fourier transform of interest
   !
@@ -151,10 +153,10 @@ SUBROUTINE qvan2( ngy, ih, jh, np, qmod, qg, ylmk0 )
         i3 = i0 + 3
         uvx = ux * vx * sixth
         pwx = px * wx * 0.5_DP
-        work = tab_qrad(i0,ijv,l,np) * uvx * wx + &
-               tab_qrad(i1,ijv,l,np) * pwx * vx - &
-               tab_qrad(i2,ijv,l,np) * pwx * ux + &
-               tab_qrad(i3,ijv,l,np) * px * uvx
+        work = ( tab_qrad(i0,ijv,l,np) * uvx * wx + &
+                 tab_qrad(i1,ijv,l,np) * pwx * vx - &
+                 tab_qrad(i2,ijv,l,np) * pwx * ux + &
+                 tab_qrad(i3,ijv,l,np) * px * uvx ) / omega
         qg(ind,ig) = qg(ind,ig) + sig * ylmk0(ig,lp) * work
         !
      ENDDO
@@ -200,7 +202,7 @@ subroutine compute_qqr ( tpiba, q, omega, qq_nt )
      if ( upf(nt)%tvanp ) then
         do ih = 1, nh (nt)
            do jh = ih, nh (nt)
-              call qvan2 (1, ih, jh, nt, qmod, qgm, ylmk0)
+              call qvan2 (1, ih, jh, nt, qmod, omega, qgm, ylmk0)
               qq_nt(ih,jh,nt) = omega * qgm (1,1)
               qq_nt(jh,ih,nt) = omega * qgm (1,1)
            enddo
@@ -244,7 +246,7 @@ subroutine compute_qqc ( tpiba, q, omega, qq_nt )
      if ( upf(nt)%tvanp ) then
         do ih = 1, nh (nt)
            do jh = ih, nh (nt)
-              call qvan2 (1, ih, jh, nt, qmod, qgm, ylmk0)
+              call qvan2 (1, ih, jh, nt, qmod, omega, qgm, ylmk0)
               qq_nt(ih,jh,nt) = omega * CMPLX(qgm (1,1),qgm(2,1),kind=dp )
               qq_nt(jh,ih,nt) = omega * CMPLX(qgm (1,1),qgm(2,1),kind=dp )
            enddo

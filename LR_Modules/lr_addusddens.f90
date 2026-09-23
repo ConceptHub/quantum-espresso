@@ -27,7 +27,7 @@ SUBROUTINE lr_addusddens (npert, dbecsum, drhop)
   !
   USE kinds,                ONLY : DP
   USE ions_base,            ONLY : nat, ityp, ntyp => nsp
-  USE cell_base,            ONLY : tpiba
+  USE cell_base,            ONLY : tpiba, omega
   USE fft_base,             ONLY : dfftp
   USE fft_interfaces,       ONLY : invfft
   USE gvect,                ONLY : ngm, g, eigts1, eigts2, eigts3, mill
@@ -143,7 +143,7 @@ SUBROUTINE lr_addusddens (npert, dbecsum, drhop)
               ! Calculate the Fourier transform of the Q functions,
               ! and put the result in qgm.
               !
-              CALL qvan2 (ngm, ih, jh, nt, qmod, qgm, ylmk0)
+              CALL qvan2 (ngm, ih, jh, nt, qmod, omega, qgm, ylmk0)
               !
               ijh = ijh + 1
               nb = 0

@@ -28,7 +28,6 @@ subroutine dft_exchange(nbnd_v,nbnd_s,n_set, e_x,ks_wfcs)
   USE uspp_param,           ONLY : lmaxq,upf,nh, nhm
   USE wavefunctions, ONLY : psic
  ! USE realus,  ONLY : adduspos_gamma_r
-  USE cell_base,            ONLY : at, bg, omega
   USE mp, ONLY : mp_sum, mp_bcast
   USE mp_world, ONLY : world_comm
   USE control_flags,        ONLY : gamma_only
@@ -320,7 +319,7 @@ subroutine addus_charge(r_ij,becp_iw,becp_jw)
   !
   USE kinds,                ONLY : DP
   USE ions_base,            ONLY : nat, ntyp => nsp, ityp
-  USE cell_base,            ONLY : tpiba
+  USE cell_base,            ONLY : tpiba, omega
   USE gvect,                ONLY : ngm, gg, g, eigts1, eigts2, &
                                    eigts3, mill
   USE lsda_mod,             ONLY : nspin
@@ -408,7 +407,7 @@ subroutine addus_charge(r_ij,becp_iw,becp_jw)
      if (upf(nt)%tvanp ) then
         do ih = 1, nh (nt)
            do jh = 1, nh (nt)
-              call qvan2 (ngm, ih, jh, nt, qmod, qgm, ylmk0)
+              call qvan2 (ngm, ih, jh, nt, qmod, omega, qgm, ylmk0)
               do na = 1, nat
                  if (ityp (na) .eq.nt) then
                     !

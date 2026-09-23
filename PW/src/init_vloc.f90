@@ -51,7 +51,7 @@ SUBROUTINE init_vloc()
   !
   qmax = MAX (sqrt(qmax), sqrt(ecutrho)*cell_factor)
   !
-  CALL init_tab_vloc (qmax, modified_coulomb, omega, intra_bgrp_comm, ierr )
+  CALL init_tab_vloc (qmax, modified_coulomb, intra_bgrp_comm, ierr )
   IF ( ierr == 1 ) THEN
      CALL errore('init_vloc','Coulomb or GTH PPs incompatible with 2D cutoff &
              & or ESM (see upflib/vloc_mod.f90)',ierr)
