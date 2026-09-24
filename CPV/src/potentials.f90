@@ -453,7 +453,7 @@ DEV_OMP_NOACC end parallel
 
       INTEGER :: na_loc, ia_s, ia_e, igis
       INTEGER :: k, i, j, is, ia, ib, ix, iy, iz
-      LOGICAL :: split, tzero, tshift
+      LOGICAL :: tzero, tshift
       REAL(DP), ALLOCATABLE :: zv2(:,:)
       REAL(DP), ALLOCATABLE :: rc(:,:)
       REAL(DP), ALLOCATABLE :: fionloc(:,:)

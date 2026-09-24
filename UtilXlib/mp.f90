@@ -23,7 +23,7 @@ MODULE mp
   ! 
   PUBLIC :: mp_start, mp_abort, mp_stop, mp_end, &
     mp_bcast, mp_sum, mp_max, mp_min, mp_rank, mp_size, &
-    mp_gather, mp_alltoall, mp_get, mp_put, &
+    mp_gather, mp_alltoall, mp_get, &
     mp_barrier, mp_report, mp_group_free, &
     mp_root_sum, mp_comm_free, mp_comm_create, mp_comm_group, &
     mp_group_create, mp_comm_split, mp_set_displs, &
@@ -72,19 +72,10 @@ MODULE mp
   END INTERFACE
   ! 
   INTERFACE mp_get
-    MODULE PROCEDURE mp_get_r1, mp_get_rv, mp_get_cv, mp_get_i1, mp_get_iv, mp_get_rm, mp_get_cm
+    MODULE PROCEDURE mp_get_r1, mp_get_rv, mp_get_cv, mp_get_i1, mp_get_iv, mp_get_im, mp_get_rm, mp_get_cm
 #if defined(__CUDA)
     MODULE PROCEDURE mp_get_r1_gpu, mp_get_rv_gpu, mp_get_cv_gpu, mp_get_i1_gpu, mp_get_iv_gpu, &
       mp_get_rm_gpu, mp_get_cm_gpu
-#endif
-   END INTERFACE
-   ! 
-   INTERFACE mp_put
-     MODULE PROCEDURE mp_put_rv, mp_put_cv, mp_put_i1, mp_put_iv, &
-       mp_put_rm
-#if defined(__CUDA)
-   MODULE PROCEDURE mp_put_rv_gpu, mp_put_cv_gpu, mp_put_i1_gpu, mp_put_iv_gpu, &
-     mp_put_rm_gpu
 #endif
    END INTERFACE
    ! 
@@ -941,6 +932,53 @@ MODULE mp
 #endif
         RETURN
       END SUBROUTINE mp_get_iv
+!
+      SUBROUTINE mp_get_im(msg_dest, msg_sour, mpime, dest, sour, ip, gid)
+        USE parallel_include
+        IMPLICIT NONE
+        INTEGER :: msg_dest(:,:)
+        INTEGER, INTENT(IN) :: msg_sour(:,:)
+        INTEGER, INTENT(IN) :: dest, sour, ip, mpime
+        INTEGER, INTENT(IN) :: gid
+        INTEGER :: group
+#if defined(__MPI)
+        INTEGER :: istatus(MPI_STATUS_SIZE)
+#endif
+        INTEGER :: ierr, nrcv
+        INTEGER :: msglen
+
+#if defined(__MPI)
+        group = gid
+#endif
+
+        ! processors not taking part in the communication have 0 length message
+
+        msglen = 0
+
+        IF(sour .NE. dest) THEN
+#if defined(__MPI)
+           IF(mpime .EQ. sour) THEN
+             msglen = SIZE(msg_sour)
+             CALL MPI_SEND( msg_sour, SIZE(msg_sour), MPI_INTEGER, dest, ip, group, ierr)
+             IF (ierr/=0) CALL mp_stop( 8023 )
+           ELSE IF(mpime .EQ. dest) THEN
+             CALL MPI_RECV( msg_dest, SIZE(msg_dest), MPI_INTEGER, sour, ip, group, istatus, IERR )
+             IF (ierr/=0) CALL mp_stop( 8024 )
+             CALL MPI_GET_COUNT(istatus, MPI_INTEGER, nrcv, ierr)
+             IF (ierr/=0) CALL mp_stop( 8025 )
+             msglen = nrcv
+           END IF
+#endif
+        ELSEIF(mpime .EQ. sour)THEN
+          msg_dest(1:SIZE(msg_sour,1), 1:SIZE(msg_sour,2)) = msg_sour(:,:)
+          msglen = SIZE(msg_sour)
+        END IF
+#if defined(__MPI)
+        CALL MPI_BARRIER(group, IERR)
+        IF (ierr/=0) CALL mp_stop( 8026 )
+#endif
+        RETURN
+      END SUBROUTINE mp_get_im
 
 !------------------------------------------------------------------------------!
 
@@ -1201,247 +1239,6 @@ MODULE mp
 !
 !
 !------------------------------------------------------------------------------!
-
-
-      SUBROUTINE mp_put_i1(msg_dest, msg_sour, mpime, sour, dest, ip, gid)
-        USE parallel_include 
-        IMPLICIT NONE
-        INTEGER :: msg_dest
-        INTEGER, INTENT(IN) :: msg_sour
-        INTEGER, INTENT(IN) :: dest, sour, ip, mpime
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: group
-#if defined(__MPI)
-        INTEGER :: istatus(MPI_STATUS_SIZE)
-#endif
-        INTEGER :: ierr, nrcv
-        INTEGER :: msglen
-
-#if defined(__MPI)
-        group = gid
-#endif
-
-        ! processors not taking part in the communication have 0 length message
-
-        msglen = 0
-
-        IF(dest .NE. sour) THEN
-#if defined(__MPI)
-           IF(mpime .EQ. sour) THEN
-             CALL MPI_SEND( msg_sour, 1, MPI_INTEGER, dest, ip, group, ierr)
-             IF (ierr/=0) CALL mp_stop( 8039 )
-             msglen = 1
-           ELSE IF(mpime .EQ. dest) THEN
-             CALL MPI_RECV( msg_dest, 1, MPI_INTEGER, sour, ip, group, istatus, IERR )
-             IF (ierr/=0) CALL mp_stop( 8040 )
-             CALL MPI_GET_COUNT(istatus, MPI_INTEGER, nrcv, ierr)
-             IF (ierr/=0) CALL mp_stop( 8041 )
-             msglen = 1
-           END IF
-#endif
-        ELSEIF(mpime .EQ. sour)THEN
-          msg_dest = msg_sour
-          msglen = 1
-        END IF
-#if defined(__MPI)
-        CALL MPI_BARRIER(group, IERR)
-        IF (ierr/=0) CALL mp_stop( 8042 )
-#endif
-        RETURN
-      END SUBROUTINE mp_put_i1
-
-!------------------------------------------------------------------------------!
-!
-!
-      SUBROUTINE mp_put_iv(msg_dest, msg_sour, mpime, sour, dest, ip, gid)
-        USE parallel_include
-        IMPLICIT NONE
-        INTEGER             :: msg_dest(:)
-        INTEGER, INTENT(IN) :: msg_sour(:)
-        INTEGER, INTENT(IN) :: dest, sour, ip, mpime
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: group
-#if defined(__MPI)
-        INTEGER :: istatus(MPI_STATUS_SIZE)
-#endif
-        INTEGER :: ierr, nrcv
-        INTEGER :: msglen
-#if defined(__MPI)
-        group = gid
-#endif
-        ! processors not taking part in the communication have 0 length message
-
-        msglen = 0
-
-        IF(sour .NE. dest) THEN
-#if defined(__MPI)
-           IF(mpime .EQ. sour) THEN
-             CALL MPI_SEND( msg_sour, SIZE(msg_sour), MPI_INTEGER, dest, ip, group, ierr)
-             IF (ierr/=0) CALL mp_stop( 8043 )
-             msglen = SIZE(msg_sour)
-           ELSE IF(mpime .EQ. dest) THEN
-             CALL MPI_RECV( msg_dest, SIZE(msg_dest), MPI_INTEGER, sour, ip, group, istatus, IERR )
-             IF (ierr/=0) CALL mp_stop( 8044 )
-             CALL MPI_GET_COUNT(istatus, MPI_INTEGER, nrcv, ierr)
-             IF (ierr/=0) CALL mp_stop( 8045 )
-             msglen = nrcv
-           END IF
-#endif
-        ELSEIF(mpime .EQ. sour)THEN
-          msg_dest(1:SIZE(msg_sour)) = msg_sour(:)
-          msglen = SIZE(msg_sour)
-        END IF
-#if defined(__MPI)
-        CALL MPI_BARRIER(group, IERR)
-        IF (ierr/=0) CALL mp_stop( 8046 )
-#endif
-        RETURN
-      END SUBROUTINE mp_put_iv
-
-!------------------------------------------------------------------------------!
-!
-!
-      SUBROUTINE mp_put_rv(msg_dest, msg_sour, mpime, sour, dest, ip, gid)
-        USE parallel_include
-        IMPLICIT NONE
-        REAL (DP)             :: msg_dest(:)
-        REAL (DP), INTENT(IN) :: msg_sour(:)
-        INTEGER, INTENT(IN) :: dest, sour, ip, mpime
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: group
-#if defined(__MPI)
-        INTEGER :: istatus(MPI_STATUS_SIZE)
-#endif
-        INTEGER :: ierr, nrcv
-        INTEGER :: msglen
-#if defined(__MPI)
-        group = gid
-#endif
-        ! processors not taking part in the communication have 0 length message
-
-        msglen = 0
-
-        IF(sour .NE. dest) THEN
-#if defined(__MPI)
-           IF(mpime .EQ. sour) THEN
-             CALL MPI_SEND( msg_sour, SIZE(msg_sour), MPI_DOUBLE_PRECISION, dest, ip, group, ierr)
-             IF (ierr/=0) CALL mp_stop( 8047 )
-             msglen = SIZE(msg_sour)
-           ELSE IF(mpime .EQ. dest) THEN
-             CALL MPI_RECV( msg_dest, SIZE(msg_dest), MPI_DOUBLE_PRECISION, sour, ip, group, istatus, IERR )
-             IF (ierr/=0) CALL mp_stop( 8048 )
-             CALL MPI_GET_COUNT(istatus, MPI_DOUBLE_PRECISION, nrcv, ierr)
-             IF (ierr/=0) CALL mp_stop( 8049 )
-             msglen = nrcv
-           END IF
-#endif
-        ELSEIF(mpime .EQ. sour)THEN
-          msg_dest(1:SIZE(msg_sour)) = msg_sour(:)
-          msglen = SIZE(msg_sour)
-        END IF
-#if defined(__MPI)
-        CALL MPI_BARRIER(group, IERR)
-        IF (ierr/=0) CALL mp_stop( 8050 )
-#endif
-        RETURN
-      END SUBROUTINE mp_put_rv
-
-!------------------------------------------------------------------------------!
-!
-!
-      SUBROUTINE mp_put_rm(msg_dest, msg_sour, mpime, sour, dest, ip, gid)
-        USE parallel_include
-        IMPLICIT NONE
-        REAL (DP)             :: msg_dest(:,:)
-        REAL (DP), INTENT(IN) :: msg_sour(:,:)
-        INTEGER, INTENT(IN) :: dest, sour, ip, mpime
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: group
-#if defined(__MPI)
-        INTEGER :: istatus(MPI_STATUS_SIZE)
-#endif
-        INTEGER :: ierr, nrcv
-        INTEGER :: msglen
-#if defined(__MPI)
-        group = gid
-#endif
-        ! processors not taking part in the communication have 0 length message
-
-        msglen = 0
-
-        IF(sour .NE. dest) THEN
-#if defined(__MPI)
-           IF(mpime .EQ. sour) THEN
-             CALL MPI_SEND( msg_sour, SIZE(msg_sour), MPI_DOUBLE_PRECISION, dest, ip, group, ierr)
-             IF (ierr/=0) CALL mp_stop( 8051 )
-             msglen = SIZE(msg_sour)
-           ELSE IF(mpime .EQ. dest) THEN
-             CALL MPI_RECV( msg_dest, SIZE(msg_dest), MPI_DOUBLE_PRECISION, sour, ip, group, istatus, IERR )
-             IF (ierr/=0) CALL mp_stop( 8052 )
-             CALL MPI_GET_COUNT(istatus, MPI_DOUBLE_PRECISION, nrcv, ierr)
-             IF (ierr/=0) CALL mp_stop( 8053 )
-             msglen = nrcv
-           END IF
-#endif
-        ELSEIF(mpime .EQ. sour)THEN
-          msg_dest(1:SIZE(msg_sour,1),1:SIZE(msg_sour,2)) = msg_sour(:,:)
-          msglen = SIZE(msg_sour)
-        END IF
-#if defined(__MPI)
-        CALL MPI_BARRIER(group, IERR)
-        IF (ierr/=0) CALL mp_stop( 8054 )
-#endif
-        RETURN
-      END SUBROUTINE mp_put_rm
-
-
-!------------------------------------------------------------------------------!
-!
-!
-      SUBROUTINE mp_put_cv(msg_dest, msg_sour, mpime, sour, dest, ip, gid)
-        USE parallel_include
-        IMPLICIT NONE
-        COMPLEX (DP)             :: msg_dest(:)
-        COMPLEX (DP), INTENT(IN) :: msg_sour(:)
-        INTEGER, INTENT(IN) :: dest, sour, ip, mpime
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: group
-#if defined(__MPI)
-        INTEGER :: istatus(MPI_STATUS_SIZE)
-#endif
-        INTEGER :: ierr, nrcv
-        INTEGER :: msglen
-#if defined(__MPI)
-        group = gid
-#endif
-        ! processors not taking part in the communication have 0 length message
-
-        msglen = 0
-
-        IF( dest .NE. sour ) THEN
-#if defined(__MPI)
-           IF(mpime .EQ. sour) THEN
-             CALL MPI_SEND( msg_sour, SIZE(msg_sour), MPI_DOUBLE_COMPLEX, dest, ip, group, ierr)
-             IF (ierr/=0) CALL mp_stop( 8055 )
-             msglen = SIZE(msg_sour)
-           ELSE IF(mpime .EQ. dest) THEN
-             CALL MPI_RECV( msg_dest, SIZE(msg_dest), MPI_DOUBLE_COMPLEX, sour, ip, group, istatus, IERR )
-             IF (ierr/=0) CALL mp_stop( 8056 )
-             CALL MPI_GET_COUNT(istatus, MPI_DOUBLE_COMPLEX, nrcv, ierr)
-             IF (ierr/=0) CALL mp_stop( 8057 )
-             msglen = nrcv
-           END IF
-#endif
-        ELSEIF(mpime .EQ. sour)THEN
-          msg_dest(1:SIZE(msg_sour)) = msg_sour(:)
-          msglen = SIZE(msg_sour)
-        END IF
-#if defined(__MPI)
-        CALL MPI_BARRIER(group, IERR)
-        IF (ierr/=0) CALL mp_stop( 8058 )
-#endif
-        RETURN
-      END SUBROUTINE mp_put_cv
 
 !
 !------------------------------------------------------------------------------!
@@ -4213,315 +4010,6 @@ END SUBROUTINE mp_type_free
 !
 !------------------------------------------------------------------------------!
 !
-      SUBROUTINE mp_put_i1_gpu(msg_dest_d, msg_sour_d, mpime, sour, dest, ip, gid)
-        USE parallel_include
-        IMPLICIT NONE
-        INTEGER, DEVICE             :: msg_dest_d
-        INTEGER, INTENT(IN), DEVICE :: msg_sour_d
-        INTEGER, INTENT(IN) :: dest, sour, ip, mpime
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: group
-#if defined(__MPI)
-        INTEGER :: istatus(MPI_STATUS_SIZE)
-#endif
-        INTEGER :: ierr, nrcv
-        INTEGER :: msglen
-        ! 
-#if ! defined(__GPU_MPI)
-        INTEGER :: msg_dest_h, msg_sour_h
-        !
-        msg_dest_h=msg_dest_d ; msg_sour_h=msg_sour_d           ! This syncs __MPI case
-        CALL mp_put_i1(msg_dest_h, msg_sour_h, mpime, sour, dest, ip, gid)
-        msg_dest_d = msg_dest_h
-#else
-
-#if defined(__MPI)
-        group = gid
-#endif
-
-        ! processors not taking part in the communication have 0 length message
-
-        msglen = 0
-        !
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL and __GPU_MPI
-        !
-        IF(dest .NE. sour) THEN
-#if defined(__MPI)
-           IF(mpime .EQ. sour) THEN
-             CALL MPI_SEND( msg_sour_d, 1, MPI_INTEGER, dest, ip, group, ierr)
-             IF (ierr/=0) CALL mp_stop( 9025 )
-             msglen = 1
-           ELSE IF(mpime .EQ. dest) THEN
-             CALL MPI_RECV( msg_dest_d, 1, MPI_INTEGER, sour, ip, group, istatus, IERR )
-             IF (ierr/=0) CALL mp_stop( 9026 )
-             CALL MPI_GET_COUNT(istatus, MPI_INTEGER, nrcv, ierr)
-             IF (ierr/=0) CALL mp_stop( 9027 )
-             msglen = 1
-           END IF
-#endif
-        ELSEIF(mpime .EQ. sour)THEN
-          msg_dest_d = msg_sour_d
-          msglen = 1
-        END IF
-#if defined(__MPI)
-        CALL MPI_BARRIER(group, IERR)
-        IF (ierr/=0) CALL mp_stop( 9028 )
-#endif
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI and __GPU_MPI
-        RETURN
-      END SUBROUTINE mp_put_i1_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_put_iv_gpu(msg_dest_d, msg_sour_d, mpime, sour, dest, ip, gid)
-        USE parallel_include
-        IMPLICIT NONE
-        INTEGER, DEVICE             :: msg_dest_d(:)
-        INTEGER, INTENT(IN), DEVICE :: msg_sour_d(:)
-        INTEGER, INTENT(IN) :: dest, sour, ip, mpime
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: group
-#if defined(__MPI)
-        INTEGER :: istatus(MPI_STATUS_SIZE)
-#endif
-        INTEGER :: ierr, nrcv
-        INTEGER :: msglen
-        !
-#if ! defined(__GPU_MPI)
-        INTEGER, ALLOCATABLE :: msg_dest_h(:), msg_sour_h(:)
-        !
-        ALLOCATE( msg_dest_h, source=msg_dest_d ); ALLOCATE( msg_sour_h, source=msg_sour_d );           ! This syncs __MPI case
-        CALL mp_put_iv(msg_dest_h, msg_sour_h, mpime, sour, dest, ip, gid)
-        msg_dest_d = msg_dest_h
-        DEALLOCATE(msg_dest_h, msg_sour_h)
-#else
-        !
-#if defined(__MPI)
-        group = gid
-#endif
-        ! processors not taking part in the communication have 0 length message
-
-        msglen = 0
-        !
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL and __GPU_MPI
-        !
-        IF(sour .NE. dest) THEN
-#if defined(__MPI)
-           IF(mpime .EQ. sour) THEN
-             CALL MPI_SEND( msg_sour_d, SIZE(msg_sour_d), MPI_INTEGER, dest, ip, group, ierr)
-             IF (ierr/=0) CALL mp_stop( 9029 )
-             msglen = SIZE(msg_sour_d)
-           ELSE IF(mpime .EQ. dest) THEN
-             CALL MPI_RECV( msg_dest_d, SIZE(msg_dest_d), MPI_INTEGER, sour, ip, group, istatus, IERR )
-             IF (ierr/=0) CALL mp_stop( 9030 )
-             CALL MPI_GET_COUNT(istatus, MPI_INTEGER, nrcv, ierr)
-             IF (ierr/=0) CALL mp_stop( 9031 )
-             msglen = nrcv
-           END IF
-#endif
-        ELSEIF(mpime .EQ. sour)THEN
-          !msg_dest_d(1:SIZE(msg_sour_d)) = msg_sour_d(:)
-          ierr = cudaMemcpy(msg_dest_d(1) , msg_sour_d(1), SIZE(msg_sour_d), cudaMemcpyDeviceToDevice )
-          msglen = SIZE(msg_sour_d)
-        END IF
-#if defined(__MPI)
-        CALL MPI_BARRIER(group, IERR)
-        IF (ierr/=0) CALL mp_stop( 9032 )
-#endif
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI and __GPU_MPI
-        RETURN
-      END SUBROUTINE mp_put_iv_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_put_rv_gpu(msg_dest_d, msg_sour_d, mpime, sour, dest, ip, gid)
-        USE parallel_include
-        IMPLICIT NONE
-        REAL (DP), DEVICE             :: msg_dest_d(:)
-        REAL (DP), INTENT(IN), DEVICE :: msg_sour_d(:)
-        INTEGER, INTENT(IN) :: dest, sour, ip, mpime
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: group
-#if defined(__MPI)
-        INTEGER :: istatus(MPI_STATUS_SIZE)
-#endif
-        INTEGER :: ierr, nrcv
-        INTEGER :: msglen
-        ! 
-#if ! defined(__GPU_MPI)
-        REAL (DP), ALLOCATABLE :: msg_dest_h(:), msg_sour_h(:)
-        !
-        ALLOCATE( msg_dest_h, source=msg_dest_d ); ALLOCATE( msg_sour_h, source=msg_sour_d );           ! This syncs __MPI case
-        CALL mp_put_rv(msg_dest_h, msg_sour_h, mpime, sour, dest, ip, gid)
-        msg_dest_d = msg_dest_h
-        DEALLOCATE(msg_dest_h, msg_sour_h)
-#else
-        !
-#if defined(__MPI)
-        group = gid
-#endif
-        ! processors not taking part in the communication have 0 length message
-
-        msglen = 0
-        !
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL and __GPU_MPI
-        !
-        IF(sour .NE. dest) THEN
-#if defined(__MPI)
-           IF(mpime .EQ. sour) THEN
-             CALL MPI_SEND( msg_sour_d, SIZE(msg_sour_d), MPI_DOUBLE_PRECISION, dest, ip, group, ierr)
-             IF (ierr/=0) CALL mp_stop( 9033 )
-             msglen = SIZE(msg_sour_d)
-           ELSE IF(mpime .EQ. dest) THEN
-             CALL MPI_RECV( msg_dest_d, SIZE(msg_dest_d), MPI_DOUBLE_PRECISION, sour, ip, group, istatus, IERR )
-             IF (ierr/=0) CALL mp_stop( 9034 )
-             CALL MPI_GET_COUNT(istatus, MPI_DOUBLE_PRECISION, nrcv, ierr)
-             IF (ierr/=0) CALL mp_stop( 9035 )
-             msglen = nrcv
-           END IF
-#endif
-        ELSEIF(mpime .EQ. sour)THEN
-          !msg_dest_d(1:SIZE(msg_sour_d)) = msg_sour_d(:)
-          ierr = cudaMemcpy(msg_dest_d(1) , msg_sour_d(1), SIZE(msg_sour_d), cudaMemcpyDeviceToDevice )
-          msglen = SIZE(msg_sour_d)
-        END IF
-#if defined(__MPI)
-        CALL MPI_BARRIER(group, IERR)
-        IF (ierr/=0) CALL mp_stop( 9036 )
-#endif
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI and __GPU_MPI
-        RETURN
-      END SUBROUTINE mp_put_rv_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_put_rm_gpu(msg_dest_d, msg_sour_d, mpime, sour, dest, ip, gid)
-        USE parallel_include
-        IMPLICIT NONE
-        REAL (DP), DEVICE             :: msg_dest_d(:,:)
-        REAL (DP), INTENT(IN), DEVICE :: msg_sour_d(:,:)
-        INTEGER, INTENT(IN) :: dest, sour, ip, mpime
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: group
-#if defined(__MPI)
-        INTEGER :: istatus(MPI_STATUS_SIZE)
-#endif
-        INTEGER :: ierr, nrcv
-        INTEGER :: msglen
-        ! 
-#if ! defined(__GPU_MPI)
-        REAL (DP), ALLOCATABLE :: msg_dest_h(:,:), msg_sour_h(:,:)
-        !
-        ALLOCATE( msg_dest_h, source=msg_dest_d ); ALLOCATE( msg_sour_h, source=msg_sour_d );           ! This syncs __MPI case
-        CALL mp_put_rm(msg_dest_h, msg_sour_h, mpime, sour, dest, ip, gid)
-        msg_dest_d = msg_dest_h
-        DEALLOCATE(msg_dest_h, msg_sour_h)
-#else
-        !
-#if defined(__MPI)
-        group = gid
-#endif
-        ! processors not taking part in the communication have 0 length message
-
-        msglen = 0
-        !
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL and __GPU_MPI
-        !
-        IF(sour .NE. dest) THEN
-#if defined(__MPI)
-           IF(mpime .EQ. sour) THEN
-             CALL MPI_SEND( msg_sour_d, SIZE(msg_sour_d), MPI_DOUBLE_PRECISION, dest, ip, group, ierr)
-             IF (ierr/=0) CALL mp_stop( 9037 )
-             msglen = SIZE(msg_sour_d)
-           ELSE IF(mpime .EQ. dest) THEN
-             CALL MPI_RECV( msg_dest_d, SIZE(msg_dest_d), MPI_DOUBLE_PRECISION, sour, ip, group, istatus, IERR )
-             IF (ierr/=0) CALL mp_stop( 9038 )
-             CALL MPI_GET_COUNT(istatus, MPI_DOUBLE_PRECISION, nrcv, ierr)
-             IF (ierr/=0) CALL mp_stop( 9039 )
-             msglen = nrcv
-           END IF
-#endif
-        ELSEIF(mpime .EQ. sour)THEN
-          !msg_dest_d(1:SIZE(msg_sour_d,1),1:SIZE(msg_sour_d,2)) = msg_sour_d(:,:)
-          ierr = cudaMemcpy2D(msg_dest_d, SIZE(msg_dest_d,1),&
-                              msg_sour_d, SIZE(msg_sour_d,1),&
-                              SIZE(msg_sour_d,1), SIZE(msg_sour_d,2), &
-                              cudaMemcpyDeviceToDevice )
-          msglen = SIZE(msg_sour_d)
-        END IF
-#if defined(__MPI)
-        CALL MPI_BARRIER(group, IERR)
-        IF (ierr/=0) CALL mp_stop( 9040 )
-#endif
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI and __GPU_MPI
-        RETURN
-      END SUBROUTINE mp_put_rm_gpu
-!
-!------------------------------------------------------------------------------!
-!
-      SUBROUTINE mp_put_cv_gpu(msg_dest_d, msg_sour_d, mpime, sour, dest, ip, gid)
-        USE parallel_include
-        IMPLICIT NONE
-        COMPLEX (DP),             DEVICE :: msg_dest_d(:)
-        COMPLEX (DP), INTENT(IN), DEVICE :: msg_sour_d(:)
-        INTEGER, INTENT(IN) :: dest, sour, ip, mpime
-        INTEGER, INTENT(IN) :: gid
-        INTEGER :: group
-#if defined(__MPI)
-        INTEGER :: istatus(MPI_STATUS_SIZE)
-#endif
-        INTEGER :: ierr, nrcv
-        INTEGER :: msglen
-        ! 
-#if ! defined(__GPU_MPI)
-        COMPLEX (DP), ALLOCATABLE :: msg_dest_h(:), msg_sour_h(:)
-        !
-        ALLOCATE( msg_dest_h, source=msg_dest_d ); ALLOCATE( msg_sour_h, source=msg_sour_d );           ! This syncs __MPI case
-        CALL mp_put_cv(msg_dest_h, msg_sour_h, mpime, sour, dest, ip, gid)
-        msg_dest_d = msg_dest_h
-        DEALLOCATE(msg_dest_h, msg_sour_h)
-#else
-        !
-#if defined(__MPI)
-        group = gid
-#endif
-        ! processors not taking part in the communication have 0 length message
-
-        msglen = 0
-        !
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL and __GPU_MPI
-        !
-        IF( dest .NE. sour ) THEN
-#if defined(__MPI)
-           IF(mpime .EQ. sour) THEN
-             CALL MPI_SEND( msg_sour_d, SIZE(msg_sour_d), MPI_DOUBLE_COMPLEX, dest, ip, group, ierr)
-             IF (ierr/=0) CALL mp_stop( 9041 )
-             msglen = SIZE(msg_sour_d)
-           ELSE IF(mpime .EQ. dest) THEN
-             CALL MPI_RECV( msg_dest_d, SIZE(msg_dest_d), MPI_DOUBLE_COMPLEX, sour, ip, group, istatus, IERR )
-             IF (ierr/=0) CALL mp_stop( 9042 )
-             CALL MPI_GET_COUNT(istatus, MPI_DOUBLE_COMPLEX, nrcv, ierr)
-             IF (ierr/=0) CALL mp_stop( 9043 )
-             msglen = nrcv
-           END IF
-#endif
-        ELSEIF(mpime .EQ. sour)THEN
-          !msg_dest_d(1:SIZE(msg_sour_d)) = msg_sour_d(:)
-          ierr = cudaMemcpy(msg_dest_d(1) , msg_sour_d(1), SIZE(msg_sour_d), cudaMemcpyDeviceToDevice )
-          msglen = SIZE(msg_sour_d)
-        END IF
-#if defined(__MPI)
-        CALL MPI_BARRIER(group, IERR)
-        IF (ierr/=0) CALL mp_stop( 9044 )
-#endif
-#endif
-        ierr = cudaDeviceSynchronize()  ! This syncs SERIAL, __MPI and __GPU_MPI
-        RETURN
-      END SUBROUTINE mp_put_cv_gpu
 !
 !------------------------------------------------------------------------------!
 !

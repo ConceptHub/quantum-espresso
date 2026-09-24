@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2016-2017 Quantum ESPRESSO Foundation 
+! Copyright (C) 2016-2026 Quantum ESPRESSO Foundation 
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -16,6 +16,8 @@ MODULE io_base
   !
   IMPLICIT NONE
   !
+  INTEGER, ALLOCATABLE::  index_file(:,:,:) 
+  !! contains indices of G-components as a function of the Miller indices
   PRIVATE
   PUBLIC :: write_wfc, read_wfc, write_rhog, read_rhog
   !
@@ -41,8 +43,6 @@ MODULE io_base
                              qeh5_set_file_hyperslab              
 #endif
 
-      IMPLICIT NONE
-      !
       INTEGER,            INTENT(IN) :: iuni
       CHARACTER(LEN=*),   INTENT(IN) :: filename
       INTEGER,            INTENT(IN) :: ik, ispin, nspin
@@ -222,8 +222,6 @@ MODULE io_base
       USE  qeh5_base_module
 #endif
 
-      IMPLICIT NONE
-      !
       INTEGER,            INTENT(IN)    :: iuni
       CHARACTER(LEN=*),   INTENT(IN)    :: filename
       INTEGER,            INTENT(IN)    :: root_in_group, intra_group_comm
@@ -362,7 +360,7 @@ MODULE io_base
             !
             IF ( npol == 2 ) THEN
                !
-               ! Quick-and-dirty noncolinear case - mergewf should be modified
+               ! Quick-and-dirty noncolinear case - splitwf should be modified
                ! Collect into wtmp(1:igwx_) first set of plane wave components
                !
                CALL splitwf( wfc(1:npwx,       j), wtmp ,   &
@@ -415,8 +413,6 @@ MODULE io_base
 #if defined (__HDF5)
       USE qeh5_base_module
 #endif
-      !
-      IMPLICIT NONE
       !
       CHARACTER(LEN=*), INTENT(IN) :: filename
       !! name of file written (to which a suffix is added)
@@ -606,14 +602,11 @@ MODULE io_base
       !! all processors in the intra_group_comm communicator 
       !
       USE mp,         ONLY : mp_size, mp_rank, mp_bcast
-      USE mp_wave,    ONLY : splitwf
-      USE gvect,      ONLY : ngm_g
+      USE gvect,      ONLY : ngm_g, ngm, mill
       !
 #if defined (__HDF5) 
       USE qeh5_base_module
 #endif
-      IMPLICIT NONE
-      !
       CHARACTER(LEN=*), INTENT(IN) :: filename
       !! name of file read (to which a suffix is added)
       INTEGER,          INTENT(IN) :: root_in_group
@@ -621,23 +614,22 @@ MODULE io_base
       INTEGER,          INTENT(IN) :: intra_group_comm
       !! rho(G) is distributed over this group of processors
       INTEGER,          INTENT(IN) :: ig_l2g(:)
-      !! local-to-global indices, for machine- and mpi-independent ordering
-      !! on this processor, G(ig) maps to G(ig_l2g(ig)) in global ordering
+      !! unused, to be removed from call
       INTEGER,          INTENT(IN) :: nspin
       !! read up to nspin components
-      COMPLEX(dp),  INTENT(INOUT) :: rho(:,:)
-      !! temporary check while waiting for more definitive solutions
-      LOGICAL, OPTIONAL, INTENT(IN) :: gamma_only
-      !! if present, don't stop in case of open error, return a nonzero value
+      COMPLEX(dp), INTENT(INOUT)   :: rho(:,:)
+      !! must be allocated on input, is filled with G components on output
+      LOGICAL, INTENT(IN), OPTIONAL:: gamma_only
+      !! true if half G-vectors are used - may differ from value read from file
+      !! used only for informative message, not in actual reading/distributing
       INTEGER, OPTIONAL, INTENT(OUT):: ier_
       !
       COMPLEX(dp), ALLOCATABLE :: rho_g(:)
-      COMPLEX(dp), ALLOCATABLE :: rhoaux(:)
       REAL(dp)                 :: b1(3), b2(3), b3(3)
-      INTEGER                  :: ngm, nspin_, isup, isdw
+      INTEGER                  :: nspin_, isup, isdw
       INTEGER                  :: iun, ns, ig, ierr
       INTEGER                  :: me_in_group, nproc_in_group
-      LOGICAL                  :: ionode_in_group, gamma_only_, readmill
+      LOGICAL                  :: ionode_in_group, gamma_only_
       INTEGER                  :: ngm_g_
       INTEGER, ALLOCATABLE     :: mill_g(:,:)
       !
@@ -647,8 +639,7 @@ MODULE io_base
       CHARACTER(LEN=10)       :: tempchar, datasets(4)
 #endif
       !
-      ngm  = SIZE (rho, 1)
-      IF (ngm /= SIZE (ig_l2g, 1) ) &
+      IF ( ngm /= SIZE (rho, 1) )  &
            CALL errore('read_rhog', 'inconsistent input dimensions', 1)
       !
       iun  = 4
@@ -706,32 +697,24 @@ MODULE io_base
       CALL mp_bcast( gamma_only_, root_in_group, intra_group_comm )
       !
       IF ( nspin > nspin_ ) &
-         CALL infomsg('read_rhog', 'some spin components not found')
-      IF ( ngm_g < MAXVAL (ig_l2g(:)) ) &
-           CALL infomsg('read_rhog', 'some G-vectors are missing, zero-padding' )
+         CALL infomsg('read_rhog', 'some spin components not found on file')
       !
-      ! ... if required and if there is a mismatch between input gamma tricks
-      ! ... and gamma tricks read from file: allocate and read Miller indices
+      ! ... allocate and read Miller indices - useful when there is a mismatch
+      ! ... between input gamma tricks and gamma tricks read from file, but
+      ! ... also to avoid mismatch in ordering that may occur in rare cases
       !
-      readmill = PRESENT(gamma_only) 
-      IF ( readmill ) readmill = ( gamma_only .NEQV. gamma_only_ ) 
-      !
-      IF (readmill .AND. ionode_in_group) THEN
+      IF (ionode_in_group) THEN
          ALLOCATE (mill_g(3,ngm_g_))
 #if defined (__HDF5)
          CALL qeh5_open_dataset( h5file, h5dset_mill, &
               NAME = "MillerIndices", ACTION = 'read', ERROR = ierr)
-         IF (readmill)  CALL qeh5_read_dataset ( mill_g , h5dset_mill )
+         CALL qeh5_read_dataset ( mill_g , h5dset_mill )
          CALL qeh5_close ( h5dset_mill )
 #else
          READ (iun, iostat=ierr) mill_g(1:3,1:ngm_g_)
 #endif
       ELSE
          ALLOCATE (mill_g(1,1))
-#if !defined(__HDF5)
-         ! .. skip record containing G-vector indices
-         IF ( ionode_in_group) READ (iun, iostat=ierr) mill_g(1,1)
-#endif
       END IF
       !
       CALL mp_bcast( ierr, root_in_group, intra_group_comm )
@@ -742,11 +725,10 @@ MODULE io_base
       ! ... of the charge density (one spin at the time to save memory)
       !
       IF ( ionode_in_group ) THEN
-         ALLOCATE( rho_g(MAX(ngm_g_,ngm_g)) )
+         ALLOCATE( rho_g(ngm_g_) )
       ELSE
          ALLOCATE( rho_g( 1 ) )
       END IF
-      ALLOCATE (rhoaux(ngm))
 #if defined(__HDF5)
       IF (nspin_ <= 2) THEN 
         datasets(1:2) =["rhotot_g  ", "rhodiff_g "]
@@ -754,6 +736,21 @@ MODULE io_base
         datasets(1)  = "rhotot_g"; datasets(2:4) = ["m_x", "m_y", "m_z"] 
       END IF
 #endif 
+      !
+      !! fill array "index_file" with indices of G-components as a function
+      !! of the Miller indices
+      !
+      IF(ionode_in_group) CALL fill_index_file ( ngm_g_, mill_g ) 
+      !
+      IF ( PRESENT(gamma_only) ) THEN
+         IF ( gamma_only .and. .NOT. gamma_only_ ) THEN 
+            call infomsg('read_rhog','Conversion: K charge to Gamma charge') 
+         ELSE IF ( gamma_only_ .and. .NOT. gamma_only ) THEN 
+            call infomsg ('read_rhog', 'Conversion: Gamma charge to K charge')
+         !ELSE
+         !call infomsg ('read_rhog', 'Reordering of the charge')
+         ENDIF 
+      ENDIF 
       !
       DO ns = 1, nspin_
          !
@@ -765,23 +762,18 @@ MODULE io_base
 #else 
            READ (iun, iostat=ierr) rho_g(1:ngm_g_)
 #endif
-           IF ( ngm_g > ngm_g_) rho_g(ngm_g_+1:ngm_g) = cmplx(0.d0,0.d0, KIND = DP) 
          END IF
          CALL mp_bcast( ierr, root_in_group, intra_group_comm )
          IF ( ierr > 0 ) CALL errore ( 'read_rhog','error reading file ' &
               & // TRIM( filename ), 2+ns )
          !
-         ! ... Convert charge from full G-vector to half G-vector format
+         !! Distribute the charge density read from file across processors,
+         !! ensuring consistency with the ordering of the current calculation
+         !! also convert from half to full G-vector sphere, or vice versa
          !
-         IF ( readmill ) CALL charge_k_to_g (ngm_g_, rho_g, mill_g, &
-              root_in_group,intra_group_comm, gamma_only)
+         CALL distribute_charge ( root_in_group, intra_group_comm, &
+           ngm_g_, mill_g, rho_g, gamma_only_, ngm, mill, rho(:,ns) )
          !
-         CALL splitwf( rhoaux, rho_g, ngm, ig_l2g, me_in_group, &
-              nproc_in_group, root_in_group, intra_group_comm )
-         DO ig = 1, ngm
-            rho(ig,ns) = rhoaux(ig)
-         END DO
-         ! 
       END DO
       !
 #if defined(__HDF5)
@@ -790,7 +782,7 @@ MODULE io_base
       IF ( ionode_in_group ) CLOSE (UNIT = iun, status ='keep' )
 #endif
       !
-      DEALLOCATE( rhoaux )
+      IF(ionode_in_group) DEALLOCATE(index_file)
       DEALLOCATE( rho_g )
       IF (ALLOCATED(mill_g))  DEALLOCATE( mill_g )
       !
@@ -798,96 +790,165 @@ MODULE io_base
       !
     END SUBROUTINE read_rhog
     !
-    SUBROUTINE charge_k_to_g ( ngm_g_file, rho_g, mill_g_file, root_in_group, &
-         intra_group_comm , this_run_is_gamma_only)
+    !-----------------------------------------------------------------
+    SUBROUTINE distribute_charge ( root_in_group, intra_group_comm, &
+         ngm_g_file, mill_g_file, rho_g_file, gamma_only_file, &
+         ngm, mill, rho )
+    !-----------------------------------------------------------------
       !
-      !! This routine reorders G-vectors for the charge density on global mesh
-      !! from the k case to the gamma-only one.
+      !! Distributes the charge density components, as read from file,
+      !! across the various MPI processing, setting the ordering
+      !! given by the "mill" array (containing Miller indices)
       !
       USE io_global,     ONLY : stdout
-      USE gvect,         ONLY : ngm, ngm_g, ig_l2g, mill
-      USE mp,            ONLY : mp_size,mp_rank
-      USE mp_wave,       ONLY : mergekg
-     
-      IMPLICIT NONE
-      INTEGER, INTENT(in) :: intra_group_comm,root_in_group
+      USE mp,            ONLY : mp_size, mp_rank, mp_get
+      !
+      INTEGER, INTENT(in) :: root_in_group
+      INTEGER, INTENT(in) :: intra_group_comm
       INTEGER, INTENT(in) :: ngm_g_file  
-      !! number of g vectors found in file 
+      !! total number of G components found in file 
+      INTEGER, INTENT(in) :: ngm
+      !! required number of g vectors (for this processor)
       INTEGER, INTENT(in) :: mill_g_file(:,:)
-      COMPLEX(kind=DP), INTENT(inout) :: rho_g(:)!relative to k case  in input, gamma case in output
-      LOGICAL, OPTIONAL, INTENT(in) :: this_run_is_gamma_only 
-      INTEGER                  :: me_in_group, npr
-      COMPLEX(kind=DP), ALLOCATABLE :: rho_aux(:)
-      LOGICAL                  :: ionode_in_group
-      INTEGER :: nproc_in_group
-      INTEGER, ALLOCATABLE :: mill_g(:,:), grid(:,:,:) 
-      CHARACTER(len=256)   :: mesg
-      INTEGER :: ig, jg, nr1b2,nr2b2,nr3b2  
-      IF ( .NOT. PRESENT (this_run_is_gamma_only) ) RETURN 
-      IF ( this_run_is_gamma_only) THEN 
-         call infomsg('read_rhog','Conversion: K charge Gamma charge') 
-      ELSE 
-         call infomsg ('read_rhog', 'Conversion: Gamma charge to K charge') 
-      ENDIF 
-
+      !! Miller indices of all G components read from file 
+      INTEGER, INTENT(in) :: mill(:,:)
+      !! Miller indices of required G components (for this processor)
+      COMPLEX(kind=DP), INTENT(in) :: rho_g_file(:)
+      !! rho(G) read from file 
+      COMPLEX(kind=DP), INTENT(out) :: rho(:)
+      !! output rho(G) distributed according to Miller indices mill
+      LOGICAL, INTENT(in) :: gamma_only_file 
+      !
+      !! local variables for G components distribution in parallel case 
+      !
+      COMPLEX(kind=DP), ALLOCATABLE :: rho_l(:)
+      INTEGER, ALLOCATABLE::  mill_l(:,:) 
+      INTEGER             :: ngm_l
+      INTEGER             :: me_in_group, nproc_in_group, npr
+      INTEGER             :: ig, ig_file, ig_read, ig_miss, ierr
+      LOGICAL             :: ionode_in_group
+      !
       me_in_group     = mp_rank( intra_group_comm )
       nproc_in_group  = mp_size( intra_group_comm )
       ionode_in_group = ( me_in_group == root_in_group )
-
-      IF(ionode_in_group) THEN
-         allocate(rho_aux(MAX(ngm_g_file, ngm_g) ))
-         allocate(mill_g(3,ngm_g))
-         rho_aux(1:ngm_g_file)=rho_g(1:ngm_g_file)
-      ELSE
-         allocate(rho_aux(1))
-         allocate(mill_g(1,1))
-      ENDIF
-
-      CALL mergekg( mill, mill_g, ngm, ig_l2g, me_in_group, &
-           nproc_in_group, root_in_group, intra_group_comm )
-
-      IF(ionode_in_group) THEN
-         rho_g(:)= cmplx(0.d0, 0.d0,KIND = DP) 
-         IF ( this_run_is_gamma_only ) THEN 
-            ig = 1 
-            DO jg=1,ngm_g_file
-               if(  mill_g(1,ig)==mill_g_file(1,jg) .and. &
-                  mill_g(2,ig)==mill_g_file(2,jg) .and. &
-                  mill_g(3,ig)==mill_g_file(3,jg) ) then
-                  rho_g(ig)=rho_aux(jg)
-                  ig = ig + 1 
-               endif
-               IF ( ig .GE. ngm_g ) EXIT  
-               END DO
-         ELSE ! this run uses full fft mesh 
-            nr1b2 = MAX(MAXVAL(ABS(mill_g(1,:))),MAXVAL(ABS(mill_g_file(1,:)))) 
-            nr2b2 = MAX(MAXVAL(ABS(mill_g(2,:))),MAXVAL(ABS(mill_g_file(2,:)))) 
-            nr3b2 = MAX(MAXVAL(ABS(mill_g(3,:))),MAXVAL(ABS(mill_g_file(3,:))))   
-            ALLOCATE(grid(-nr1b2-1:nr1b2+1,-nr2b2-1:nr2b2+1,-nr3b2-1:nr3b2+1)) 
-            grid = 10 * ngm_g_file
-            !$omp do   
-            DO ig = 1, ngm_g_file
-               grid ( mill_g_file(1,ig), mill_g_file(2,ig),mill_g_file(3,ig))     = ig
-               grid(-mill_g_file(1,ig),-mill_g_file(2,ig),-mill_g_file(3,ig))     = -ig  
-            END DO 
-            !$omp do private(ig) 
-            DO jg =1, ngm_g
-               ig = grid(mill_g(1,jg),mill_g(2,jg),mill_g(3,jg))
-               IF (ig .LE. ngm_g_file) THEN  
-                 IF (ig .GE. 0 ) THEN 
-                   rho_g(jg) = rho_aux(ig) 
-                 ELSE 
-                   rho_g(jg) = CONJG(rho_aux(-ig)) 
-                 END IF 
-               END IF
-            END DO 
-            deallocate(grid) 
-         END IF 
+      !
+      ig_read = 0
+      ig_miss = 0
+      DO npr = 0, nproc_in_group-1
+         IF ( npr == root_in_group ) THEN
+            IF ( ionode_in_group ) THEN
+               !! here fill rho on ionode_in_group
+               CALL fill_rho (ngm, mill, gamma_only_file, rho_g_file, &
+                              rho, ierr )
+               ig_read = ig_read + ngm
+               ig_miss = ig_miss + ierr
+            END IF
+         ELSE 
+            !! here send ngm, mill, from processor "npr"
+            !!      receive ngm_l, mill_l, on processor "root_in_group"
+            CALL mp_get (ngm_l, ngm, me_in_group, root_in_group, npr, 1, intra_group_comm)
+            IF ( ionode_in_group ) THEN
+               ALLOCATE ( rho_l(ngm_l), mill_l(3,ngm_l) )
+            ELSE
+               ALLOCATE ( rho_l(1), mill_l(3,1) )
+            END IF
+            CALL mp_get (mill_l, mill, me_in_group, root_in_group, npr, 2, intra_group_comm)
+            !! here fill rho_l (on ionode_in_group only)
+            IF ( ionode_in_group ) THEN
+               CALL fill_rho (ngm_l, mill_l, gamma_only_file, rho_g_file, &
+                              rho_l, ierr )
+               ig_read = ig_read + ngm_l
+               ig_miss = ig_miss + ierr
+            END IF
+            !! here send rho_l back to processor "npr" from "root_in_group"
+            CALL mp_get( rho, rho_l, me_in_group, npr, root_in_group, 3, intra_group_comm)
+            DEALLOCATE ( rho_l, mill_l )
+         END IF
+      END DO
+      !
+      IF ( ig_miss > 0 ) THEN
+         WRITE (stdout,'(5X,"read_rhog: ",I6," G-components read, ",I6," not found (set to 0)")') ig_read,ig_miss
+         WRITE (stdout,'(5X,"Zero-padding will be used")')
       END IF
-      deallocate(rho_aux,mill_g)  
-      return
- 
-    END SUBROUTINE charge_k_to_g
+      !
+    END SUBROUTINE distribute_charge
     !
+    !-----------------------------------------------------------------
+    SUBROUTINE fill_index_file (ngm_g_file, mill_g_file)
+    !-----------------------------------------------------------------
+    !
+    INTEGER, INtENT(IN) :: ngm_g_file, mill_g_file(:,:)
+    INTEGER :: n1l,n2l,n3l, n1u,n2u,n3u, n(3), ig
+    !
+    !! find lower and upper bounds for file "index_file"
+    n1l = MINVAL(mill_g_file(1,:))
+    n2l = MINVAL(mill_g_file(2,:))
+    n3l = MINVAL(mill_g_file(3,:))
+    n1u = MAXVAL(mill_g_file(1,:))
+    n2u = MAXVAL(mill_g_file(2,:))
+    n3u = MAXVAL(mill_g_file(3,:))
+    ALLOCATE(index_file(n1l:n1u,n2l:n2u,n3l:n3u)) 
+    index_file = 0
+    !
+    DO ig = 1, ngm_g_file
+       n(:) = mill_g_file(:,ig)
+       index_file ( n(1), n(2), n(3) ) = ig
+    END DO
+    !
+    END SUBROUTINE
+    !
+    SUBROUTINE fill_rho (ngm, mill, gamma_only_file, rho_g_file, &
+                 rho, ig_miss )
+      !
+      !! Fill charge density with G-vector components read from file
+      !
+      INTEGER, INTENT(in) :: ngm
+      !! number of g vectors found in file 
+      INTEGER, INTENT(in) :: mill(:,:)
+      !! Miller indices of G components read from file 
+      COMPLEX(kind=DP), INTENT(in) :: rho_g_file(:)
+      !! rho(G) read from file 
+      COMPLEX(kind=DP), INTENT(out) :: rho(:)
+      !! output rho(G) distributed according to Miller indices mill
+      LOGICAL, INTENT(in) :: gamma_only_file 
+      !! true if half G-vector sphere read from file 
+      INTEGER, INTENT(out) :: ig_miss
+      !! count missing components, if any
+      INTEGER :: ig, ig_file, ig_max, n(3), nlo(3), nup(3)
+      !! bounds
+      LOGICAL :: is_gm
+      !! is_gm=.true. : G-component is not there, look for -G instead
+      !
+      nlo = LBOUND (index_file)
+      nup = UBOUND (index_file)
+      !! BEWARE: index_file must be in a module, not passed as argument,
+      !!         or else the upper and lower bounds will be incorrect!
+      rho (:) = (0.0_dp, 0.0_dp)
+      ig_miss = 0
+      ig_max = SIZE (rho_g_file)
+      DO ig = 1, ngm
+         n(:) = mill(:,ig)
+         !! BEWARE: gamma_only must follow here the same logic as in "ggen"
+         is_gm= ( (n(1) < 0) .OR. (n(1) == 0 .AND. n(2) < 0 ) .OR. &
+                  (n(1) == 0 .AND. n(2) == 0 .AND. n(3) < 0 ) ) .AND. &
+                  gamma_only_file 
+         ig_file = 0 
+         IF ( is_gm ) THEN
+            IF ( ALL( -n >= nlo ) .AND. ALL ( -n <= nup ) ) &
+                 ig_file =-index_file(-n(1),-n(2),-n(3))
+         ELSE IF ( ALL( n >= nlo ) .AND. ALL( n <= nup ) ) THEN
+            ig_file = index_file( n(1), n(2), n(3))
+         END IF
+         IF ( ig_file > 0 .AND. ig_file <= ig_max) THEN
+            rho (ig) = rho_g_file (ig_file)
+         ELSE IF ( ig_file < 0 .AND. -ig_file <= ig_max) THEN
+            rho (ig) = CONJG(rho_g_file (-ig_file))
+         ELSE
+            ig_miss = ig_miss + 1
+         END IF
+      END DO
+      !
+    END SUBROUTINE fill_rho
+    
   END MODULE io_base
 
