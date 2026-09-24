@@ -32,7 +32,7 @@ SUBROUTINE vcsmd( conv_ions )
   USE io_global,           ONLY : stdout
   USE constants,           ONLY : e2, ry_kbar, amu_ry, au_ps
   USE cell_base,           ONLY : wmass, omega, alat, at, bg, iforceh, &
-       press, fix_volume, fix_area
+       press, fix_volume, fix_area, isotropic
   USE ions_base,           ONLY : tau, nat, ntyp => nsp, ityp, atm, if_pos
   USE ions_nose,           ONLY : ions_nosevel, ions_noseupd, ions_nose_shiftvar, ions_nose_nrg, ions_nose_energy,&
                                   vnhp, xnhp0, xnhpm, xnhpp, nhpdim, nhpcl, gkbt, gkbt2nhp, ekin2nhp, nhpbeg, nhpend,&
@@ -408,6 +408,8 @@ SUBROUTINE vcsmd( conv_ions )
   if (fix_volume) call impose_deviatoric_strain(alat*at, avec)
   !
   if (fix_area) call impose_deviatoric_strain_2d(alat*at, avec)
+  !
+  if (isotropic) call impose_isotropic_strain(alat*at, avec)
   !
   at = avec / alat
   !

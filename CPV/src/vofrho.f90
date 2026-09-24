@@ -23,7 +23,7 @@ SUBROUTINE vofrho_x( nfi, rhor, drhor, rhog, drhog, rhos, rhoc, tfirst, &
       USE ions_base,        ONLY: nsp, na, nat, rcmax, compute_eextfor
       USE cell_base,        ONLY: omega, r_to_s
       USE cell_base,        ONLY: alat, at, tpiba2, h, ainv
-      USE cell_base,        ONLY: ibrav, isotropic  !True if volume option is chosen for cell_dofree
+      USE cell_base,        ONLY: isotropic  !True if volume option is chosen for cell_dofree
       USE cp_main_variables, ONLY: iprint_stdout    !print control
       USE gvect,            ONLY: gstart, gg, g
       USE electrons_base,   ONLY: nspin
@@ -704,11 +704,13 @@ DEV_OMP_NOACC end parallel
          !
          IF(xclib_dft_is('hybrid').AND.exx_is_active()) THEN
            !
-           IF (isotropic .and. (ibrav.eq.1)) THEN
+           IF (isotropic) THEN
              !
              ! BS / RAD
-             ! This part is dE/dV; so works only for cubic cells and isotropic change
-             ! in simulation cell while doing variable cell calculation ..
+             ! This part is dE/dV; valid for an isotropic change (h -> s*h) of
+             ! the simulation cell of any shape while doing variable cell calculation,
+             ! since E_exx scales as 1/s and only Tr(stress) enters the projected
+             ! isotropic cell force (see cell_force in Modules/cell_base.f90)
              ! dE/dV = -(1/3) * (-exx * 0.25_DP) / V
              ! dexx(3,3) = dE/dh = (dE/dV) * (dV/dh) = (dE/dV) * V * (Transpose h)^-1
              !

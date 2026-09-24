@@ -31,7 +31,7 @@ SUBROUTINE move_ions( idone, ions_status, optimizer_failed )
   USE kinds,                  ONLY : DP
   USE cell_base,              ONLY : alat, at, bg, omega, cell_force, &
                                      fix_volume, fix_area, ibrav, press, &
-                                     iforceh, enforce_ibrav
+                                     iforceh, enforce_ibrav, isotropic
   USE cellmd,                 ONLY : omega_old, at_old, lmovecell, calc
   USE ions_base,              ONLY : nat, ityp, zv, tau, if_pos
   USE symm_base,              ONLY : checkallsym
@@ -159,6 +159,7 @@ SUBROUTINE move_ions( idone, ions_status, optimizer_failed )
            ! changes needed only if cell moves
            IF (fix_volume) CALL impose_deviatoric_strain( alat*at, h )
            IF (fix_area)   CALL impose_deviatoric_strain_2d( alat*at, h )
+           IF (isotropic)  CALL impose_isotropic_strain( alat*at, h )
            at = h / alat
            IF(enforce_ibrav) CALL remake_cell( ibrav, alat, at(1,1),at(1,2),at(1,3), new_alat )
            CALL recips( at(1,1),at(1,2),at(1,3), bg(1,1),bg(1,2),bg(1,3) )

@@ -1924,8 +1924,9 @@ input_description -distribution {Quantum ESPRESSO} -package CP -program cp.x {
                shape   = all axis and angles, keeping the volume fixed
                2Dxy    = only x and y components are allowed to change
                2Dshape = as above, keeping the area in xy plane fixed
-               volume  = isotropic variations of v1_x, v2_y, v3_z, keeping
-                         the shape fixed. Should be used only with ibrav=1. 
+               volume  = isotropic expansion/contraction: all cell vectors
+                         are scaled by the same factor, keeping the shape
+                         of the cell fixed. Works for any ibrav.
 	    }
 	}
     }

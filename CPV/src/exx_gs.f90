@@ -515,7 +515,7 @@ SUBROUTINE exx_gs(nfi, c)
             paire(j) = paire(j) * 0.5_DP* hcub             ! volume element hcub and trapezoidal rule prefactor 0.5_DP are included
             totalenergy = totalenergy + 2.0_DP*paire(j)    ! the factor of two comes from the identity of ij and ji pair
             !
-            IF (.NOT. (isotropic .AND. (ibrav.EQ.1) )) THEN
+            IF (.NOT. isotropic) THEN
               CALL start_clock('exx_cell_derv')
               !
               ! EXX cell derivative (note: exxalfa is included in vofrho.f90 when calculate stress)
@@ -690,7 +690,7 @@ SUBROUTINE exx_gs(nfi, c)
           !  vpsil(:,iobtl) = 0.0_DP
           !END IF
           !
-          IF (.NOT. (isotropic .AND. (ibrav.EQ.1))) THEN
+          IF (.NOT. isotropic) THEN
             !
             !  EXX cell derivative (note: need to include exxalfa later)
             CALL start_clock('exx_cell_derv')
@@ -827,7 +827,7 @@ SUBROUTINE exx_gs(nfi, c)
     !
     total_exx_derv_g(:,:) = 0.0_DP ! mpi reduction variable initialization
     !
-    IF (.NOT. (isotropic .AND. (ibrav.EQ.1))) THEN
+    IF (.NOT. isotropic) THEN
 #if defined(__MPI)
       ! collect the total_exx_derv of each mpi task to total_exx_derv_g
       CALL MPI_ALLREDUCE(total_exx_derv(:,:), total_exx_derv_g(:,:), 9, &
