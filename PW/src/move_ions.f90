@@ -145,7 +145,7 @@ SUBROUTINE move_ions( idone, ions_status, optimizer_failed )
                       felec, epse, epsf, epsp1, fcp_eps, energy_error, &
                       gradient_error, cell_error, fcp_error, lmovecell, lfcp, &
                       capacitance, helec, step_accepted, conv_ions, &
-                      optimizer_failed, istep )
+                      optimizer_failed, istep, isotropic )
            !
         ELSE
            !
