@@ -2159,7 +2159,7 @@ SUBROUTINE exx_iosys ( ecutwfc, ecutrho )
                             set_screening_parameter
   USE exx_base,      ONLY : x_gamma_extrapolation_ => x_gamma_extrapolation, &
                             nq1, nq2, nq3, exx_bgrp_type, EXX_BGRP_BANDS, EXX_BGRP_PAIRS, &
-                            batchsize, EXX_BGRP_INBTC, EXX_BGRP_EXBTC, &
+                            batchsize, EXX_BGRP_EXBTC, &
                             exxdiv_treatment_ => exxdiv_treatment, &
                             yukawa_           => yukawa, &
                             ecutvcut_         => ecutvcut
@@ -2224,17 +2224,9 @@ SUBROUTINE exx_iosys ( ecutwfc, ecutrho )
   select case(trim(adjustl(exx_type)))
   case("bands")
     exx_bgrp_type = EXX_BGRP_BANDS
-!#if defined(__CUDA)
-!    Call errore('input', 'exx_type = bands on GPU not present in this version (use exx_type = band_pairs)',1)
-!#endif
   case("bands_outer")
-    !if(gamma_only) CALL errore('input','exx_type = bands_outer at gamma not yet implemented',1)
     exx_bgrp_type = EXX_BGRP_EXBTC
     write(stdout, '(/,5x,"Exact exchange outer batching size: ",I4/)' ) batchsize 
-  case("bands_inner")
-    if(gamma_only) CALL errore('input','exx_type = bands_inner at gamma not yet implemented',1)
-    exx_bgrp_type = EXX_BGRP_INBTC
-    write(stdout, '(/,5x,"Exact exchange inner batching size: ",I4/)' ) batchsize 
   case("band_pairs")
     exx_bgrp_type = EXX_BGRP_PAIRS
   case default

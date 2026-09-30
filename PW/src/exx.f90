@@ -21,7 +21,7 @@ MODULE exx
   USE io_global,            ONLY : stdout
   !
   USE control_flags,        ONLY : gamma_only, tqr, use_gpu, many_fft
-  USE exx_base,             ONLY : exx_bgrp_type, EXX_BGRP_PAIRS, EXX_BGRP_BANDS, EXX_BGRP_INBTC, EXX_BGRP_EXBTC, &
+  USE exx_base,             ONLY : exx_bgrp_type, EXX_BGRP_PAIRS, EXX_BGRP_BANDS, EXX_BGRP_EXBTC, &
                                    dfftt, exxbuff , exxbuff_d, npwt, x_nbnd_occ, &
                                    ibnd_start, ibnd_end, gt, ggt, gcutmt, gkcut, gstart_t, ngmt_g, &
                                    eps_occ, exxalfa, exxbeta, x_occupation, x_occupation_d, &
@@ -377,9 +377,7 @@ MODULE exx
     if( exx_bgrp_type .eq. EXX_BGRP_PAIRS ) then
       ! prepare buffers for massive EXX scheme (pair parallelism, DFT data transposition)
       Call exxinit_bp()
-    elseif( .not. gamma_only .or. (exx_bgrp_type .ne. EXX_BGRP_EXBTC) ) then
-    !else
-print *, '@calling exxinit_std '      
+    else
       ! prepare buffers for standard EXX scheme
       Call exxinit_std( DoLoc )
     end if
@@ -408,8 +406,8 @@ print *, '@calling exxinit_std '
     USE uspp,           ONLY : okvan
     USE paw_variables,  ONLY : okpaw
     USE wvfct,          ONLY : nbnd
-    USE exx_std,        ONLY : vexx_std_gamma_one, vexx_std_gamma_outer, vexx_std_gamma_outer_exxbuff, &
-                               vexx_std_k_inner, vexx_std_k_outer, vexx_std_k_one
+    USE exx_std,        ONLY : vexx_std_gamma_one, vexx_std_gamma_outer, &
+                               vexx_std_k_one,     vexx_std_k_outer
     USE exx_bp,         ONLY : vexx_bp
     !
     IMPLICIT NONE
@@ -444,9 +442,6 @@ print *, '@calling exxinit_std '
        else
           Call vexx_std_k_outer(lda, n, m, psi, hpsi, becpsi )
        end if 
-    elseif(exx_bgrp_type .eq. EXX_BGRP_INBTC) then
-       if(gamma_only) Call errore('vexx', 'gama_only with bands_inner NYI', 2)
-       Call vexx_std_k_inner(lda, n, m, psi, hpsi, becpsi )
     elseif(exx_bgrp_type .eq. EXX_BGRP_PAIRS) then
        Call vexx_bp(lda, n, m, psi, hpsi, becpsi )
     else
@@ -598,9 +593,6 @@ print *, '@calling exxinit_std '
     REAL(DP)   :: exx_stress(3,3)
     !
     CALL start_clock( 'exx_stress' )
-    !
-!civn: temporary fix as exxbuff is not allocated in EXX_BGRP_EXBTC gamma only path
-    if (gamma_only .and. (exx_bgrp_type .eq. EXX_BGRP_EXBTC) ) return
     !
     IF ( exx_bgrp_type .eq. EXX_BGRP_PAIRS ) THEN 
        exx_stress = exx_stress_bp() 
