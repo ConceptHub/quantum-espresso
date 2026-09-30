@@ -569,10 +569,12 @@ print *, '@vexx_std_gamma_one'
              !
              !   >>>> add augmentation in REAL SPACE here
              IF(okvan .and. tqr) THEN
+                !$acc update host(rhoc)
                 IF(ibnd>=ibnd_start) &
                 CALL addusxx_r(rhoc,_CX(becxx(ikq)%r(:,ibnd)), _CX(becpsi%r(:,im)))
                 IF(ibnd<ibnd_end) &
                 CALL addusxx_r(rhoc,_CY(becxx(ikq)%r(:,ibnd+1)),_CX(becpsi%r(:,im)))
+                !$acc update device(rhoc)
              ENDIF
              !
              !$acc host_data use_device(rhoc)
@@ -580,6 +582,7 @@ print *, '@vexx_std_gamma_one'
              !$acc end host_data
              !   >>>> add augmentation in G SPACE here
              IF(okvan .and. .not. tqr) THEN
+                !$acc update host(rhoc)
                 ! contribution from one band added to real (in real space) part of rhoc
                 IF(ibnd>=ibnd_start) &
                    CALL addusxx_g(dfftt, rhoc, xkq,  xkp, 'r', &
@@ -588,6 +591,7 @@ print *, '@vexx_std_gamma_one'
                 IF(ibnd<ibnd_end) &
                    CALL addusxx_g(dfftt, rhoc, xkq,  xkp, 'i', &
                    becphi_r=becxx(ikq)%r(:,ibnd+1), becpsi_r=becpsi%r(:,im) )
+                !$acc update device(rhoc)
              ENDIF
              !   >>>> charge density done
              !
@@ -614,12 +618,14 @@ print *, '@vexx_std_gamma_one'
              !
              !   >>>>  compute <psi|H_fock G SPACE here
              IF(okvan .and. .not. tqr) THEN
+                !$acc update host(vc)
                 IF(ibnd>=ibnd_start) &
                 CALL newdxx_g(dfftt, vc, xkq, xkp, 'r', deexx, &
                               becphi_r=x1*becxx(ikq)%r(:,ibnd))
                 IF(ibnd<ibnd_end) &
                 CALL newdxx_g(dfftt, vc, xkq, xkp, 'i', deexx, &
                               becphi_r=x2*becxx(ikq)%r(:,ibnd+1))
+                !$acc update device(vc)
              ENDIF
              !
              !brings back v in real space
@@ -629,10 +635,12 @@ print *, '@vexx_std_gamma_one'
              !
              !   >>>>  compute <psi|H_fock REAL SPACE here
              IF(okvan .and. tqr) THEN
+                !$acc update host(vc)
                 IF(ibnd>=ibnd_start) &
                 CALL newdxx_r(dfftt, vc, _CX(x1*becxx(ikq)%r(:,ibnd)), deexx)
                 IF(ibnd<ibnd_end) &
                 CALL newdxx_r(dfftt, vc, _CY(x2*becxx(ikq)%r(:,ibnd+1)), deexx)
+                !$acc update device(vc)
              ENDIF
              !
              IF(okpaw) THEN
@@ -693,8 +701,12 @@ print *, '@vexx_std_gamma_one'
           !$omp end parallel do
 #endif
           ! add non-local \sum_I |beta_I> \alpha_Ii (the sum on i is outside)
-          IF(okvan) CALL add_nlxx_pot (lda, hpsi(:,im), xkp, n, &
+          IF(okvan) THEN
+            !$acc update host(hpsi)
+            CALL add_nlxx_pot (lda, hpsi(:,im), xkp, n, &
                            igk_k(1,current_k), deexx, eps_occ, exxalfa)
+            !$acc update device(hpsi)
+          END IF
        ENDDO &
        LOOP_ON_PSI_BANDS
        IF ( okvan .and..not.tqr ) CALL qvan_clean ()
@@ -748,7 +760,7 @@ print *, '@vexx_std_gamma_one'
     ! local variables
     COMPLEX(DP),ALLOCATABLE :: RESULT(:), temppsic(:)
     !
-    COMPLEX(DP),ALLOCATABLE :: rhoc(:), vc(:), deexx(:)
+    COMPLEX(DP),ALLOCATABLE :: rhoc(:), vc(:), deexx(:,:)
     REAL(DP),   ALLOCATABLE :: fac(:)
     INTEGER          :: ibnd, im , ipol
     INTEGER          :: ir, ig, idx, idxm
@@ -779,7 +791,7 @@ print *, '@@vexx_std_gamma_outer'
     ALLOCATE( temppsic( batchsize/2 * nrxxs) ) ! Gamma trick here
     ALLOCATE( rhoc(batchsize*nrxxs), RESULT(batchsize*nrxxs), vc(batchsize*nrxxs) )
     !
-    IF(okvan) ALLOCATE(deexx(nkb))
+    IF(okvan) ALLOCATE(deexx(nkb, batchsize))
     !
     current_ik = global_kpoint_index ( nkstot, current_k )
     !
@@ -852,6 +864,8 @@ print *, '@@vexx_std_gamma_outer'
        ! now in temppsic there are batchsize wavefunctons, 
        ! half in the real part, half in the imaginary part.
        !
+       IF(okvan) deexx = 0.0_DP
+       !
        !$acc kernels
        RESULT = 0.0_DP
        !$acc end kernels
@@ -896,27 +910,36 @@ print *, '@@vexx_std_gamma_outer'
           ! bring rho to G-space
           !
           !   >>>> add augmentation in REAL SPACE here
-          !IF(okvan .and. tqr) THEN
-          !   IF(ibnd>=ibnd_start) &
-          !   CALL addusxx_r(rhoc,_CX(becxx(current_ik)%r(:,ibnd)), _CX(becpsi%r(:,im)))
-          !   IF(ibnd<ibnd_end) &
-          !   CALL addusxx_r(rhoc,_CY(becxx(current_ik)%r(:,ibnd+1)),_CX(becpsi%r(:,im)))
-          !ENDIF
+          IF(okvan .and. tqr) THEN
+             !$acc update host(rhoc)
+             do ib = 1, nb
+               IF(ibnd>=ibnd_start) &
+               CALL addusxx_r(rhoc((ib-1)*nrxxs+1:ib*nrxxs),_CX(becxx(current_ik)%r(:,ibnd)), _CX(becpsi%r(:,i_global+ib)))
+               IF(ibnd<ibnd_end) &
+               CALL addusxx_r(rhoc((ib-1)*nrxxs+1:ib*nrxxs),_CY(becxx(current_ik)%r(:,ibnd+1)),_CX(becpsi%r(:,i_global+ib)))
+             end do
+             !$acc update device(rhoc)
+          ENDIF
           !
           !$acc host_data use_device(rhoc)
           CALL fwfft ('Rho', rhoc, dfftt, howmany=batchsize)
           !$acc end host_data
+          !
           !   >>>> add augmentation in G SPACE here
-          !IF(okvan .and. .not. tqr) THEN
-          !   ! contribution from one band added to real (in real space) part of rhoc
-          !   IF(ibnd>=ibnd_start) &
-          !      CALL addusxx_g(dfftt, rhoc, xkg,  xkg, 'r', &
-          !      becphi_r=becxx(current_ik)%r(:,ibnd), becpsi_r=becpsi%r(:,im) )
-          !   ! contribution from following band added to imaginary (in real space) part of rhoc
-          !   IF(ibnd<ibnd_end) &
-          !      CALL addusxx_g(dfftt, rhoc, xkg,  xkg, 'i', &
-          !      becphi_r=becxx(current_ik)%r(:,ibnd+1), becpsi_r=becpsi%r(:,im) )
-          !ENDIF
+          IF(okvan .and. .not. tqr) THEN
+             !$acc update host(rhoc)
+             ! contribution from one band added to real (in real space) part of rhoc
+             do ib = 1, nb
+               IF(ibnd>=ibnd_start) &
+                  CALL addusxx_g(dfftt, rhoc((ib-1)*nrxxs+1), xkg,  xkg, 'r', &
+                  becphi_r=becxx(current_ik)%r(:,ibnd), becpsi_r=becpsi%r(:,i_global+ib) )
+               ! contribution from following band added to imaginary (in real space) part of rhoc
+               IF(ibnd<ibnd_end) &
+                  CALL addusxx_g(dfftt, rhoc((ib-1)*nrxxs+1), xkg,  xkg, 'i', &
+                  becphi_r=becxx(current_ik)%r(:,ibnd+1), becpsi_r=becpsi%r(:,i_global+ib) )
+             end do 
+             !$acc update device(rhoc)
+          ENDIF
           !   >>>> charge density done
           !
           !$acc kernels
@@ -934,14 +957,17 @@ print *, '@@vexx_std_gamma_outer'
           end do  
           !
           !   >>>>  compute <psi|H_fock G SPACE here
-          !IF(okvan .and. .not. tqr) THEN
-          !   IF(ibnd>=ibnd_start) &
-          !   CALL newdxx_g(dfftt, vc, xkg, xkg, 'r', deexx, &
-          !                 becphi_r=x1*becxx(current_ik)%r(:,ibnd))
-          !   IF(ibnd<ibnd_end) &
-          !   CALL newdxx_g(dfftt, vc, xkg, xkg, 'i', deexx, &
-          !                 becphi_r=x2*becxx(current_ik)%r(:,ibnd+1))
-          !ENDIF
+          IF(okvan .and. .not. tqr) THEN
+             !$acc update host(vc)
+             do ib = 1, nb
+               IF(ibnd>=ibnd_start) &
+               CALL newdxx_g(dfftt, vc((ib-1)*nrxxs+1), xkg, xkg, 'r', deexx(:,ib), &
+                             becphi_r=x1*becxx(current_ik)%r(:,ibnd))
+               IF(ibnd<ibnd_end) &
+               CALL newdxx_g(dfftt, vc((ib-1)*nrxxs+1), xkg, xkg, 'i', deexx(:,ib), &
+                             becphi_r=x2*becxx(current_ik)%r(:,ibnd+1))
+             end do
+          ENDIF
           !
           !brings back v in real space
           !$acc host_data use_device(vc)
@@ -949,21 +975,26 @@ print *, '@@vexx_std_gamma_outer'
           !$acc end host_data
           !
           !   >>>>  compute <psi|H_fock REAL SPACE here
-          !IF(okvan .and. tqr) THEN
-          !   IF(ibnd>=ibnd_start) &
-          !   CALL newdxx_r(dfftt, vc, _CX(x1*becxx(current_ik)%r(:,ibnd)), deexx)
-          !   IF(ibnd<ibnd_end) &
-          !   CALL newdxx_r(dfftt, vc, _CY(x2*becxx(current_ik)%r(:,ibnd+1)), deexx)
-          !ENDIF
-          !!
-          !IF(okpaw) THEN
-          !   IF(ibnd>=ibnd_start) &
-          !   CALL PAW_newdxx(x1/nqs, _CX(becxx(current_ik)%r(:,ibnd)),&
-          !                           _CX(becpsi%r(:,im)), deexx)
-          !   IF(ibnd<ibnd_end) &
-          !   CALL PAW_newdxx(x2/nqs, _CX(becxx(current_ik)%r(:,ibnd+1)), &
-          !                           _CX(becpsi%r(:,im)), deexx)
-          !ENDIF
+          IF(okvan .and. tqr) THEN
+             !$acc update host(vc)
+             do ib = 1, nb 
+               IF(ibnd>=ibnd_start) &
+               CALL newdxx_r(dfftt, vc((ib-1)*nrxxs+1:ib*nrxxs), _CX(x1*becxx(current_ik)%r(:,ibnd)), deexx(:,ib))
+               IF(ibnd<ibnd_end) &
+               CALL newdxx_r(dfftt, vc((ib-1)*nrxxs+1:ib*nrxxs), _CY(x2*becxx(current_ik)%r(:,ibnd+1)), deexx(:,ib))
+             end do 
+          ENDIF
+          !
+          IF(okpaw) THEN
+             do ib = 1, nb
+               IF(ibnd>=ibnd_start) &
+               CALL PAW_newdxx(x1/nqs, _CX(becxx(current_ik)%r(:,ibnd)),&
+                                       _CX(becpsi%r(:,i_global+ib)), deexx(:,ib))
+               IF(ibnd<ibnd_end) &
+               CALL PAW_newdxx(x2/nqs, _CX(becxx(current_ik)%r(:,ibnd+1)), &
+                                       _CX(becpsi%r(:,i_global+ib)), deexx(:,ib))
+             end do 
+          ENDIF
           !
           ! accumulates over bands and k points
           !
@@ -1003,11 +1034,18 @@ print *, '@@vexx_std_gamma_outer'
        end do 
        !
        ! add non-local \sum_I |beta_I> \alpha_Ii (the sum on i is outside)
-       !IF(okvan) CALL add_nlxx_pot (lda, hpsi(:,im), xkg, n, &
-       !                 igk_k(1,current_k), deexx, eps_occ, exxalfa)
+       IF(okvan) THEN
+         !$acc update host(hpsi(:,i_global+1:i_global+nb))
+         do ib = 1, nb
+           CALL add_nlxx_pot (lda, hpsi(:,i_global+ib), xkg, n, &
+                        igk_k(1,current_k), deexx(:,ib), eps_occ, exxalfa)
+         end do 
+         !$acc update device(hpsi(:,i_global+1:i_global+nb))
+       END IF
     ENDDO &
     LOOP_ON_I_BLOCKS
-    !IF ( okvan .and..not.tqr ) CALL qvan_clean ()
+    !
+    IF ( okvan .and..not.tqr ) CALL qvan_clean ()
     !
     !$acc end data
     !
@@ -1059,7 +1097,7 @@ print *, '@@vexx_std_gamma_outer'
     COMPLEX(DP),ALLOCATABLE :: temppsic_nc(:,:),result_nc(:,:)
     COMPLEX(DP),ALLOCATABLE :: result_nc_g(:,:)
     !
-    COMPLEX(DP),ALLOCATABLE :: deexx(:)
+    COMPLEX(DP),ALLOCATABLE :: deexx(:,:)
     INTEGER, ALLOCATABLE :: nl(:), nl_k(:)
     REAL(DP),   ALLOCATABLE :: fac(:)
     INTEGER          :: ibnd, ik, ikq, iq, ipol
@@ -1130,7 +1168,7 @@ print *, '@@vexx_std_gamma_outer'
     ALLOCATE( vc(npol*nrxxs*batchsize) )
     ALLOCATE( rhoc(npol*nrxxs*batchsize) )
     !
-    IF(okvan) ALLOCATE(deexx(nkb))
+    IF(okvan) ALLOCATE(deexx(nkb, batchsize))
     !
     current_ik = global_kpoint_index ( nkstot, current_k )
     xkp = xk(:,current_k)
@@ -1185,6 +1223,8 @@ print *, '@@vexx_std_gamma_outer'
          end do 
        end do 
        !
+       IF(okvan) deexx = 0._DP
+       !
        !$acc parallel loop collapse(3) private(idx)
        do ipol = 1, npol
          do ib = 1, nb
@@ -1217,7 +1257,7 @@ print *, '@@vexx_std_gamma_outer'
              !$acc update device(fac)
              Call stop_clock('vexx-@1')
              !
-             !IF ( okvan .and..not.tqr ) CALL qvan_init (ngmt, xkq, xkp)
+             IF ( okvan .and..not.tqr ) CALL qvan_init (ngmt, xkq, xkp)
              !
              IBND_LOOP_K : &
              DO ibnd=ibnd_start,ibnd_end !for each band of psi
@@ -1248,11 +1288,16 @@ print *, '@@vexx_std_gamma_outer'
 #endif
                 Call stop_clock('vexx-@2')
                 !   >>>> add augmentation in REAL space HERE
-                !!IF(okvan .and. tqr) THEN ! augment the "charge" in real space
-                !!   !$acc update host(rhoc)
-                !!   CALL addusxx_r( rhoc, becxx(ikq)%k(:,ibnd), becpsi%k(:,im))
-                !!   !$acc update device(rhoc)
-                !!ENDIF
+                IF(okvan .and. tqr) THEN ! augment the "charge" in real space
+                   !$acc update host(rhoc)
+                   DO ipol = 1, npol
+                     do ib = 1,nb
+                       idx = (ipol-1) * batchsize * nrxxs + (ib-1) * nrxxs + 1 
+                       CALL addusxx_r( rhoc(idx:idx+nrxxs-1), becxx(ikq)%k(:,ibnd), becpsi%k(:,im_start+ib))
+                     end do 
+                   end do 
+                   !$acc update device(rhoc)
+                ENDIF
                 !
                 !   >>>> brings it to G-space
                 Call start_clock('vexx-@3')
@@ -1263,12 +1308,17 @@ print *, '@@vexx_std_gamma_outer'
                 Call stop_clock('vexx-@3')
                 !
                 !   >>>> add augmentation in G space HERE
-                !!IF(okvan .and. .not. tqr) THEN
-                !!   !$acc update host(rhoc)
-                !!   CALL addusxx_g(dfftt, rhoc, xkq, xkp, 'c', &
-                !!      becphi_c=becxx(ikq)%k(:,ibnd),becpsi_c=becpsi%k(:,im))
-                !!   !$acc update device(rhoc)
-                !!ENDIF
+                IF(okvan .and. .not. tqr) THEN
+                   !$acc update host(rhoc)
+                   DO ipol = 1, npol
+                     do ib = 1,nb
+                       idx = (ipol-1) * batchsize * nrxxs + (ib-1) * nrxxs + 1
+                       CALL addusxx_g(dfftt, rhoc(idx), xkq, xkp, 'c', &
+                          becphi_c=becxx(ikq)%k(:,ibnd),becpsi_c=becpsi%k(:,im_start+ib))
+                     end do 
+                   end do 
+                   !$acc update device(rhoc)
+                ENDIF
                 !   >>>> charge done
                 !
                 ! inizializations on the whole allocation dimension (batchsize)
@@ -1303,12 +1353,16 @@ print *, '@@vexx_std_gamma_outer'
                 !
                 ! Add ultrasoft contribution (RECIPROCAL SPACE)
                 ! compute alpha_I,j,k+q = \sum_J \int <beta_J|phi_j,k+q> V_i,j,k,q Q_I,J(r) d3r
-                !!IF(okvan .and. .not. tqr) THEN
-                !!   !$acc update host(vc)
-                !!   CALL newdxx_g(dfftt, vc, xkq, xkp, 'c', deexx, &
-                !!                 becphi_c=becxx(ikq)%k(:,ibnd))
-                !!   !$acc update device(vc)
-                !!ENDIF
+                IF(okvan .and. .not. tqr) THEN
+                   !$acc update host(vc)
+                   do ipol = 1, npol
+                     do ib = 1, nb
+                       idx = (ipol-1) * batchsize * nrxxs + (ib-1)*nrxxs + 1
+                       CALL newdxx_g(dfftt, vc(idx), xkq, xkp, 'c', deexx(:,ib), &
+                                   becphi_c=becxx(ikq)%k(:,ibnd))
+                     end do 
+                   end do 
+                ENDIF
                 !
                 !brings back v in real space
                 Call start_clock('vexx-@5')
@@ -1318,17 +1372,23 @@ print *, '@@vexx_std_gamma_outer'
                 !$acc end host_data
                 Call stop_clock('vexx-@5')
                 !
-                !!! Add ultrasoft contribution (REAL SPACE)
-                !!IF(okvan .and. tqr) THEN
-                !!  !$acc update host(vc)
-                !!  CALL newdxx_r(dfftt,vc, becxx(ikq)%k(:,ibnd), deexx)
-                !!  !$acc update device(vc)
-                !!END IF
-                !!!
-                !!! Add PAW one-center contribution
-                !!IF(okpaw) THEN
-                !!   CALL PAW_newdxx(x_occ , becxx(ikq)%k(:,ibnd), becpsi%k(:,im), deexx)
-                !!ENDIF
+                ! Add ultrasoft contribution (REAL SPACE)
+                IF(okvan .and. tqr) THEN
+                  !$acc update host(vc)
+                  do ipol = 1, npol
+                    do ib = 1, nb
+                      idx = (ipol-1) * batchsize * nrxxs + (ib-1)*nrxxs + 1
+                      CALL newdxx_r(dfftt,vc(idx:idx+nrxxs-1), becxx(ikq)%k(:,ibnd), deexx(:,ib))
+                    end do 
+                  end do 
+                END IF
+                !
+                ! Add PAW one-center contribution
+                IF(okpaw) THEN
+                   do ib = 1, nb
+                     CALL PAW_newdxx(x_occ , becxx(ikq)%k(:,ibnd), becpsi%k(:,im_start+ib), deexx(:,ib))
+                   end do 
+                ENDIF
                 !
                 !accumulates over bands and k points
                 !
@@ -1353,15 +1413,15 @@ print *, '@@vexx_std_gamma_outer'
                 !
              ENDDO &
              IBND_LOOP_K
-             !IF ( okvan .and..not.tqr ) CALL qvan_clean ()
+             IF ( okvan .and..not.tqr ) CALL qvan_clean ()
              !
           ENDDO &
           INTERNAL_LOOP_ON_Q
           !
-          !!IF(okvan) THEN
-          !!  CALL mp_sum(deexx,intra_bgrp_comm)
-          !!  CALL mp_sum(deexx,inter_bgrp_comm)
-          !!ENDIF
+          IF(okvan) THEN
+            CALL mp_sum(deexx,intra_bgrp_comm)
+            CALL mp_sum(deexx,inter_bgrp_comm)
+          ENDIF
           Call stop_clock('vexx_k_main')
           !
           CALL start_clock( 'vexx_k_fin' )
@@ -1391,7 +1451,19 @@ print *, '@@vexx_std_gamma_outer'
 #if !defined(__CUDA) 
           !$omp end parallel do
 #endif
+          !
+          ! add non-local \sum_I |beta_I> \alpha_Ii (the sum on i is outside)
+          IF(okvan) THEN
+            !$acc update host(hpsi)
+            do ib = 1, nb
+              CALL add_nlxx_pot(lda, hpsi(:,im_start+ib), xkp, n, igk_k(:,current_k),&
+                                            deexx(:,ib), eps_occ, exxalfa)
+            end do 
+            !$acc update device(hpsi)
+          END IF
+          !
           CALL stop_clock( 'vexx_k_fin' )
+          !
     END DO &
     EXTERNAL_LOOP_ON_BATCHES
     !
@@ -1667,7 +1739,6 @@ print *, '@vexx_std_k_one'
              IF(okvan .and. tqr) THEN
                !$acc update host(vc)
                CALL newdxx_r(dfftt,vc, becxx(ikq)%k(:,ibnd), deexx)
-               !$acc update device(vc)
              END IF
              !
              ! Add PAW one-center contribution
@@ -1784,8 +1855,12 @@ print *, '@vexx_std_k_one'
        ENDIF
        !
        ! add non-local \sum_I |beta_I> \alpha_Ii (the sum on i is outside)
-       IF(okvan) CALL add_nlxx_pot(lda, hpsi(:,im), xkp, n, igk_k(:,current_k),&
+       IF(okvan) THEN
+         !$acc update host(hpsi)
+         CALL add_nlxx_pot(lda, hpsi(:,im), xkp, n, igk_k(:,current_k),&
                                        deexx, eps_occ, exxalfa)
+         !$acc update device(hpsi)
+       END IF
        !
     ENDDO &
     LOOP_ON_PSI_BANDS
