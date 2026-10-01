@@ -455,6 +455,8 @@ SUBROUTINE control_iosys()
   LOGICAL  :: domag, sm_wasnt_set
   REAL(DP) :: theta, phi, V
   !
+  INTEGER :: igcx
+  !
   ! MAIN CONTROL VARIABLES, MD AND RELAX
   !
   title_      = title
@@ -2138,12 +2140,14 @@ SUBROUTINE exx_iosys ( ecutwfc, ecutrho )
                               exxdiv_treatment, yukawa, ecutvcut,          &
                               gau_parameter, localization_thr, scdm, ace,  &
                               scdmden, scdmgrd, nscdm, n_proj,             & 
-                              exx_fraction, exx_type, screening_parameter, ecutfock 
+                              exx_fraction, exx_lr_fraction, exx_type,     &
+                              screening_parameter, ecutfock
   USE io_global,     ONLY : stdout
   USE klist,         ONLY : tot_charge
   USE ions_base,     ONLY : nat, ityp, zv
   USE xc_lib,        ONLY:  xclib_dft_is
-  USE xc_lib,        ONLY : xclib_set_exx_fraction, set_screening_parameter
+  USE xc_lib,        ONLY : xclib_set_exx_fraction, xclib_set_exx_lr_fraction, &
+                            set_screening_parameter
   USE exx_base,      ONLY : x_gamma_extrapolation_ => x_gamma_extrapolation, &
                             nq1, nq2, nq3, exx_bgrp_type, EXX_BGRP_BANDS, EXX_BGRP_PAIRS, &
                             exxdiv_treatment_ => exxdiv_treatment, &
@@ -2195,6 +2199,8 @@ SUBROUTINE exx_iosys ( ecutwfc, ecutrho )
   END IF
   !
   IF (exx_fraction >= 0.0_DP) CALL xclib_set_exx_fraction (exx_fraction)
+  !
+  IF (exx_lr_fraction > -1.0E5_DP) CALL xclib_set_exx_lr_fraction (exx_lr_fraction)
   !
   IF (screening_parameter >= 0.0_DP) &
         & CALL set_screening_parameter(screening_parameter)

@@ -633,6 +633,7 @@ MODULE qes_reset_module
     obj%qpoint_grid_ispresent = .FALSE.
     obj%ecutfock_ispresent = .FALSE.
     obj%exx_fraction_ispresent = .FALSE.
+    obj%exx_lr_fraction_ispresent = .FALSE.
     obj%screening_parameter_ispresent = .FALSE.
     obj%exxdiv_treatment_ispresent = .FALSE.
     obj%x_gamma_extrapolation_ispresent = .FALSE.

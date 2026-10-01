@@ -416,15 +416,16 @@ CONTAINS
     END SUBROUTINE qexsd_init_dft 
 
     !------------------------------------------------------------------------
-    SUBROUTINE qexsd_init_hybrid ( obj, dft_is_hybrid, nq1, nq2, nq3, ecutfock, exx_fraction, screening_parameter,&
-                                   exxdiv_treatment, x_gamma_extrapolation, ecutvcut, local_thr, use_ace, nbndproj ) 
+    SUBROUTINE qexsd_init_hybrid ( obj, dft_is_hybrid, nq1, nq2, nq3, ecutfock, exx_fraction, exx_lr_fraction,&
+                                 screening_parameter, exxdiv_treatment, x_gamma_extrapolation, ecutvcut, local_thr, &
+                                 use_ace, nbndproj )
          IMPLICIT NONE 
          TYPE (hybrid_type),INTENT(INOUT)        :: obj 
          LOGICAL,INTENT(IN)                      :: dft_is_hybrid 
          INTEGER,OPTIONAL, INTENT(IN)            :: nq1, nq2, nq3 
          LOGICAL,OPTIONAL,INTENT(IN)             :: use_ace 
          INTEGER,OPTIONAL, INTENT(IN)            :: nbndproj 
-         REAL(DP),OPTIONAL,INTENT(IN)            :: ecutfock, exx_fraction, screening_parameter, ecutvcut,&
+         REAL(DP),OPTIONAL,INTENT(IN)            :: ecutfock, exx_fraction, exx_lr_fraction, screening_parameter, ecutvcut,&
                                                     local_thr
          CHARACTER(LEN=*), INTENT(IN)            :: exxdiv_treatment 
          LOGICAL,OPTIONAL,INTENT(IN)             :: x_gamma_extrapolation 
@@ -440,8 +441,10 @@ CONTAINS
          END IF 
          !
          CALL qes_init ( obj, "hybrid", qpoint_grid_opt, ecutfock, exx_fraction, &
-                        screening_parameter, exxdiv_treatment, x_gamma_extrapolation, ecutvcut,&
-                        local_thr, use_ace, nbndproj )
+                        EXX_LR_FRACTION = exx_lr_fraction, &
+                        SCREENING_PARAMETER = screening_parameter, EXXDIV_TREATMENT = exxdiv_treatment, &
+                        X_GAMMA_EXTRAPOLATION = x_gamma_extrapolation, ECUTVCUT = ecutvcut, &
+                        LOCALIZATION_THRESHOLD = local_thr, USE_ACE = use_ace, NBNDPROJ = nbndproj )
          !
          IF (ASSOCIATED (qpoint_grid_opt)) CALL qes_reset (qpoint_grid_opt)
          !

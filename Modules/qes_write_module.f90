@@ -780,6 +780,11 @@ MODULE qes_write_module
            CALL xml_addCharacters(xp, obj%exx_fraction, fmt='s16')
         CALL xml_EndElement(xp, "exx_fraction")
      END IF
+     IF (obj%exx_lr_fraction_ispresent) THEN
+        CALL xml_NewElement(xp, "exx_lr_fraction")
+           CALL xml_addCharacters(xp, obj%exx_lr_fraction, fmt='s16')
+        CALL xml_EndElement(xp, "exx_lr_fraction")
+     END IF
      IF (obj%screening_parameter_ispresent) THEN
         CALL xml_NewElement(xp, "screening_parameter")
            CALL xml_addCharacters(xp, obj%screening_parameter, fmt='s16')

@@ -770,6 +770,9 @@ MODULE qes_bcast_module
     CALL mp_bcast(obj%exx_fraction_ispresent, ionode_id, comm)
     IF (obj%exx_fraction_ispresent) &
       CALL mp_bcast(obj%exx_fraction, ionode_id, comm)
+    CALL mp_bcast(obj%exx_lr_fraction_ispresent, ionode_id, comm)
+    IF (obj%exx_lr_fraction_ispresent) &
+      CALL mp_bcast(obj%exx_lr_fraction, ionode_id, comm)
     CALL mp_bcast(obj%screening_parameter_ispresent, ionode_id, comm)
     IF (obj%screening_parameter_ispresent) &
       CALL mp_bcast(obj%screening_parameter, ionode_id, comm)
