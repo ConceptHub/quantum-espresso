@@ -65,8 +65,6 @@ module wannier
    real(DP), allocatable :: alpha_w(:)  ! alpha_w(n_wannier) ( called zona in wannier spec)
    !
    real(DP), allocatable :: csph(:,:)    ! expansion coefficients of gf on QE ylm function (16,n_wannier)
-   real(DP), allocatable :: tab_gf(:,:,:) ! radial Fourier transform of gf on a uniform q grid (nqx,0:3,n_proj)
-   real(DP), allocatable :: dq_gf(:)      ! q grid step of tab_gf (n_proj)
    CHARACTER(len=256) :: seedname  = 'wannier'  ! prepended to file names in wannier90
    ! For implementation of wannier_lib
    integer               :: mp_grid(3)            ! dimensions of MP k-point grid

@@ -1180,8 +1180,8 @@ SUBROUTINE print_clock_pw2wannier90
   !
   WRITE(stdout, '(/5x, "Internal routines:")')
   CALL print_clock('atomproj_wfc')
-  CALL print_clock('guiding_fn')
   CALL print_clock('init_tab_gf')
+  CALL print_clock('guiding_fn')
   CALL print_clock('scdm_QRCP')
   CALL print_clock('compute_u_kb')
   CALL print_clock('h_psi')
@@ -5528,6 +5528,7 @@ SUBROUTINE compute_amn
    USE lsda_mod,        ONLY : lsda, isk
    USE constants,       ONLY : eps6
    USE uspp_init,       ONLY : init_us_2
+   USE gvecw,           ONLY : ecutwfc
    USE wannier
    !
    IMPLICIT NONE
@@ -5537,6 +5538,16 @@ SUBROUTINE compute_amn
    COMPLEX(DP), ALLOCATABLE :: sgf(:,:)
    COMPLEX(DP), ALLOCATABLE :: evc_k(:, :)
    !! Wavefunction at k. Contains only the included bands.
+   INTEGER, PARAMETER :: lmax = 3
+   !! Highest angular momentum of the guiding functions
+   REAL(DP), PARAMETER :: dq_n = 0.01_DP
+   !! q step of tab_gf in units of alpha_w/r_w, the scale on which the radial transform varies
+   INTEGER :: nqx
+   !! Number of q points of tab_gf
+   REAL(DP), ALLOCATABLE :: dq_gf(:)
+   !! q step of tab_gf, per projector
+   REAL(DP), ALLOCATABLE :: tab_gf(:,:,:)
+   !! Radial Fourier transform of the guiding functions on a uniform q grid (nqx,0:lmax,n_proj)
    INTEGER :: ik, npw, ibnd, ibnd1, iw, i, nt, ipol, ik_g_w90
    LOGICAL            :: opnd, exst,spin_z_pos, spin_z_neg
    INTEGER            :: istart, ierr
@@ -5559,7 +5570,16 @@ SUBROUTINE compute_amn
    ALLOCATE(evc_k(npol*npwx, num_bands), stat=ierr)
    IF (ierr /= 0) CALL errore('pw2wannier90', 'Error allocating evc_k', 1)
    !
-   CALL init_tab_guiding_functions(world_comm)
+   ! Tabulate the radial Fourier transform of the guiding functions in q
+   ALLOCATE(dq_gf(n_proj), stat=ierr)
+   IF (ierr /= 0) CALL errore('pw2wannier90', 'Error allocating dq_gf', 1)
+   DO iw = 1, n_proj
+      dq_gf(iw) = dq_n * alpha_w(iw) / r_w(iw)
+   ENDDO
+   nqx = INT( SQRT(ecutwfc) / MINVAL(dq_gf) + 4 )
+   ALLOCATE(tab_gf(nqx, 0:lmax, n_proj), stat=ierr)
+   IF (ierr /= 0) CALL errore('pw2wannier90', 'Error allocating tab_gf', 1)
+   CALL init_tab_guiding_functions(nqx, lmax, dq_gf, tab_gf)
    !
    IF (wan_mode=='library') THEN
       ALLOCATE(a_mat(num_bands, n_wannier, iknum), stat=ierr)
@@ -5601,7 +5621,7 @@ SUBROUTINE compute_amn
          evc_k(:, ibnd1) = evc(:, ibnd)
       ENDDO
       !
-      CALL generate_guiding_functions(ik)   ! they are called gf(npw,n_proj)
+      CALL generate_guiding_functions(ik, nqx, lmax, dq_gf, tab_gf)   ! they are called gf(npw,n_proj)
       !
       IF (noncolin) THEN
         sgf_spinor = (0.d0,0.d0)
@@ -7111,48 +7131,49 @@ subroutine orient_gf_spinor(npw)
   enddo
 end subroutine orient_gf_spinor
 !
-SUBROUTINE init_tab_guiding_functions(comm)
+SUBROUTINE init_tab_guiding_functions(nqx, lmax, dq_gf, tab_gf)
    !! Tabulates the radial Fourier transform of the guiding functions on a
    !! uniform q grid up to sqrt(ecutwfc), for interpolation by interp_radial_tab.
    !!
    !! Duplicates the table setup of upflib/atwfc_mod.f90 (init_tab_atwfc): a
-   !! uniform q grid whose points are distributed over comm and summed with
-   !! mp_sum. nqx covers |k+G| <= sqrt(ecutwfc), as in init_tab_atproj.
-   !! init_tab_atwfc tabulates the pseudopotential wavefunctions into its own
-   !! module table, so it cannot be used for the hydrogenic guiding functions.
+   !! uniform q grid whose points are distributed over world_comm and summed
+   !! with mp_sum. The q range covers |k+G| <= sqrt(ecutwfc), as in
+   !! init_tab_atproj. init_tab_atwfc tabulates the pseudopotential
+   !! wavefunctions into its own module table, so it cannot be used for the
+   !! hydrogenic guiding functions.
    !!
-   !! Unlike upflib's fixed dq, the q step is set per projector: the transform
-   !! varies on the scale alfa/rvalue, so dq = dq_n * alfa / rvalue.
+   !! Unlike upflib's fixed dq, the q step dq_gf differs per projector, and so
+   !! does the number of q points needed, INT(sqrt(ecutwfc)/dq_gf(iw) + 4). The
+   !! table is sized for the smallest step; for the other projectors the entries
+   !! beyond their own q range are zero and never read by interp_radial_tab.
    !
-   USE gvecw,   ONLY : ecutwfc
-   USE mp,      ONLY : mp_sum
-   USE wannier
+   USE kinds,    ONLY : DP
+   USE gvecw,    ONLY : ecutwfc
+   USE mp,       ONLY : mp_sum
+   USE mp_world, ONLY : world_comm
+   USE wannier,  ONLY : n_proj, alpha_w, r_w
    !
    IMPLICIT NONE
    !
-   INTEGER, INTENT(IN) :: comm
+   INTEGER, INTENT(IN) :: nqx
+   !! Number of q points of tab_gf
+   INTEGER, INTENT(IN) :: lmax
+   !! Highest angular momentum of the guiding functions
+   REAL(DP), INTENT(IN) :: dq_gf(n_proj)
+   !! q step of tab_gf, per projector
+   REAL(DP), INTENT(OUT) :: tab_gf(nqx, 0:lmax, n_proj)
+   !! Radial Fourier transform of the guiding functions
    !
-   INTEGER, PARAMETER :: lmax=3
-   real(DP), PARAMETER :: dq_n = 0.01_DP
-   INTEGER :: nqx, iq, iw, startq, lastq, ierr
-   real(DP), ALLOCATABLE :: q(:), radial(:,:)
+   INTEGER :: nqx_iw, iq, iw, startq, lastq, ierr
+   REAL(DP), ALLOCATABLE :: q(:), radial(:,:)
    !
    CALL start_clock( 'init_tab_gf' )
    !
-   ALLOCATE( dq_gf(n_proj), stat=ierr)
-   IF (ierr /= 0) CALL errore('pw2wannier90', 'Error allocating dq_gf', 1)
-   DO iw = 1, n_proj
-      dq_gf(iw) = dq_n * alpha_w(iw) / r_w(iw)
-   ENDDO
-   !
-   nqx = INT( SQRT(ecutwfc) / MINVAL(dq_gf) + 4 )
-   ALLOCATE( tab_gf(nqx,0:lmax,n_proj), stat=ierr)
-   IF (ierr /= 0) CALL errore('pw2wannier90', 'Error allocating tab_gf', 1)
    tab_gf(:,:,:) = 0.d0
    !
    DO iw = 1, n_proj
-      nqx = INT( SQRT(ecutwfc) / dq_gf(iw) + 4 )
-      CALL divide(comm, nqx, startq, lastq)
+      nqx_iw = INT( SQRT(ecutwfc) / dq_gf(iw) + 4 )
+      CALL divide(world_comm, nqx_iw, startq, lastq)
       IF (lastq < startq) CYCLE
       ALLOCATE( q(startq:lastq), radial(startq:lastq,0:lmax), stat=ierr)
       IF (ierr /= 0) CALL errore('pw2wannier90', 'Error allocating q/radial', 1)
@@ -7164,13 +7185,13 @@ SUBROUTINE init_tab_guiding_functions(comm)
       DEALLOCATE(q, radial)
    ENDDO
    !
-   CALL mp_sum(tab_gf, comm)
+   CALL mp_sum(tab_gf, world_comm)
    !
    CALL stop_clock( 'init_tab_gf' )
    !
 END SUBROUTINE init_tab_guiding_functions
 !
-SUBROUTINE generate_guiding_functions(ik)
+SUBROUTINE generate_guiding_functions(ik, nqx, lmax, dq_gf, tab_gf)
    !! gf should not be normalized at each k point because the atomic orbitals are
    !! not orthonormal so that their Bloch representation is not normalized.
    !
@@ -7188,8 +7209,15 @@ SUBROUTINE generate_guiding_functions(ik)
    IMPLICIT NONE
 
    INTEGER, INTENT(in) :: ik
-   INTEGER, PARAMETER :: lmax=3, lmax2=(lmax+1)**2
-   INTEGER :: npw, iw, ig, l, ierr
+   INTEGER, INTENT(in) :: nqx
+   !! Number of q points of tab_gf
+   INTEGER, INTENT(in) :: lmax
+   !! Highest angular momentum of the guiding functions
+   real(DP), INTENT(in) :: dq_gf(n_proj)
+   !! q step of tab_gf, per projector
+   real(DP), INTENT(in) :: tab_gf(nqx, 0:lmax, n_proj)
+   !! Radial Fourier transform of the guiding functions, from init_tab_guiding_functions
+   INTEGER :: npw, iw, ig, l, ierr, lmax2
    INTEGER :: lmax_iw, lm, ipol, n1, n2, n3, nr1, nr2, nr3, iig
    real(DP) :: arg
    COMPLEX(DP) :: lphase
@@ -7198,6 +7226,7 @@ SUBROUTINE generate_guiding_functions(ik)
    !
    CALL start_clock( 'guiding_fn' )
    !
+   lmax2 = (lmax+1)**2
    npw = ngk(ik)
    ALLOCATE( gk(3,npw), qg(npw), ylm(npw,lmax2), sk(npw), radial(npw,0:lmax), stat=ierr)
    IF (ierr /= 0) CALL errore('pw2wannier90', 'Error allocating gk/qg/ylm/sk/radial', 1)
@@ -7218,7 +7247,7 @@ SUBROUTINE generate_guiding_functions(ik)
       gf(:,iw) = (0.d0,0.d0)
 
       DO l = 0, lmax
-         CALL interp_radial_tab(SIZE(tab_gf, 1), tab_gf(:,l,iw), dq_gf(iw), npw, qg, radial(:,l))
+         CALL interp_radial_tab(nqx, tab_gf(:,l,iw), dq_gf(iw), npw, qg, radial(:,l))
       ENDDO
       !
       DO lm = 1, lmax2
