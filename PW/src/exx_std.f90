@@ -1,4 +1,4 @@
-! Copyrigh(C) 2005-2018 Quantum ESPRESSO group
+! Copyright(C) 2005-2026 Quantum ESPRESSO group
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -29,31 +29,17 @@ MODULE exx_std
     USE wavefunctions,        ONLY : evc, psic
     USE io_files,             ONLY : nwordwfc, iunwfc
     USE buffers,              ONLY : get_buffer
-    USE wvfct,                ONLY : nbnd, npwx, wg, current_k
-    USE klist,                ONLY : ngk, nkstot, xk, wk
-    USE symm_base,            ONLY : nsym, s, sr
-    USE mp_pools,             ONLY : npool, nproc_pool, me_pool, inter_pool_comm
-    USE mp_exx,               ONLY : me_egrp, negrp, init_index_over_band,  &
-                                     my_egrp_id, inter_egrp_comm,           &
-                                     intra_egrp_comm, iexx_start, iexx_end, &
-                                     all_start, all_end
-    USE mp,                   ONLY : mp_sum, mp_bcast
-    USE xc_lib,               ONLY : xclib_get_exx_fraction, start_exx,          &
-                                     get_screening_parameter, get_gau_parameter, &
-                                     exx_is_active
+    USE wvfct,                ONLY : nbnd, npwx
+    USE klist,                ONLY : ngk, nkstot
+    USE mp_exx,               ONLY : me_egrp, inter_egrp_comm
+    USE mp,                   ONLY : mp_bcast
     USE scatter_mod,          ONLY : gather_grid, scatter_grid
     USE fft_interfaces,       ONLY : invfft
-    USE uspp,                 ONLY : nkb, vkb, okvan
+    USE uspp,                 ONLY : okvan
     USE paw_variables,        ONLY : okpaw
     USE mp_orthopools,        ONLY : intra_orthopool_comm
-    USE exx_base,             ONLY : nkqs, index_sym,  &
-                                     exx_set_symm, rir, working_pool, exxdiv, &
-                                     erfc_scrlen, gau_scrlen, exx_divergence, &
+    USE exx_base,             ONLY : nkqs, index_sym, rir, working_pool, &
                                      x_nbnd_occ, nbndproj, local_thr, d_spin
-#if defined(__CUDA)
-    USE device_memcpy_m,      ONLY : dev_memset
-    USE device_fbuff_m,       ONLY : dev_buf
-#endif
     !
     IMPLICIT NONE
     !
@@ -63,10 +49,9 @@ MODULE exx_std
     !
     ! ... local variables
     !
-    INTEGER :: ik, ibnd, i, j, k, ir, isym, ikq, ig, ierr
+    INTEGER :: ik, ibnd, i, isym, ikq, ig
     INTEGER :: ibnd_loop_start
     INTEGER :: ipol, jpol
-    REAL(DP), ALLOCATABLE :: occ(:,:)
     COMPLEX(DP),ALLOCATABLE :: temppsic(:)
 #if defined(__USE_INTEL_HBM_DIRECTIVES)
 !DIR$ ATTRIBUTES FASTMEM :: temppsic
@@ -74,10 +59,6 @@ MODULE exx_std
 !DIR$ memory(bandwidth) temppsic
 #endif
     COMPLEX(DP),ALLOCATABLE :: temppsic_nc(:,:), psic_nc(:,:)
-    COMPLEX(DP),POINTER     :: psic_nc_d(:,:)
-#if defined(__CUDA)
-    attributes(DEVICE)      :: psic_nc_d
-#endif
     COMPLEX(DP),ALLOCATABLE :: psic_exx(:)
     INTEGER :: nxxs, nrxxs
 #if defined(__MPI)
@@ -353,18 +334,16 @@ MODULE exx_std
     !
     ! ... Gamma-specific version of vexx
     !
-    USE constants,      ONLY : fpi, e2, pi
     USE cell_base,      ONLY : omega
-    USE gvect,          ONLY : ngm, g
-    USE wvfct,          ONLY : npwx, current_k
-    USE klist,          ONLY : xk, nks, nkstot, igk_k
+    USE wvfct,          ONLY : current_k
+    USE klist,          ONLY : xk, nkstot, igk_k
     USE fft_interfaces, ONLY : fwfft, invfft
     USE becmod,         ONLY : bec_type
     USE mp_bands,       ONLY : inter_bgrp_comm, intra_bgrp_comm, my_bgrp_id, nbgrp
-    USE mp,             ONLY : mp_sum, mp_barrier, mp_bcast
+    USE mp,             ONLY : mp_sum, mp_bcast
     USE uspp,           ONLY : nkb, okvan
     USE paw_variables,  ONLY : okpaw
-    USE us_exx,         ONLY : bexg_merge, becxx, addusxx_g, addusxx_r, &
+    USE us_exx,         ONLY : becxx, addusxx_g, addusxx_r, &
                                newdxx_g, newdxx_r, add_nlxx_pot, &
                                qvan_init, qvan_clean
     USE paw_exx,        ONLY : PAW_newdxx
@@ -385,7 +364,7 @@ MODULE exx_std
     !
     COMPLEX(DP),ALLOCATABLE :: rhoc(:), vc(:), deexx(:)
     REAL(DP),   ALLOCATABLE :: fac(:)
-    INTEGER          :: ibnd, ik, im , ikq, iq, ipol
+    INTEGER          :: ibnd, ik, im , ikq, iq
     INTEGER          :: ir, ig
     INTEGER          :: current_ik
     INTEGER          :: ibnd_loop_start
@@ -625,7 +604,6 @@ print *, '@vexx_std_gamma_one'
                 IF(ibnd<ibnd_end) &
                 CALL newdxx_g(dfftt, vc, xkq, xkp, 'i', deexx, &
                               becphi_r=x2*becxx(ikq)%r(:,ibnd+1))
-                !$acc update device(vc)
              ENDIF
              !
              !brings back v in real space
@@ -640,7 +618,6 @@ print *, '@vexx_std_gamma_one'
                 CALL newdxx_r(dfftt, vc, _CX(x1*becxx(ikq)%r(:,ibnd)), deexx)
                 IF(ibnd<ibnd_end) &
                 CALL newdxx_r(dfftt, vc, _CY(x2*becxx(ikq)%r(:,ibnd+1)), deexx)
-                !$acc update device(vc)
              ENDIF
              !
              IF(okpaw) THEN
@@ -702,10 +679,10 @@ print *, '@vexx_std_gamma_one'
 #endif
           ! add non-local \sum_I |beta_I> \alpha_Ii (the sum on i is outside)
           IF(okvan) THEN
-            !$acc update host(hpsi)
+            !$acc update host(hpsi(:,im))
             CALL add_nlxx_pot (lda, hpsi(:,im), xkp, n, &
                            igk_k(1,current_k), deexx, eps_occ, exxalfa)
-            !$acc update device(hpsi)
+            !$acc update device(hpsi(:,im))
           END IF
        ENDDO &
        LOOP_ON_PSI_BANDS
@@ -732,22 +709,20 @@ print *, '@vexx_std_gamma_one'
     !
     ! ... Gamma-specific version of vexx with batched outer loop over bands
     !
-    USE constants,      ONLY : fpi, e2, pi
     USE cell_base,      ONLY : omega
-    USE gvect,          ONLY : ngm, g
-    USE wvfct,          ONLY : npwx, current_k
-    USE klist,          ONLY : xk, nks, nkstot, igk_k
+    USE wvfct,          ONLY : current_k
+    USE klist,          ONLY : nkstot, igk_k
     USE fft_interfaces, ONLY : fwfft, invfft
     USE becmod,         ONLY : bec_type
     USE mp_bands,       ONLY : inter_bgrp_comm, intra_bgrp_comm, my_bgrp_id, nbgrp
-    USE mp,             ONLY : mp_sum, mp_barrier, mp_bcast
+    USE mp,             ONLY : mp_sum, mp_bcast
     USE uspp,           ONLY : nkb, okvan
     USE paw_variables,  ONLY : okpaw
-    USE us_exx,         ONLY : bexg_merge, becxx, addusxx_g, addusxx_r, &
+    USE us_exx,         ONLY : becxx, addusxx_g, addusxx_r, &
                                newdxx_g, newdxx_r, add_nlxx_pot, &
                                qvan_init, qvan_clean
     USE paw_exx,        ONLY : PAW_newdxx
-    USE exx_base,       ONLY : npwt, gt, nqs, index_xkq, x_occupation, g2_convolution, batchsize
+    USE exx_base,       ONLY : npwt, gt, nqs, x_occupation, g2_convolution, batchsize
     !
     !
     IMPLICIT NONE
@@ -762,7 +737,7 @@ print *, '@vexx_std_gamma_one'
     !
     COMPLEX(DP),ALLOCATABLE :: rhoc(:), vc(:), deexx(:,:)
     REAL(DP),   ALLOCATABLE :: fac(:)
-    INTEGER          :: ibnd, im , ipol
+    INTEGER          :: ibnd
     INTEGER          :: ir, ig, idx, idxm
     INTEGER          :: current_ik
     INTEGER          :: ibnd_loop_start
@@ -772,8 +747,6 @@ print *, '@vexx_std_gamma_one'
     REAL(DP) :: x1, x2
     ! <LMS> temp array for vcut_spheric
     INTEGER, EXTERNAL  :: global_kpoint_index
-    LOGICAL :: l_fft_doubleband
-    LOGICAL :: l_fft_singleband
     INTEGER :: ngmt
     INTEGER :: nblocks, nb_last, iblock, nb , i_global,  ib 
     !
@@ -1065,18 +1038,16 @@ print *, '@@vexx_std_gamma_outer'
     !
     ! ... generic, k-point version of vexx
     !
-    USE constants,      ONLY : fpi, e2, pi
     USE cell_base,      ONLY : omega
-    USE gvect,          ONLY : ngm, g
-    USE wvfct,          ONLY : npwx, current_k
-    USE klist,          ONLY : xk, nks, nkstot, igk_k
+    USE wvfct,          ONLY : current_k
+    USE klist,          ONLY : xk, nkstot, igk_k
     USE fft_interfaces, ONLY : fwfft, invfft
     USE becmod,         ONLY : bec_type
     USE mp_bands,       ONLY : inter_bgrp_comm, intra_bgrp_comm, my_bgrp_id, nbgrp
-    USE mp,             ONLY : mp_sum, mp_barrier, mp_bcast
+    USE mp,             ONLY : mp_sum, mp_bcast
     USE uspp,           ONLY : nkb, okvan
     USE paw_variables,  ONLY : okpaw
-    USE us_exx,         ONLY : bexg_merge, becxx, addusxx_g, addusxx_r, &
+    USE us_exx,         ONLY : becxx, addusxx_g, addusxx_r, &
                                newdxx_g, newdxx_r, add_nlxx_pot, &
                                qvan_init, qvan_clean
     USE paw_exx,        ONLY : PAW_newdxx
@@ -1094,8 +1065,6 @@ print *, '@@vexx_std_gamma_outer'
     COMPLEX(DP),ALLOCATABLE :: temppsic(:)
     COMPLEX(DP),ALLOCATABLE :: result(:)
     COMPLEX(DP),ALLOCATABLE :: vc(:), rhoc(:)
-    COMPLEX(DP),ALLOCATABLE :: temppsic_nc(:,:),result_nc(:,:)
-    COMPLEX(DP),ALLOCATABLE :: result_nc_g(:,:)
     !
     COMPLEX(DP),ALLOCATABLE :: deexx(:,:)
     INTEGER, ALLOCATABLE :: nl(:), nl_k(:)
@@ -1103,9 +1072,8 @@ print *, '@@vexx_std_gamma_outer'
     INTEGER          :: ibnd, ik, ikq, iq, ipol
     INTEGER          :: ir, ig
     INTEGER          :: current_ik
-    INTEGER          :: ibnd_loop_start
-    INTEGER          :: h_ibnd, nrxxs
-    REAL(DP) :: x1, x2, xkp(3)
+    INTEGER          :: nrxxs
+    REAL(DP) :: xkp(3)
     REAL(DP) :: xkq(3)
     ! <LMS> temp array for vcut_spheric
     INTEGER, EXTERNAL :: global_kpoint_index
@@ -1120,17 +1088,20 @@ print *, '@@vexx_std_gamma_outer'
     ! using a fixed batchsize prevents allocating and deallocating batched variables inside the loop
     INTEGER :: nbatch, ibatch 
     ! loop over batches 
-    INTEGER :: im, im_start
+    INTEGER :: im_start
     ! global index of bands ranging (1...m)
     INTEGER :: ib
     ! local index of bands ranging (1...nb)
-    INTEGER :: batchsize0 = 0, subbatchsize0 = 0
-    !! batckup values in case FFT internal batching is changed
+    INTEGER :: batchsize0, subbatchsize0
+    !! backup values in case FFT internal batching is changed
     INTEGER :: idx, jdx
-    !! index of batched quantities allocated npol*nrxxs*batchsize. 
+    !! index of batched quantities: 
+    !!   temppsic, result -> npol*nrxxs*batchsize
+    !!   rhoc, vc -> nrxxs*batchsize
     !! Strides: 
     !!      ... (ipol-1) * batchsize * nrxxs
     !!      ... (ib-1)   * nrxxs
+    LOGICAL, SAVE :: first_call = .true.
     !
     ngmt = dfftt%ngm 
     ALLOCATE( fac(ngmt) )
@@ -1138,8 +1109,8 @@ print *, '@@vexx_std_gamma_outer'
     !
     ! update internal FFT batching parameters 
     !
-    !batchsize = 16 ! can be set <= dfftt%batchsize = 16
-    !if( batchsize > dfftt%batchsize ) Call errore('vexx_std_k_outer', "EXX batch size is too large (max 16)", 2)
+    batchsize0 = 0 
+    subbatchsize0 = 0
     if( batchsize > dfftt%batchsize ) then
       batchsize0 = dfftt%batchsize
       subbatchsize0 = dfftt%subbatchsize
@@ -1152,8 +1123,11 @@ print *, '@@vexx_std_gamma_outer'
         dfftt%batchsize = dfftt%subbatchsize * 4 
       endif
     endif
-    write(stdout, '(5X,3(A,I4))') &
-      "EXX batchsize: ", batchsize, " FFT batchsize: ", dfftt%batchsize, " subbatchsize: ", dfftt%subbatchsize
+    IF( first_call ) THEN
+      write(stdout, '(5X,3(A,I4))') &
+        "EXX batchsize: ", batchsize, " FFT batchsize: ", dfftt%batchsize, " subbatchsize: ", dfftt%subbatchsize
+      first_call = .false.
+    END IF
     !
     nbatch = m / batchsize 
     !
@@ -1185,7 +1159,7 @@ print *, '@@vexx_std_gamma_outer'
     ENDIF
     !$acc update device(psi)
     !
-    !$acc data create( rhoc, vc, fac, nl, nl_k, temppsic, result, temppsic_nc, result_nc, result_nc_g) copy(hpsi) present(exxbuff) 
+    !$acc data create( rhoc, vc, fac, nl, nl_k, temppsic, result) copy(hpsi) present(exxbuff) 
     !
     !$acc parallel loop
     do ig = 1, ngmt 
@@ -1270,39 +1244,24 @@ print *, '@@vexx_std_gamma_outer'
                 !
                 Call start_clock('vexx-@2')
                 !   >>>> calculate rho in real space
-                IF (noncolin) THEN
-#if defined(__CUDA)
-                  !$acc parallel loop collapse(2) private(idx, jdx)
-#else
-                  !$omp parallel do default(shared), private(ir, idx, jdx)
-#endif
-                  DO ib = 1,nb !for each band of psi (the k cycle is outside band)
-                    DO ir = 1, nrxxs
-                       idx = (ib-1) * nrxxs + ir
-                       jdx = batchsize * nrxxs + (ib-1) * nrxxs + ir 
-                       rhoc( idx )= ( conjg(exxbuff(ir,ibnd,ikq))*temppsic( idx ) + &
-                                      conjg(exxbuff(nrxxs+ir,ibnd,ikq))*temppsic(jdx) ) / omega
-                    ENDDO
-                  ENDDO
-#if !defined(__CUDA)
-                  !$omp end parallel do
-#endif
-                ELSE 
 #if defined(__CUDA)
                 !$acc parallel loop collapse(2) private(idx)
 #else
                 !$omp parallel do default(shared), private(ir, idx)
 #endif
-                  DO ib = 1,nb 
-                    DO ir = 1, nrxxs
-                       idx = (ib-1) * nrxxs + ir
-                       rhoc( idx )=conjg(exxbuff(ir,ibnd,ikq))*temppsic( idx ) / omega
-                    ENDDO
+                DO ib = 1,nb 
+                  DO ir = 1, nrxxs
+                     idx = (ib-1) * nrxxs + ir
+                     rhoc( idx )=conjg(exxbuff(ir,ibnd,ikq))*temppsic( idx ) / omega
+                     IF (noncolin) THEN
+                       jdx = batchsize * nrxxs + (ib-1) * nrxxs + ir 
+                       rhoc( idx )= rhoc( idx ) + conjg(exxbuff(nrxxs+ir,ibnd,ikq))*temppsic(jdx) / omega
+                     END IF
                   ENDDO
+                ENDDO
 #if !defined(__CUDA)
                 !$omp end parallel do
 #endif
-                END IF 
                 !
                 Call stop_clock('vexx-@2')
                 !
@@ -1398,39 +1357,25 @@ print *, '@@vexx_std_gamma_outer'
                 !accumulates over bands and k points
                 !
                 Call start_clock('vexx-@6')
-                IF (noncolin) THEN
 #if defined(__CUDA)
-                  !$acc parallel loop collapse(2) private(idx, jdx)
+                !$acc parallel loop collapse(2) private(idx)
 #else
-                  !$omp parallel do default(shared), private(ir, idx, jdx)
+                !$omp parallel do default(shared), private(ir, idx)
 #endif
-                  do ib = 1, nb
-                    do ir = 1, nrxxs
-                      idx = (ib-1)*nrxxs + ir 
+                do ib = 1, nb
+                  do ir = 1, nrxxs
+                    idx = (ib-1)*nrxxs + ir 
+                    result( idx ) = result( idx ) + vc( idx )*exxbuff(ir,ibnd,ikq)
+                    IF (noncolin) THEN
                       jdx = batchsize * nrxxs + (ib-1)*nrxxs + ir 
-                      result( idx ) = result( idx ) + vc( idx )*exxbuff(ir,ibnd,ikq)
                       result( jdx ) = result( jdx ) + vc( idx )*exxbuff(ir+nrxxs,ibnd,ikq)
-                    enddo
-                  end do 
+                    END IF
+                  enddo
+                end do 
 #if !defined(__CUDA)
                 !$omp end parallel do
 #endif
-                ELSE 
-#if defined(__CUDA)
-                  !$acc parallel loop collapse(2) private(idx)
-#else
-                  !$omp parallel do default(shared), private(ir, idx)
-#endif
-                  do ib = 1, nb
-                    do ir = 1, nrxxs
-                      idx = (ib-1)*nrxxs + ir 
-                      result( idx ) = result( idx ) + vc( idx )*exxbuff(ir,ibnd,ikq)
-                    enddo
-                  end do 
-#if !defined(__CUDA)
-                !$omp end parallel do
-#endif
-                END IF
+                END IF 
                 Call stop_clock('vexx-@6')
                 !
              ENDDO &
@@ -1476,12 +1421,12 @@ print *, '@@vexx_std_gamma_outer'
           !
           ! add non-local \sum_I |beta_I> \alpha_Ii (the sum on i is outside)
           IF(okvan) THEN
-            !$acc update host(hpsi)
+            !$acc update host(hpsi(:,im_start+1:im_start+nb))
             do ib = 1, nb
               CALL add_nlxx_pot(lda, hpsi(:,im_start+ib), xkp, n, igk_k(:,current_k),&
                                             deexx(:,ib), eps_occ, exxalfa)
             end do 
-            !$acc update device(hpsi)
+            !$acc update device(hpsi(:,im_start+1:im_start+nb))
           END IF
           !
           CALL stop_clock( 'vexx_k_fin' )
@@ -1513,18 +1458,16 @@ print *, '@@vexx_std_gamma_outer'
     !
     ! ... generic, k-point version of vexx
     !
-    USE constants,      ONLY : fpi, e2, pi
     USE cell_base,      ONLY : omega
-    USE gvect,          ONLY : ngm, g
     USE wvfct,          ONLY : npwx, current_k
-    USE klist,          ONLY : xk, nks, nkstot, igk_k
+    USE klist,          ONLY : xk, nkstot, igk_k
     USE fft_interfaces, ONLY : fwfft, invfft
     USE becmod,         ONLY : bec_type
     USE mp_bands,       ONLY : inter_bgrp_comm, intra_bgrp_comm, my_bgrp_id, nbgrp
-    USE mp,             ONLY : mp_sum, mp_barrier, mp_bcast
+    USE mp,             ONLY : mp_sum, mp_bcast
     USE uspp,           ONLY : nkb, okvan
     USE paw_variables,  ONLY : okpaw
-    USE us_exx,         ONLY : bexg_merge, becxx, addusxx_g, addusxx_r, &
+    USE us_exx,         ONLY : becxx, addusxx_g, addusxx_r, &
                                newdxx_g, newdxx_r, add_nlxx_pot, &
                                qvan_init, qvan_clean
     USE paw_exx,        ONLY : PAW_newdxx
@@ -1548,9 +1491,8 @@ print *, '@@vexx_std_gamma_outer'
     INTEGER          :: ibnd, ik, im , ikq, iq, ipol
     INTEGER          :: ir, ig
     INTEGER          :: current_ik
-    INTEGER          :: ibnd_loop_start
-    INTEGER          :: h_ibnd, nrxxs
-    REAL(DP) :: x1, x2, xkp(3)
+    INTEGER          :: nrxxs
+    REAL(DP) :: xkp(3)
     REAL(DP) :: xkq(3)
     ! <LMS> temp array for vcut_spheric
     INTEGER, EXTERNAL :: global_kpoint_index
@@ -1749,7 +1691,6 @@ print *, '@vexx_std_k_one'
                 !$acc update host(vc)
                 CALL newdxx_g(dfftt, vc, xkq, xkp, 'c', deexx, &
                               becphi_c=becxx(ikq)%k(:,ibnd))
-                !$acc update device(vc)
              ENDIF
              !
              !brings back v in real space
@@ -1878,10 +1819,10 @@ print *, '@vexx_std_k_one'
        !
        ! add non-local \sum_I |beta_I> \alpha_Ii (the sum on i is outside)
        IF(okvan) THEN
-         !$acc update host(hpsi)
+         !$acc update host(hpsi(:,im))
          CALL add_nlxx_pot(lda, hpsi(:,im), xkp, n, igk_k(:,current_k),&
                                        deexx, eps_occ, exxalfa)
-         !$acc update device(hpsi)
+         !$acc update device(hpsi(:,im))
        END IF
        !
     ENDDO &
@@ -1909,20 +1850,19 @@ print *, '@vexx_std_k_one'
     !
     ! This is Eq.(10) of PRB 73, 125120 (2006).
     !
-    USE constants,            ONLY : fpi, e2, pi, tpi
+    USE constants,            ONLY : fpi, e2, pi
     USE io_files,             ONLY : iunwfc, nwordwfc
     USE buffers,              ONLY : get_buffer
-    USE cell_base,            ONLY : alat, omega, bg, at, tpiba
-    USE symm_base,            ONLY : nsym, s
-    USE wvfct,                ONLY : nbnd, npwx, wg, current_k
+    USE cell_base,            ONLY : omega, bg, at, tpiba
+    USE symm_base,            ONLY : s
+    USE wvfct,                ONLY : nbnd, wg, current_k
     USE wavefunctions,        ONLY : evc
-    USE klist,                ONLY : xk, ngk, nks, igk_k
+    USE klist,                ONLY : xk, ngk, igk_k
     USE lsda_mod,             ONLY : lsda, current_spin, isk
     USE gvect,                ONLY : g
     USE mp_pools,             ONLY : npool, inter_pool_comm
     USE mp_bands,             ONLY : inter_bgrp_comm, intra_bgrp_comm
     USE mp,                   ONLY : mp_sum
-    USE fft_base,             ONLY : dffts
     USE fft_interfaces,       ONLY : fwfft, invfft
     USE uspp,                 ONLY : okvan
     USE exx_base,             ONLY : exxdiv, erfc_scrlen, gau_scrlen, grid_factor, eps, &
@@ -1940,9 +1880,7 @@ print *, '@vexx_std_k_one'
     ! local variables
     REAL(DP)   :: exx_stress_std(3,3), exx_stress_(3,3)
     !
-    COMPLEX(DP),ALLOCATABLE :: tempphic(:), temppsic(:), RESULT(:)
-    COMPLEX(DP),ALLOCATABLE :: tempphic_nc(:,:), temppsic_nc(:,:), &
-                               result_nc(:,:)
+    COMPLEX(DP),ALLOCATABLE :: tempphic(:), temppsic(:)
     COMPLEX(DP),ALLOCATABLE :: rhoc(:)
     REAL(DP),    ALLOCATABLE :: fac(:), fac_tens(:,:,:), fac_stress(:), fac_stress_div(:)
     INTEGER  :: npw, jbnd, ibnd, ik, ikk, ig, ir, ikq, iq, isym
