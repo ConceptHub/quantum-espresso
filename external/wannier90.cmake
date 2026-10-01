@@ -16,15 +16,6 @@ if(QE_WANNIER90_INTERNAL)
             "Upgrade CMake, or build against an external Wannier90 with "
             "-DQE_WANNIER90_INTERNAL=OFF -DWANNIER90_ROOT=<path>.")
     endif()
-    if(QE_LAPACK_INTERNAL)
-        message(FATAL_ERROR
-            "QE_LAPACK_INTERNAL=ON is incompatible with the internal Wannier90: "
-            "Wannier90's CMake calls find_package(LAPACK REQUIRED) itself and "
-            "cannot use QE's reference LAPACK, so it would either fail to "
-            "configure or link a different LAPACK than the rest of QE. Provide a "
-            "system BLAS/LAPACK, or use -DQE_WANNIER90_INTERNAL=OFF "
-            "-DWANNIER90_ROOT=<path>.")
-    endif()
 
     qe_git_submodule_update(external/wannier90)
 

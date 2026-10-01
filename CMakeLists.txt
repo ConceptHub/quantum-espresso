@@ -97,8 +97,6 @@ option(QE_ENABLE_MPI_INPLACE
     "enable inplace MPI calls (ignored when QE_ENABLE_MPI=OFF)" OFF)
 option(QE_ENABLE_BARRIER
     "enable global synchronization between execution units" OFF)
-option(QE_LAPACK_INTERNAL
-    "enable internal reference LAPACK" OFF)
 option(QE_ENABLE_SCALAPACK
     "enable SCALAPACK execution units" OFF)
 cmake_dependent_option(QE_ENABLE_SCALAPACK_QRCP
@@ -506,7 +504,9 @@ endif()
 add_library(qe_lapack INTERFACE)
 qe_install_targets(qe_lapack)
 ###########################################################
-if(NOT QE_LAPACK_INTERNAL)
+if(QE_LAPACK_INTERNAL)
+    message(FATAL_ERROR "Building Netlib LAPACK inside QE via CMake is no longer supported!")
+else()
     if(NOT BLA_VENDOR)
         if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64.*")
             message(STATUS "Trying to find LAPACK from Intel MKL")
@@ -573,23 +573,8 @@ if(NOT QE_LAPACK_INTERNAL)
         endif()
     else()
         message(FATAL_ERROR "Failed to find a complete set of external BLAS/LAPACK library by FindLAPACK. "
-                            "Variables controlling FindLAPACK can be found at CMake online documentation. "
-                            "Alternatively, '-DQE_LAPACK_INTERNAL=ON' may be used to enable reference LAPACK "
-                            "at a performance loss compared to optimized libraries.")
+                            "Variables controlling FindLAPACK can be found at CMake online documentation.")
     endif()
-else()
-    message(WARNING "Internal reference LAPACK is enabled! It is less performant than vendor optimized libraries.")
-    if(CMAKE_Fortran_COMPILER_ID MATCHES "XL")
-        message(FATAL_ERROR "IBM XL compilers cannot build internal LAPACK with QE "
-                            "due to the conflict in flags for free vs fixed format. "
-                            "Please use an optimized LAPACK or build internal reference LAPACK separately.")
-    endif()
-    message(STATUS "Installing LAPACK via submodule")
-    qe_git_submodule_update(external/lapack)
-    add_subdirectory(external/lapack)
-    target_link_libraries(qe_lapack INTERFACE lapack)
-    # make lapack ready for other external libraries like mbd
-    set(LAPACK_LIBRARIES lapack)
 endif()
 
 ###########################################################
