@@ -1126,7 +1126,7 @@ print *, '@@vexx_std_gamma_outer'
     ! local index of bands ranging (1...nb)
     INTEGER :: batchsize0 = 0, subbatchsize0 = 0
     !! batckup values in case FFT internal batching is changed
-    INTEGER :: idx 
+    INTEGER :: idx, jdx
     !! index of batched quantities allocated npol*nrxxs*batchsize. 
     !! Strides: 
     !!      ... (ipol-1) * batchsize * nrxxs
@@ -1165,8 +1165,8 @@ print *, '@@vexx_std_gamma_outer'
     ALLOCATE( temppsic(npol*nrxxs*batchsize) )
     ALLOCATE( result(npol*nrxxs*batchsize) )
     !
-    ALLOCATE( vc(npol*nrxxs*batchsize) )
-    ALLOCATE( rhoc(npol*nrxxs*batchsize) )
+    ALLOCATE( vc(nrxxs*batchsize) )
+    ALLOCATE( rhoc(nrxxs*batchsize) )
     !
     IF(okvan) ALLOCATE(deexx(nkb, batchsize))
     !
@@ -1270,31 +1270,48 @@ print *, '@@vexx_std_gamma_outer'
                 !
                 Call start_clock('vexx-@2')
                 !   >>>> calculate rho in real space
+                IF (noncolin) THEN
 #if defined(__CUDA)
-                !$acc parallel loop collapse(3) private(idx)
+                  !$acc parallel loop collapse(2) private(idx, jdx)
+#else
+                  !$omp parallel do default(shared), private(ir, idx, jdx)
+#endif
+                  DO ib = 1,nb !for each band of psi (the k cycle is outside band)
+                    DO ir = 1, nrxxs
+                       idx = (ib-1) * nrxxs + ir
+                       jdx = batchsize * nrxxs + (ib-1) * nrxxs + ir 
+                       rhoc( idx )= ( conjg(exxbuff(ir,ibnd,ikq))*temppsic( idx ) + &
+                                      conjg(exxbuff(nrxxs+ir,ibnd,ikq))*temppsic(jdx) ) / omega
+                    ENDDO
+                  ENDDO
+#if !defined(__CUDA)
+                  !$omp end parallel do
+#endif
+                ELSE 
+#if defined(__CUDA)
+                !$acc parallel loop collapse(2) private(idx)
 #else
                 !$omp parallel do default(shared), private(ir, idx)
 #endif
-                DO ipol = 1, npol
-                  DO ib = 1,nb !for each band of psi (the k cycle is outside band)
+                  DO ib = 1,nb 
                     DO ir = 1, nrxxs
-                       idx = (ipol-1) * batchsize * nrxxs + (ib-1) * nrxxs + ir
+                       idx = (ib-1) * nrxxs + ir
                        rhoc( idx )=conjg(exxbuff(ir,ibnd,ikq))*temppsic( idx ) / omega
                     ENDDO
                   ENDDO
-                ENDDO
 #if !defined(__CUDA)
                 !$omp end parallel do
 #endif
+                END IF 
+                !
                 Call stop_clock('vexx-@2')
+                !
                 !   >>>> add augmentation in REAL space HERE
                 IF(okvan .and. tqr) THEN ! augment the "charge" in real space
                    !$acc update host(rhoc)
-                   DO ipol = 1, npol
-                     do ib = 1,nb
-                       idx = (ipol-1) * batchsize * nrxxs + (ib-1) * nrxxs + 1 
-                       CALL addusxx_r( rhoc(idx:idx+nrxxs-1), becxx(ikq)%k(:,ibnd), becpsi%k(:,im_start+ib))
-                     end do 
+                   do ib = 1,nb
+                     idx = (ib-1) * nrxxs + 1 
+                     CALL addusxx_r( rhoc(idx:idx+nrxxs-1), becxx(ikq)%k(:,ibnd), becpsi%k(:,im_start+ib))
                    end do 
                    !$acc update device(rhoc)
                 ENDIF
@@ -1303,49 +1320,42 @@ print *, '@@vexx_std_gamma_outer'
                 Call start_clock('vexx-@3')
                 !$acc host_data use_device(rhoc)
                 CALL fwfft('Rho', rhoc, dfftt, howmany=nb)
-                if(noncolin) CALL fwfft('Rho', rhoc(batchsize*nrxxs+1:), dfftt, howmany=nb)
                 !$acc end host_data
                 Call stop_clock('vexx-@3')
                 !
                 !   >>>> add augmentation in G space HERE
                 IF(okvan .and. .not. tqr) THEN
                    !$acc update host(rhoc)
-                   DO ipol = 1, npol
-                     do ib = 1,nb
-                       idx = (ipol-1) * batchsize * nrxxs + (ib-1) * nrxxs + 1
-                       CALL addusxx_g(dfftt, rhoc(idx), xkq, xkp, 'c', &
-                          becphi_c=becxx(ikq)%k(:,ibnd),becpsi_c=becpsi%k(:,im_start+ib))
-                     end do 
+                   do ib = 1,nb
+                     idx = (ib-1) * nrxxs + 1
+                     CALL addusxx_g(dfftt, rhoc(idx), xkq, xkp, 'c', &
+                        becphi_c=becxx(ikq)%k(:,ibnd),becpsi_c=becpsi%k(:,im_start+ib))
                    end do 
                    !$acc update device(rhoc)
                 ENDIF
                 !   >>>> charge done
                 !
                 ! inizializations on the whole allocation dimension (batchsize)
-                !$acc parallel loop collapse(3) private(idx)
-                do ipol = 1, npol
-                  do ib = 1, batchsize
-                    do ir = 1, nrxxs
-                      idx = (ipol-1) * batchsize * nrxxs + (ib-1)*nrxxs + ir 
-                      vc( idx ) = 0._DP
-                    end do 
+                !$acc parallel loop collapse(2) private(idx)
+                do ib = 1, batchsize
+                  do ir = 1, nrxxs
+                    idx = (ib-1)*nrxxs + ir 
+                    vc( idx ) = 0._DP
                   end do 
                 end do 
                 !
                 Call start_clock('vexx-@4')
 #if defined(__CUDA)
-                !$acc parallel loop collapse(3) private(idx)
+                !$acc parallel loop collapse(2) private(idx)
 #else
                 !$omp parallel do default(shared), private(ig,idx)
 #endif
-                do ipol = 1, npol
-                  do ib = 1, nb
-                    do ig = 1, ngmt
-                       idx = (ipol-1) * batchsize * nrxxs + (ib-1)*nrxxs + nl(ig) 
-                       vc( idx ) = fac(ig) * rhoc( idx ) * x_occ 
-                    enddo
+                do ib = 1, nb
+                  do ig = 1, ngmt
+                     idx = (ib-1)*nrxxs + nl(ig) 
+                     vc( idx ) = fac(ig) * rhoc( idx ) * x_occ 
                   enddo
-                end do 
+                enddo
 #if !defined(__CUDA)
                 !$omp end parallel do
 #endif
@@ -1355,12 +1365,10 @@ print *, '@@vexx_std_gamma_outer'
                 ! compute alpha_I,j,k+q = \sum_J \int <beta_J|phi_j,k+q> V_i,j,k,q Q_I,J(r) d3r
                 IF(okvan .and. .not. tqr) THEN
                    !$acc update host(vc)
-                   do ipol = 1, npol
-                     do ib = 1, nb
-                       idx = (ipol-1) * batchsize * nrxxs + (ib-1)*nrxxs + 1
-                       CALL newdxx_g(dfftt, vc(idx), xkq, xkp, 'c', deexx(:,ib), &
-                                   becphi_c=becxx(ikq)%k(:,ibnd))
-                     end do 
+                   do ib = 1, nb
+                     idx = (ib-1)*nrxxs + 1
+                     CALL newdxx_g(dfftt, vc(idx), xkq, xkp, 'c', deexx(:,ib), &
+                                 becphi_c=becxx(ikq)%k(:,ibnd))
                    end do 
                 ENDIF
                 !
@@ -1368,18 +1376,15 @@ print *, '@@vexx_std_gamma_outer'
                 Call start_clock('vexx-@5')
                 !$acc host_data use_device(vc)
                 CALL invfft('Rho', vc, dfftt, howmany=nb)
-                if(noncolin) CALL invfft('Rho', vc(batchsize*nrxxs+1:), dfftt, howmany=nb)
                 !$acc end host_data
                 Call stop_clock('vexx-@5')
                 !
                 ! Add ultrasoft contribution (REAL SPACE)
                 IF(okvan .and. tqr) THEN
                   !$acc update host(vc)
-                  do ipol = 1, npol
-                    do ib = 1, nb
-                      idx = (ipol-1) * batchsize * nrxxs + (ib-1)*nrxxs + 1
-                      CALL newdxx_r(dfftt,vc(idx:idx+nrxxs-1), becxx(ikq)%k(:,ibnd), deexx(:,ib))
-                    end do 
+                  do ib = 1, nb
+                    idx = (ib-1)*nrxxs + 1
+                    CALL newdxx_r(dfftt,vc(idx:idx+nrxxs-1), becxx(ikq)%k(:,ibnd), deexx(:,ib))
                   end do 
                 END IF
                 !
@@ -1393,22 +1398,39 @@ print *, '@@vexx_std_gamma_outer'
                 !accumulates over bands and k points
                 !
                 Call start_clock('vexx-@6')
+                IF (noncolin) THEN
 #if defined(__CUDA)
-                !$acc parallel loop collapse(3) private(idx)
+                  !$acc parallel loop collapse(2) private(idx, jdx)
 #else
-                !$omp parallel do default(shared), private(ir, idx)
+                  !$omp parallel do default(shared), private(ir, idx, jdx)
 #endif
-                do ipol = 1, npol
                   do ib = 1, nb
                     do ir = 1, nrxxs
-                      idx = (ipol-1) * batchsize * nrxxs + (ib-1)*nrxxs + ir 
+                      idx = (ib-1)*nrxxs + ir 
+                      jdx = batchsize * nrxxs + (ib-1)*nrxxs + ir 
                       result( idx ) = result( idx ) + vc( idx )*exxbuff(ir,ibnd,ikq)
+                      result( jdx ) = result( jdx ) + vc( idx )*exxbuff(ir+nrxxs,ibnd,ikq)
                     enddo
                   end do 
-                end do 
 #if !defined(__CUDA)
                 !$omp end parallel do
 #endif
+                ELSE 
+#if defined(__CUDA)
+                  !$acc parallel loop collapse(2) private(idx)
+#else
+                  !$omp parallel do default(shared), private(ir, idx)
+#endif
+                  do ib = 1, nb
+                    do ir = 1, nrxxs
+                      idx = (ib-1)*nrxxs + ir 
+                      result( idx ) = result( idx ) + vc( idx )*exxbuff(ir,ibnd,ikq)
+                    enddo
+                  end do 
+#if !defined(__CUDA)
+                !$omp end parallel do
+#endif
+                END IF
                 Call stop_clock('vexx-@6')
                 !
              ENDDO &
