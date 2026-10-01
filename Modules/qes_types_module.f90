@@ -540,6 +540,19 @@ MODULE qes_types_module
     !
   END TYPE integerMatrix_type
   !
+  TYPE :: cpscalarQuantity_type
+    !
+    CHARACTER(len=100) :: tagname
+    LOGICAL  :: lwrite = .FALSE.
+    LOGICAL  :: lread  = .FALSE.
+    !
+    CHARACTER(len=256) :: UNITS
+    LOGICAL :: UNITS_ispresent = .FALSE.
+    !
+    REAL(DP) :: cpscalarQuantity
+    !
+  END TYPE cpscalarQuantity_type
+  !
   TYPE :: scalarQuantity_type
     !
     CHARACTER(len=100) :: tagname
@@ -882,6 +895,12 @@ MODULE qes_types_module
     INTEGER :: diago_gs_nblock
     LOGICAL  :: diago_rmm_conv_ispresent = .FALSE.
     LOGICAL :: diago_rmm_conv
+    LOGICAL  :: simple_magn_mix_ispresent = .FALSE.
+    LOGICAL :: simple_magn_mix
+    LOGICAL  :: maxlinmix_ispresent = .FALSE.
+    INTEGER :: maxlinmix
+    LOGICAL  :: simplemix_ispresent = .FALSE.
+    REAL(DP) :: simplemix
     !
   END TYPE electron_control_type
   !
@@ -1325,9 +1344,11 @@ MODULE qes_types_module
     LOGICAL  :: lread  = .FALSE.
     !
     TYPE(cpnumstep_type) :: STEP
-    TYPE(scalarQuantity_type) :: TIME
+    TYPE(cpscalarQuantity_type) :: TIME
+    LOGICAL  :: DT_ispresent = .FALSE.
+    TYPE(cpscalarQuantity_type) :: DT
     CHARACTER(len=256) :: TITLE
-    TYPE(scalarQuantity_type) :: KINETIC_ENERGY
+    TYPE(cpscalarQuantity_type) :: KINETIC_ENERGY
     TYPE(scalarQuantity_type) :: HARTREE_ENERGY
     TYPE(scalarQuantity_type) :: EWALD_TERM
     TYPE(scalarQuantity_type) :: GAUSS_SELFINT
