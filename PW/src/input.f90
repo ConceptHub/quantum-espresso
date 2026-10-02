@@ -2227,10 +2227,13 @@ SUBROUTINE exx_iosys ( ecutwfc, ecutrho )
   case("bands_outer")
     exx_bgrp_type = EXX_BGRP_EXBTC
     write(stdout, '(/,5x,"Exact exchange outer batching size: ",I4/)' ) batchsize 
+#if !defined(__CUDA)
+    CALL errore('input','EXX batching (exx_type = bands_outer) for CPU execution is not implemented',1)
+#endif
   case("band_pairs")
     exx_bgrp_type = EXX_BGRP_PAIRS
   case default
-    CALL errore('input','Invalid value of exx_type (values: bands, bands_outer, bands_inner, band_pairs)',1)
+    CALL errore('input','Invalid value of exx_type (values: bands, bands_outer, band_pairs)',2)
   end select
   !
 END SUBROUTINE exx_iosys

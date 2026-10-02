@@ -406,8 +406,10 @@ MODULE exx
     USE uspp,           ONLY : okvan
     USE paw_variables,  ONLY : okpaw
     USE wvfct,          ONLY : nbnd
-    USE exx_std,        ONLY : vexx_std_gamma_one, vexx_std_gamma_outer, &
-                               vexx_std_k_one,     vexx_std_k_outer
+    USE exx_std,        ONLY : vexx_std_gamma_one, vexx_std_k_one
+#if defined(__CUDA)
+    USE exx_std,        ONLY : vexx_std_gamma_outer, vexx_std_k_outer
+#endif
     USE exx_bp,         ONLY : vexx_bp
     !
     IMPLICIT NONE
@@ -436,12 +438,14 @@ MODULE exx
        else
           Call vexx_std_k_one(lda, n, m, psi, hpsi, becpsi )
        end if 
+#if defined(__CUDA)
     elseif(exx_bgrp_type .eq. EXX_BGRP_EXBTC) then
        if (gamma_only ) then
           Call vexx_std_gamma_outer(lda, n, m, psi, hpsi, becpsi )
        else
           Call vexx_std_k_outer(lda, n, m, psi, hpsi, becpsi )
        end if 
+#endif
     elseif(exx_bgrp_type .eq. EXX_BGRP_PAIRS) then
        Call vexx_bp(lda, n, m, psi, hpsi, becpsi )
     else
