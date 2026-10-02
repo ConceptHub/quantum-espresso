@@ -1,13 +1,22 @@
 Fixed in 8.0 version 
+  (8.0 also includes all fixes and new features listed for 7.6.1)
   * ...
 Incompatible changes in 8.0 version 
   * ...
 New in 8.0 version 
+  * Linear mixing of the magnetization during the first SCF iterations,
+    with the charge mixed by Broyden, then switch to full Broyden: new
+    variables simple_magn_mix, maxlinmix, simplemix (Aurora Ponzi)
   * pw2wannier90: new write_vmn, write_pmn options for velocity and momentum
     matrix elements (Martin Thümmler and Jae-Mo Lihm)
   * ...
 
 Fixed in 7.6.1 version(s)
+  (all changes in 7.6.1 are backports from the development version 8.0)
+  * Stress for hybrid functionals: the contribution of the q=0 divergent
+    term was missing and the normalization was wrong (Pietro Delugas)
+  * Gau-PBE: wrong density derivative of the exchange enhancement factor,
+    affecting potential and stress (Pietro Delugas)
   * Missing initialization of some PAW arrays (issue #863, courtesy Minkyu Park)
   * XML reading problem with some PPs (issue #857, courtesy Victor Yu)
   * The averaging of full-relativistic PPs for usage without spin-orbit was 
@@ -28,12 +37,22 @@ Fixed in 7.6.1 version(s)
     See !2931, courtesy Seung-Ju Hong
     
 Incompatible changes in 7.6.1 version(s)
+  * Stress for hybrid functionals changes (previous values were wrong).
+    With ultrasoft or PAW pseudopotentials the stress for hybrid
+    functionals is not computed, variable-cell calculations stop
+  * Gau-PBE: results change slightly
   * Full-relativistic PPs in calculations with no spin-orbit may yield 
     tiny differences wrt previous versions
   * "make pwall" compiles hp and tddfpt instead of pwcond
   * Meta-GGA: tiny differences in final total energies may appear 
 
 New in 7.6.1 version(s) 
+  * Dielectric-dependent range-separated (CAM-type) hybrid functionals,
+    input_dft='CAM', new variable exx_lr_fraction; stress available with
+    norm-conserving PPs. See !2870, courtesy Wei Chen; W. Chen, G. Miceli,
+    G.-M. Rignanese, A. Pasquarello, Phys. Rev. Materials 2, 073803 (2018)
+  * XML schema qes_260928: exx_lr_fraction and CAM, magnetization mixing
+    parameters, cp.x STATUS units (backward compatible)
   * DFT+U+V, 'ortho-atomic' DFT+U speedup: see !2905, courtesy Moritz Gubler
 
 Fixed in 7.6 version:

@@ -135,6 +135,7 @@ MODULE qes_init_module
     MODULE PROCEDURE qes_init_integerMatrix_1
     MODULE PROCEDURE qes_init_integerMatrix_2
     MODULE PROCEDURE qes_init_integerMatrix_3
+    MODULE PROCEDURE qes_init_cpscalarQuantity
     MODULE PROCEDURE qes_init_scalarQuantity
     MODULE PROCEDURE qes_init_rism3d
     MODULE PROCEDURE qes_init_rismlaue
@@ -1115,9 +1116,9 @@ MODULE qes_init_module
   END SUBROUTINE qes_init_dft
   !
   !
-  SUBROUTINE qes_init_hybrid(obj, tagname, qpoint_grid, ecutfock, exx_fraction, screening_parameter,&
-                            exxdiv_treatment, x_gamma_extrapolation, ecutvcut, localization_threshold,&
-                            use_ace, nbndproj)
+  SUBROUTINE qes_init_hybrid(obj, tagname, qpoint_grid, ecutfock, exx_fraction, exx_lr_fraction,&
+                            screening_parameter, exxdiv_treatment, x_gamma_extrapolation, ecutvcut,&
+                            localization_threshold, use_ace, nbndproj)
     !
     IMPLICIT NONE
     !
@@ -1126,6 +1127,7 @@ MODULE qes_init_module
     TYPE(qpoint_grid_type),OPTIONAL,INTENT(IN) :: qpoint_grid
     REAL(DP),OPTIONAL,INTENT(IN) :: ecutfock
     REAL(DP),OPTIONAL,INTENT(IN) :: exx_fraction
+    REAL(DP),OPTIONAL,INTENT(IN) :: exx_lr_fraction
     REAL(DP),OPTIONAL,INTENT(IN) :: screening_parameter
     CHARACTER(LEN=*),OPTIONAL,INTENT(IN) :: exxdiv_treatment
     LOGICAL,OPTIONAL,INTENT(IN) :: x_gamma_extrapolation
@@ -1155,6 +1157,12 @@ MODULE qes_init_module
       obj%exx_fraction = exx_fraction
     ELSE
       obj%exx_fraction_ispresent = .FALSE.
+    END IF
+    IF ( PRESENT(exx_lr_fraction)) THEN
+      obj%exx_lr_fraction_ispresent = .TRUE. 
+      obj%exx_lr_fraction = exx_lr_fraction
+    ELSE
+      obj%exx_lr_fraction_ispresent = .FALSE.
     END IF
     IF ( PRESENT(screening_parameter)) THEN
       obj%screening_parameter_ispresent = .TRUE. 
@@ -2430,8 +2438,8 @@ MODULE qes_init_module
                                       conv_thr, mixing_ndim, max_nstep, tq_smoothing, tbeta_smoothing,&
                                       diago_thr_init, diago_full_acc, exx_nstep, real_space_q,&
                                       real_space_beta, diago_cg_maxiter, diago_ppcg_maxiter,&
-                                      diago_david_ndim, diago_rmm_ndim, diago_gs_nblock, diago_rmm_conv &
-                                      )
+                                      diago_david_ndim, diago_rmm_ndim, diago_gs_nblock, diago_rmm_conv,&
+                                      simple_magn_mix, maxlinmix, simplemix)
     !
     IMPLICIT NONE
     !
@@ -2456,6 +2464,9 @@ MODULE qes_init_module
     INTEGER,OPTIONAL,INTENT(IN) :: diago_rmm_ndim
     INTEGER,OPTIONAL,INTENT(IN) :: diago_gs_nblock
     LOGICAL,OPTIONAL,INTENT(IN) :: diago_rmm_conv
+    LOGICAL,OPTIONAL,INTENT(IN) :: simple_magn_mix
+    INTEGER,OPTIONAL,INTENT(IN) :: maxlinmix
+    REAL(DP),OPTIONAL,INTENT(IN) :: simplemix
     !
     obj%tagname = TRIM(tagname)
     obj%lwrite = .TRUE.
@@ -2524,6 +2535,24 @@ MODULE qes_init_module
       obj%diago_rmm_conv = diago_rmm_conv
     ELSE
       obj%diago_rmm_conv_ispresent = .FALSE.
+    END IF
+    IF ( PRESENT(simple_magn_mix)) THEN
+      obj%simple_magn_mix_ispresent = .TRUE. 
+      obj%simple_magn_mix = simple_magn_mix
+    ELSE
+      obj%simple_magn_mix_ispresent = .FALSE.
+    END IF
+    IF ( PRESENT(maxlinmix)) THEN
+      obj%maxlinmix_ispresent = .TRUE. 
+      obj%maxlinmix = maxlinmix
+    ELSE
+      obj%maxlinmix_ispresent = .FALSE.
+    END IF
+    IF ( PRESENT(simplemix)) THEN
+      obj%simplemix_ispresent = .TRUE. 
+      obj%simplemix = simplemix
+    ELSE
+      obj%simplemix_ispresent = .FALSE.
     END IF
     !
   END SUBROUTINE qes_init_electron_control
@@ -4671,16 +4700,17 @@ MODULE qes_init_module
   !
   SUBROUTINE qes_init_cpstatus(obj, tagname, STEP, TIME, TITLE, KINETIC_ENERGY, HARTREE_ENERGY,&
                               EWALD_TERM, GAUSS_SELFINT, LPSP_ENERGY, NLPSP_ENERGY, EXC_ENERGY,&
-                              AVERAGE_POT, ENTHALPY)
+                              AVERAGE_POT, ENTHALPY, DT)
     !
     IMPLICIT NONE
     !
     TYPE(cpstatus_type), INTENT(OUT) :: obj
     CHARACTER(LEN=*), INTENT(IN) :: tagname
     TYPE(cpnumstep_type),INTENT(IN) :: STEP
-    TYPE(scalarQuantity_type),INTENT(IN) :: TIME
+    TYPE(cpscalarQuantity_type),INTENT(IN) :: TIME
+    TYPE(cpscalarQuantity_type),OPTIONAL,INTENT(IN) :: DT
     CHARACTER(LEN=*),INTENT(IN) :: TITLE
-    TYPE(scalarQuantity_type),INTENT(IN) :: KINETIC_ENERGY
+    TYPE(cpscalarQuantity_type),INTENT(IN) :: KINETIC_ENERGY
     TYPE(scalarQuantity_type),INTENT(IN) :: HARTREE_ENERGY
     TYPE(scalarQuantity_type),INTENT(IN) :: EWALD_TERM
     TYPE(scalarQuantity_type),INTENT(IN) :: GAUSS_SELFINT
@@ -4696,6 +4726,12 @@ MODULE qes_init_module
     !
     obj%STEP = STEP
     obj%TIME = TIME
+    IF ( PRESENT(DT)) THEN
+      obj%DT_ispresent = .TRUE. 
+      obj%DT = DT
+    ELSE
+      obj%DT_ispresent = .FALSE.
+    END IF
     obj%TITLE = TITLE
     obj%KINETIC_ENERGY = KINETIC_ENERGY
     obj%HARTREE_ENERGY = HARTREE_ENERGY
@@ -5139,6 +5175,30 @@ MODULE qes_init_module
     END IF
     !
   END SUBROUTINE qes_init_integerMatrix_3
+  !
+  !
+  SUBROUTINE qes_init_cpscalarQuantity(obj, tagname, UNITS, cpscalarQuantity)
+    !
+    IMPLICIT NONE
+    !
+    TYPE(cpscalarQuantity_type), INTENT(OUT) :: obj
+    CHARACTER(LEN=*), INTENT(IN) :: tagname
+    CHARACTER(LEN=*), OPTIONAL, INTENT(IN) :: UNITS
+    REAL(DP), INTENT(IN) :: cpscalarQuantity
+    !
+    obj%tagname = TRIM(tagname)
+    obj%lwrite = .TRUE.
+    obj%lread = .TRUE.
+    IF (PRESENT(UNITS)) THEN
+      obj%UNITS_ispresent = .TRUE.
+      obj%UNITS = UNITS
+    ELSE
+      obj%UNITS_ispresent = .FALSE.
+    END IF
+    !
+    obj%cpscalarQuantity = cpscalarQuantity
+    !
+  END SUBROUTINE qes_init_cpscalarQuantity
   !
   !
   SUBROUTINE qes_init_scalarQuantity(obj, tagname, Units, scalarQuantity)

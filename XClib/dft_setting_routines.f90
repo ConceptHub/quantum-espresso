@@ -21,11 +21,13 @@ MODULE dft_setting_routines
   !
   PUBLIC :: xclib_set_dft_from_name, xclib_set_dft_IDs,           &
             xclib_set_auxiliary_flags, xclib_set_threshold,       &
-            xclib_set_exx_fraction, xclib_set_finite_size_volume, &
+            xclib_set_exx_fraction, xclib_set_exx_lr_fraction,    &
+            xclib_set_finite_size_volume, &
             set_screening_parameter, set_gau_parameter
   PUBLIC :: xclib_get_name, xclib_get_ID,             & 
             xclib_get_dft_short, xclib_get_dft_long,  &
-            xclib_get_exx_fraction, xclib_get_finite_size_cell_volume, &
+            xclib_get_exx_fraction, xclib_get_exx_lr_fraction,    &
+            xclib_get_finite_size_cell_volume, &
             get_screening_parameter, get_gau_parameter
   PUBLIC :: xclib_dft_is, xclib_dft_is_libxc, xclib_init_libxc,  &
             start_exx, stop_exx, dft_has_finite_size_correction, &
@@ -503,6 +505,7 @@ CONTAINS
     USE kind_l,              ONLY: DP
     USE dft_setting_params,  ONLY: iexch, icorr, igcx, igcc, imeta, imetac, &
                                    islda, isgradient, ismeta, exx_fraction, &
+                                   exx_lr_fraction,                         &
                                    screening_parameter, gau_parameter,      &
                                    ishybrid, has_finite_size_correction,    &
                                    is_libxc, exx_term, max_flags
@@ -557,6 +560,12 @@ CONTAINS
        exx_fraction = 0.20_DP
        screening_parameter = 0.106_DP
     ENDIF
+    ! CAM
+    IF ( igcx == 52) THEN
+       exx_fraction = 1.0_DP
+       exx_lr_fraction = -0.8_DP
+       screening_parameter = 0.7_DP
+    END IF
     ! gau-pbe
     IF ( igcx==20 .AND. .NOT.is_libxc(3) ) THEN
        exx_fraction = 0.24_DP
@@ -701,6 +710,18 @@ CONTAINS
     RETURN
   END SUBROUTINE xclib_set_exx_fraction
   !-----------------------------------------------------------------------
+  SUBROUTINE xclib_set_exx_lr_fraction( exx_lr_fraction_ )
+    !! Impose input parameter as exact exchange fraction value
+    USE kind_l,             ONLY: DP
+    USE dft_setting_params, ONLY: exx_lr_fraction
+    IMPLICIT NONE
+    REAL(DP), INTENT(IN) :: exx_lr_fraction_
+    !! Imposed value of exact exchange fraction
+    exx_lr_fraction = exx_lr_fraction_
+    WRITE( stdout,'(5x,a,f6.2)') 'EXX (lr) fraction changed: ', exx_lr_fraction
+    RETURN
+  END SUBROUTINE xclib_set_exx_lr_fraction
+  !-----------------------------------------------------------------------
   SUBROUTINE dft_force_hybrid( request )
     !! Impose hybrid condition.
     USE dft_setting_params, ONLY: ishybrid
@@ -736,6 +757,16 @@ CONTAINS
      RETURN
   END FUNCTION xclib_get_exx_fraction
   !-----------------------------------------------------------------------
+  FUNCTION xclib_get_exx_lr_fraction()
+     !! Recover exact exchange fraction in the long range.
+     USE kind_l,             ONLY: DP
+     USE dft_setting_params, ONLY: exx_lr_fraction
+     IMPLICIT NONE
+     REAL(DP) :: xclib_get_exx_lr_fraction
+     xclib_get_exx_lr_fraction = exx_lr_fraction
+     RETURN
+  END FUNCTION xclib_get_exx_lr_fraction
+  !-----------------------------------------------------------------------
   !
   !
   !============ PBE gau-screening ========================================
@@ -754,7 +785,7 @@ CONTAINS
     lxc_cond4 = (igcx==0 .AND.is_libxc(4) .AND. fkind==XC_EXCHANGE_CORRELATION)
 #endif
     IF ((ABS(scrparm_)>0.d0.AND.(igcx/=0.AND.igcx/=12.AND.(igcx<32.OR.igcx>35) &
-        .AND.igcx/=47).AND..NOT.is_libxc(3))) THEN
+        .AND.igcx/=47.AND.igcx/=52).AND..NOT.is_libxc(3))) THEN
       IF (.NOT.lxc_cond4) THEN
         CALL xclib_infomsg( 'set_screening_parameter', 'WARNING: the screening &
                              &parameter seems inconsistent with the chosen inpu&

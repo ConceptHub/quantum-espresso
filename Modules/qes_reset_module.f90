@@ -129,6 +129,7 @@ MODULE qes_reset_module
     MODULE PROCEDURE qes_reset_d3mags
     MODULE PROCEDURE qes_reset_pseudoPath
     MODULE PROCEDURE qes_reset_integerMatrix
+    MODULE PROCEDURE qes_reset_cpscalarQuantity
     MODULE PROCEDURE qes_reset_scalarQuantity
     MODULE PROCEDURE qes_reset_rism3d
     MODULE PROCEDURE qes_reset_rismlaue
@@ -633,6 +634,7 @@ MODULE qes_reset_module
     obj%qpoint_grid_ispresent = .FALSE.
     obj%ecutfock_ispresent = .FALSE.
     obj%exx_fraction_ispresent = .FALSE.
+    obj%exx_lr_fraction_ispresent = .FALSE.
     obj%screening_parameter_ispresent = .FALSE.
     obj%exxdiv_treatment_ispresent = .FALSE.
     obj%x_gamma_extrapolation_ispresent = .FALSE.
@@ -1294,6 +1296,9 @@ MODULE qes_reset_module
     obj%diago_rmm_ndim_ispresent = .FALSE.
     obj%diago_gs_nblock_ispresent = .FALSE.
     obj%diago_rmm_conv_ispresent = .FALSE.
+    obj%simple_magn_mix_ispresent = .FALSE.
+    obj%maxlinmix_ispresent = .FALSE.
+    obj%simplemix_ispresent = .FALSE.
     !
   END SUBROUTINE qes_reset_electron_control
   !
@@ -2215,8 +2220,11 @@ MODULE qes_reset_module
     obj%lread  = .FALSE.
     !
     CALL qes_reset_cpnumstep(obj%STEP)
-    CALL qes_reset_scalarQuantity(obj%TIME)
-    CALL qes_reset_scalarQuantity(obj%KINETIC_ENERGY)
+    CALL qes_reset_cpscalarQuantity(obj%TIME)
+    IF (obj%DT_ispresent) &
+      CALL qes_reset_cpscalarQuantity(obj%DT)
+    obj%DT_ispresent = .FALSE.
+    CALL qes_reset_cpscalarQuantity(obj%KINETIC_ENERGY)
     CALL qes_reset_scalarQuantity(obj%HARTREE_ENERGY)
     CALL qes_reset_scalarQuantity(obj%EWALD_TERM)
     CALL qes_reset_scalarQuantity(obj%GAUSS_SELFINT)
@@ -2433,6 +2441,20 @@ MODULE qes_reset_module
     obj%order_ispresent = .FALSE.
     !
   END SUBROUTINE qes_reset_integerMatrix
+  !
+  !
+  SUBROUTINE qes_reset_cpscalarQuantity(obj)
+    !
+    IMPLICIT NONE
+    TYPE(cpscalarQuantity_type),INTENT(INOUT)    :: obj
+    !
+    obj%tagname = ""
+    obj%lwrite  = .FALSE.
+    obj%lread  = .FALSE.
+    !
+    obj%UNITS_ispresent = .FALSE.
+    !
+  END SUBROUTINE qes_reset_cpscalarQuantity
   !
   !
   SUBROUTINE qes_reset_scalarQuantity(obj)

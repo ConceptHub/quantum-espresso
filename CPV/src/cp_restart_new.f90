@@ -81,6 +81,7 @@ MODULE cp_restart_new
                                            amass, iforce, ityp 
       USE funct,                    ONLY : get_dft_name, dft_is_nonlocc, get_nonlocc_name
       USE xc_lib,                   ONLY : xclib_dft_is, xclib_get_exx_fraction, &
+                                           xclib_get_exx_lr_fraction, xclib_get_id, &
                                            get_screening_parameter
       USE ldaU_cp,                  ONLY : lda_plus_U, ns, Hubbard_l, Hubbard_n, &
                                            Hubbard_lmax, Hubbard_U
@@ -304,7 +305,7 @@ MODULE cp_restart_new
 !-------------------------------------------------------------------------------
 ! ... XC FUNCTIONAL
 !-------------------------------------------------------------------------------
-        dft_name = get_dft_name()
+        dft_name = ADJUSTL(get_dft_name())
         IF ( lda_plus_U) THEN
            ALLOCATE (dftU_) 
            is_hubbard(:) = (Hubbard_U(:) > 0.0_dp)
@@ -315,9 +316,18 @@ MODULE cp_restart_new
         !
         IF (xclib_dft_is('hybrid'))  THEN 
            ALLOCATE (hybrid_) 
-           CALL qexsd_init_hybrid(OBJ = hybrid_, DFT_IS_HYBRID = .TRUE. , ECUTFOCK = ecutwfc, &
-                                 EXX_FRACTION = xclib_get_exx_fraction(), SCREENING_PARAMETER = get_screening_parameter(),&
-                                 EXXDIV_TREATMENT = 'none',  X_GAMMA_EXTRAPOLATION = .FALSE.) 
+           ! ... exx_lr_fraction is written only for the CAM kernel
+           IF ( xclib_get_id('GGA','EXCH') == 52 ) THEN
+              CALL qexsd_init_hybrid(OBJ = hybrid_, DFT_IS_HYBRID = .TRUE. , ECUTFOCK = ecutwfc, &
+                                   EXX_FRACTION = xclib_get_exx_fraction(), EXX_LR_FRACTION = xclib_get_exx_lr_fraction(), &
+                                   SCREENING_PARAMETER = get_screening_parameter(),&
+                                   EXXDIV_TREATMENT = 'none',  X_GAMMA_EXTRAPOLATION = .FALSE.)
+           ELSE
+              CALL qexsd_init_hybrid(OBJ = hybrid_, DFT_IS_HYBRID = .TRUE. , ECUTFOCK = ecutwfc, &
+                                   EXX_FRACTION = xclib_get_exx_fraction(), &
+                                   SCREENING_PARAMETER = get_screening_parameter(),&
+                                   EXXDIV_TREATMENT = 'none',  X_GAMMA_EXTRAPOLATION = .FALSE.)
+           END IF
         END IF 
         empirical_vdW = ( TRIM(vdw_corr) /= 'none' )  
         IF ( empirical_vdW .OR. dft_is_nonlocc() ) THEN 
@@ -683,7 +693,7 @@ MODULE cp_restart_new
       CHARACTER(LEN=32) :: exxdiv_treatment, Hubbard_projectors
       LOGICAL :: ldftd3
       INTEGER :: nq1, nq2, nq3, lda_plus_U_kind
-      REAL(dp):: exx_fraction, screening_parameter, ecutfock, ecutvcut,local_thr
+      REAL(dp):: exx_fraction, exx_lr_fraction, screening_parameter, ecutfock, ecutvcut,local_thr
       LOGICAL :: x_gamma_extrapolation, use_ace
       INTEGER :: nbndproj
       REAL(dp):: hubbard_dum(3,nsp), hubba_dum(nsp), hubba_dum_dum(1,1,1) 
@@ -696,6 +706,9 @@ MODULE cp_restart_new
       !
       dirname = restart_dir(ndr)
       filename= xmlfile(ndr)
+      exx_fraction = -1.0_DP
+      exx_lr_fraction = -1.0E6_DP
+      screening_parameter = -1.0_DP
       INQUIRE ( file=filename, exist=found )
       IF (.NOT. found ) &
          CALL errore ('cp_readfile', 'xml data file not found', 1)
@@ -787,7 +800,7 @@ MODULE cp_restart_new
            ngm_g, ngms_g, npw_g, b1, b2, b3 )
 
       CALL qexsd_copy_dft ( output_obj%dft, nsp, atm, dft_name, &
-           nq1, nq2, nq3, ecutfock, exx_fraction, screening_parameter, &
+           nq1, nq2, nq3, ecutfock, exx_fraction, exx_lr_fraction, screening_parameter, &
            exxdiv_treatment, x_gamma_extrapolation, ecutvcut, local_thr, use_ace, nbndproj, &
            lda_plus_U, bool_dum,lda_plus_U_kind, Hubbard_projectors, Hubbard_n, Hubbard_l, Hubbard_lmax,Hubbard_dum, &
            hub_l2_dum, hub_l2_dum, hub_l2_dum, hub_l2_dum, backall_dum, hub_lmax_back_dum, hubba_dum, & 

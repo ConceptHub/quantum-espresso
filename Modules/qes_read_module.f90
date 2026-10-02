@@ -132,6 +132,7 @@ MODULE qes_read_module
     MODULE PROCEDURE qes_read_d3mags
     MODULE PROCEDURE qes_read_pseudoPath
     MODULE PROCEDURE qes_read_integerMatrix
+    MODULE PROCEDURE qes_read_cpscalarQuantity
     MODULE PROCEDURE qes_read_scalarQuantity
     MODULE PROCEDURE qes_read_rism3d
     MODULE PROCEDURE qes_read_rismlaue
@@ -3174,6 +3175,34 @@ MODULE qes_read_module
       END IF
     ELSE
        obj%exx_fraction_ispresent = .FALSE.
+    END IF
+    !
+    tmp_node_list => getElementsByTagname(xml_node, "exx_lr_fraction")
+    tmp_node_list_size = getLength(tmp_node_list)
+    !
+    IF (tmp_node_list_size > 1) THEN
+        IF (PRESENT(ierr) ) THEN
+           CALL infomsg("qes_read:hybridType","exx_lr_fraction: too many occurrences")
+           ierr = ierr + 1
+        ELSE
+           CALL errore("qes_read:hybridType","exx_lr_fraction: too many occurrences",10)
+        END IF
+    END IF
+    !
+    IF (tmp_node_list_size>0) THEN
+      obj%exx_lr_fraction_ispresent = .TRUE.
+      tmp_node => item(tmp_node_list, 0)
+      CALL extractDataContent(tmp_node, obj%exx_lr_fraction , IOSTAT = iostat_)
+      IF ( iostat_ /= 0 ) THEN
+         IF ( PRESENT (ierr ) ) THEN
+            CALL infomsg("qes_read:hybridType","error reading exx_lr_fraction")
+            ierr = ierr + 1
+         ELSE
+            CALL errore ("qes_read:hybridType","error reading exx_lr_fraction",10)
+         END IF
+      END IF
+    ELSE
+       obj%exx_lr_fraction_ispresent = .FALSE.
     END IF
     !
     tmp_node_list => getElementsByTagname(xml_node, "screening_parameter")
@@ -6412,6 +6441,90 @@ MODULE qes_read_module
       END IF
     ELSE
        obj%diago_rmm_conv_ispresent = .FALSE.
+    END IF
+    !
+    tmp_node_list => getElementsByTagname(xml_node, "simple_magn_mix")
+    tmp_node_list_size = getLength(tmp_node_list)
+    !
+    IF (tmp_node_list_size > 1) THEN
+        IF (PRESENT(ierr) ) THEN
+           CALL infomsg("qes_read:electron_controlType","simple_magn_mix: too many occurrences")
+           ierr = ierr + 1
+        ELSE
+           CALL errore("qes_read:electron_controlType","simple_magn_mix: too many occurrences",10)
+        END IF
+    END IF
+    !
+    IF (tmp_node_list_size>0) THEN
+      obj%simple_magn_mix_ispresent = .TRUE.
+      tmp_node => item(tmp_node_list, 0)
+      CALL extractDataContent(tmp_node, obj%simple_magn_mix , IOSTAT = iostat_)
+      IF ( iostat_ /= 0 ) THEN
+         IF ( PRESENT (ierr ) ) THEN
+            CALL infomsg("qes_read:electron_controlType","error reading simple_magn_mix")
+            ierr = ierr + 1
+         ELSE
+            CALL errore ("qes_read:electron_controlType","error reading simple_magn_mix",10)
+         END IF
+      END IF
+    ELSE
+       obj%simple_magn_mix_ispresent = .FALSE.
+    END IF
+    !
+    tmp_node_list => getElementsByTagname(xml_node, "maxlinmix")
+    tmp_node_list_size = getLength(tmp_node_list)
+    !
+    IF (tmp_node_list_size > 1) THEN
+        IF (PRESENT(ierr) ) THEN
+           CALL infomsg("qes_read:electron_controlType","maxlinmix: too many occurrences")
+           ierr = ierr + 1
+        ELSE
+           CALL errore("qes_read:electron_controlType","maxlinmix: too many occurrences",10)
+        END IF
+    END IF
+    !
+    IF (tmp_node_list_size>0) THEN
+      obj%maxlinmix_ispresent = .TRUE.
+      tmp_node => item(tmp_node_list, 0)
+      CALL extractDataContent(tmp_node, obj%maxlinmix , IOSTAT = iostat_)
+      IF ( iostat_ /= 0 ) THEN
+         IF ( PRESENT (ierr ) ) THEN
+            CALL infomsg("qes_read:electron_controlType","error reading maxlinmix")
+            ierr = ierr + 1
+         ELSE
+            CALL errore ("qes_read:electron_controlType","error reading maxlinmix",10)
+         END IF
+      END IF
+    ELSE
+       obj%maxlinmix_ispresent = .FALSE.
+    END IF
+    !
+    tmp_node_list => getElementsByTagname(xml_node, "simplemix")
+    tmp_node_list_size = getLength(tmp_node_list)
+    !
+    IF (tmp_node_list_size > 1) THEN
+        IF (PRESENT(ierr) ) THEN
+           CALL infomsg("qes_read:electron_controlType","simplemix: too many occurrences")
+           ierr = ierr + 1
+        ELSE
+           CALL errore("qes_read:electron_controlType","simplemix: too many occurrences",10)
+        END IF
+    END IF
+    !
+    IF (tmp_node_list_size>0) THEN
+      obj%simplemix_ispresent = .TRUE.
+      tmp_node => item(tmp_node_list, 0)
+      CALL extractDataContent(tmp_node, obj%simplemix , IOSTAT = iostat_)
+      IF ( iostat_ /= 0 ) THEN
+         IF ( PRESENT (ierr ) ) THEN
+            CALL infomsg("qes_read:electron_controlType","error reading simplemix")
+            ierr = ierr + 1
+         ELSE
+            CALL errore ("qes_read:electron_controlType","error reading simplemix",10)
+         END IF
+      END IF
+    ELSE
+       obj%simplemix_ispresent = .FALSE.
     END IF
     !
     !
@@ -13830,7 +13943,27 @@ MODULE qes_read_module
     !
     tmp_node => item(tmp_node_list, 0)
     IF (ASSOCIATED(tmp_node))&
-       CALL qes_read_scalarQuantity(tmp_node, obj%TIME, ierr )
+       CALL qes_read_cpscalarQuantity(tmp_node, obj%TIME, ierr )
+    !
+    tmp_node_list => getElementsByTagname(xml_node, "DT")
+    tmp_node_list_size = getLength(tmp_node_list)
+    !
+    IF (tmp_node_list_size > 1) THEN
+        IF (PRESENT(ierr) ) THEN
+           CALL infomsg("qes_read:cpstatusType","DT: too many occurrences")
+           ierr = ierr + 1
+        ELSE
+           CALL errore("qes_read:cpstatusType","DT: too many occurrences",10)
+        END IF
+    END IF
+    !
+    IF (tmp_node_list_size>0) THEN
+      obj%DT_ispresent = .TRUE.
+      tmp_node => item(tmp_node_list, 0)
+      CALL qes_read_cpscalarQuantity(tmp_node, obj%DT, ierr )
+    ELSE
+       obj%DT_ispresent = .FALSE.
+    END IF
     !
     tmp_node_list => getElementsByTagname(xml_node, "TITLE")
     tmp_node_list_size = getLength(tmp_node_list)
@@ -13870,7 +14003,7 @@ MODULE qes_read_module
     !
     tmp_node => item(tmp_node_list, 0)
     IF (ASSOCIATED(tmp_node))&
-       CALL qes_read_scalarQuantity(tmp_node, obj%KINETIC_ENERGY, ierr )
+       CALL qes_read_cpscalarQuantity(tmp_node, obj%KINETIC_ENERGY, ierr )
     !
     tmp_node_list => getElementsByTagname(xml_node, "HARTREE_ENERGY")
     tmp_node_list_size = getLength(tmp_node_list)
@@ -14966,6 +15099,36 @@ MODULE qes_read_module
     obj%lwrite = .TRUE.
     !
   END SUBROUTINE qes_read_integerMatrix
+  !
+  !
+  SUBROUTINE qes_read_cpscalarQuantity(xml_node, obj, ierr )
+    !
+    IMPLICIT NONE
+    !
+    TYPE(Node), INTENT(IN), POINTER                 :: xml_node
+    TYPE(cpscalarQuantity_type), INTENT(OUT) :: obj
+    INTEGER, OPTIONAL, INTENT(INOUT)                  :: ierr
+    !
+    TYPE(Node), POINTER :: tmp_node
+    TYPE(NodeList), POINTER :: tmp_node_list
+    INTEGER :: tmp_node_list_size, index, iostat_
+    !
+    obj%tagname = getTagName(xml_node)
+    ! 
+    IF (hasAttribute(xml_node, "UNITS")) THEN
+      CALL extractDataAttribute(xml_node, "UNITS", obj%UNITS)
+      obj%UNITS_ispresent = .TRUE.
+    ELSE
+      obj%UNITS_ispresent = .FALSE.
+    END IF
+    !
+    !
+    !
+    CALL extractDataContent(xml_node, obj%cpscalarQuantity )
+    !
+    obj%lwrite = .TRUE.
+    !
+  END SUBROUTINE qes_read_cpscalarQuantity
   !
   !
   SUBROUTINE qes_read_scalarQuantity(xml_node, obj, ierr )

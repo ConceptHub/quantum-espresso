@@ -30,6 +30,7 @@ MODULE xc_lib
             xclib_set_auxiliary_flags,         &
             xclib_set_threshold,               &
             xclib_set_exx_fraction,            &
+            xclib_set_exx_lr_fraction,         &
             xclib_set_finite_size_volume,      &
             set_screening_parameter,           &
             set_gau_parameter
@@ -39,6 +40,7 @@ MODULE xc_lib
             xclib_get_dft_short,               &
             xclib_get_dft_long,                &
             xclib_get_exx_fraction,            &
+            xclib_get_exx_lr_fraction,         &
             xclib_get_finite_size_cell_volume, &
             get_screening_parameter,           &
             get_gau_parameter        

@@ -23,7 +23,7 @@ MODULE exx
   USE control_flags,        ONLY : gamma_only, tqr, use_gpu, many_fft
   USE exx_base,             ONLY : exx_bgrp_type, EXX_BGRP_BANDS, dfftt, exxbuff , exxbuff_d, npwt, x_nbnd_occ, &
                                    ibnd_start, ibnd_end, gt, ggt, gcutmt, gkcut, gstart_t, ngmt_g, &
-                                   eps_occ, exxalfa, x_occupation, x_occupation_d, &
+                                   eps_occ, exxalfa, exxbeta, x_occupation, x_occupation_d, &
                                    locbuff, exxmat, locmat, nbndproj, local_thr
   !
   IMPLICIT NONE
@@ -265,7 +265,8 @@ MODULE exx
     USE wvfct,                ONLY : nbnd, npwx, wg
     USE klist,                ONLY : nks, nkstot, wk
     USE symm_base,            ONLY : nsym, sr
-    USE xc_lib,               ONLY : xclib_get_exx_fraction, start_exx,          &
+    USE xc_lib,               ONLY : xclib_get_exx_fraction,                &
+                                     xclib_get_exx_lr_fraction, start_exx,  &
                                      get_screening_parameter, get_gau_parameter, &
                                      exx_is_active
     USE uspp,                 ONLY : okvan
@@ -298,6 +299,7 @@ MODULE exx
        gau_scrlen = get_gau_parameter()
        exxdiv  = exx_divergence()
        exxalfa = xclib_get_exx_fraction()
+       exxbeta = xclib_get_exx_lr_fraction()
        !
        CALL start_exx()
     ENDIF

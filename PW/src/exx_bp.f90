@@ -2992,10 +2992,12 @@ end associate
                                      x_gamma_extrapolation, on_double_grid, &
                                      grid_factor, yukawa, erfc_scrlen,      &
                                      use_coulomb_vcut_ws, use_coulomb_vcut_spheric, &
-                                     gau_scrlen, vcut, index_xkq, index_xk, index_sym
+                                     gau_scrlen, vcut, index_xkq, index_xk, index_sym, &
+                                     exx_divergence_ew, exx_divergence_stress, exxbeta
     USE exx_bp_utils,         ONLY : change_data_structure, transform_evc_to_exx, &
                                      g_exx, igk_exx, nwordwfc_exx, evc_exx
     USE coulomb_vcut_module,  ONLY : vcut_get,  vcut_spheric_get
+    USE xc_lib,               ONLY : xclib_get_id
     !
     IMPLICIT NONE
     !
@@ -3007,13 +3009,16 @@ end associate
     COMPLEX(DP),ALLOCATABLE :: tempphic_nc(:,:), temppsic_nc(:,:), &
                                result_nc(:,:)
     COMPLEX(DP),ALLOCATABLE :: rhoc(:)
-    REAL(DP),   ALLOCATABLE :: fac(:), fac_tens(:,:,:), fac_stress(:)
+    REAL(DP),   ALLOCATABLE :: fac(:), fac_tens(:,:,:), fac_stress(:), fac_stress_div(:)
     INTEGER  :: npw, jbnd, ibnd, ik, ikk, ig, ir, ikq, iq, isym
     INTEGER  :: nqi, iqi, beta, nrxxs, ngm
-    INTEGER  :: ibnd_loop_start
+    INTEGER  :: ibnd_loop_start, igcx
     REAL(DP) :: x1, x2
     REAL(DP) :: qq, xk_cryst(3), sxk(3), xkq(3), vc(3,3), x, q(3)
+    REAL(DP) :: cam_beta, scr_exp, qscr
     REAL(DP) :: delta(3,3)
+    ! q=0 divergence: Ewald part of exxdiv and strain derivative of its G-sum part
+    REAL(DP) :: exxdivergence_ew, exxdiv_stress(3,3)
     INTEGER :: jstart, jend, ii, ipair, jblock_start, jblock_end
     INTEGER :: iegrp, wegrp
     INTEGER :: exxbuff_index
@@ -3023,14 +3028,22 @@ end associate
     IF (npool>1) CALL errore( 'exx_stress2', 'stress not available with pools', 1 )
     IF (noncolin) CALL errore( 'exx_stress2', 'noncolinear stress not implemented', 1 )
     IF (okvan) CALL infomsg( 'exx_stress2', 'USPP stress not tested' )
+    igcx = xclib_get_id('GGA','EXCH')
+    cam_beta = 0._DP
+    IF (igcx == 52) THEN
+       IF (exxalfa == 0._DP) CALL errore( 'exx_stress2', 'CAM stress requires nonzero exx_fraction', 1 )
+       cam_beta = exxbeta / exxalfa
+    ENDIF
     !
     nrxxs = dfftt%nnr
     ngm   = dfftt%ngm
     delta = RESHAPE( (/1._dp,0._dp,0._dp, 0._dp,1._dp,0._dp, 0._dp,0._dp,1._dp/), (/3,3/))
     exx_stress_ = 0._dp
+    exxdivergence_ew = exx_divergence_ew()
+    exxdiv_stress    = exx_divergence_stress()
     !
     ALLOCATE( tempphic(nrxxs), temppsic(nrxxs), rhoc(nrxxs), fac(ngm) )
-    ALLOCATE( fac_tens(3,3,ngm), fac_stress(ngm) )
+    ALLOCATE( fac_tens(3,3,ngm), fac_stress(ngm), fac_stress_div(ngm) )
     !
     nqi = nqs
     !
@@ -3061,7 +3074,7 @@ end associate
           !      
           !CALL start_clock ('exxen2_ngmloop')      
           !      
-!$omp parallel do default(shared), private(ig, beta, q, qq, on_double_grid, x)
+!$omp parallel do default(shared), private(ig, beta, q, qq, on_double_grid, x, qscr, scr_exp)
           DO ig = 1, ngm      
              IF (negrp == 1) THEN      
                 q(1) = xk(1,current_k) - xkq(1) + g(1,ig)      
@@ -3095,11 +3108,13 @@ end associate
              IF (use_coulomb_vcut_ws) THEN      
                 fac(ig) = vcut_get(vcut, q)      
                 fac_stress(ig) = 0._dp   ! not implemented      
+                fac_stress_div(ig) = 0._dp
                 IF (gamma_only .AND. qq > 1.d-8) fac(ig) = 2.d0 * fac(ig)      
                 !      
              ELSEIF ( use_coulomb_vcut_spheric ) THEN      
                 fac(ig) = vcut_spheric_get(vcut, q)      
                 fac_stress(ig) = 0._dp   ! not implemented      
+                fac_stress_div(ig) = 0._dp
                 IF (gamma_only .AND. qq > 1.d-8) fac(ig) = 2.d0 * fac(ig)      
                 !      
              ELSEIF (gau_scrlen > 0) THEN      
@@ -3108,17 +3123,27 @@ end associate
                 fac_stress(ig) =  e2*2.d0/4.d0/gau_scrlen  * &       
                                   EXP(-qq/4.d0/gau_scrlen) * &
                                   ((pi/gau_scrlen)**(1.5d0))*grid_factor       
+                fac_stress_div(ig) = 0._dp
                 IF (gamma_only) fac(ig) = 2.d0 * fac(ig)       
                 IF (gamma_only) fac_stress(ig) = 2.d0 * fac_stress(ig)       
                 IF (on_double_grid) fac(ig) = 0._dp       
                 IF (on_double_grid) fac_stress(ig) = 0._dp       
                 !       
              ELSEIF (qq > 1.d-8) THEN      
+                fac_stress_div(ig) = 0._dp
                 IF ( erfc_scrlen > 0 ) THEN       
-                  fac(ig)=e2*fpi/qq*(1._dp-EXP(-qq/4.d0/erfc_scrlen**2)) * grid_factor       
-                  fac_stress(ig) = -e2*fpi * 2.d0/qq**2 * ( &       
-                      (1._dp+qq/4.d0/erfc_scrlen**2)*EXP(-qq/4.d0/erfc_scrlen**2) - 1._dp) * &       
-                      grid_factor       
+                  qscr = qq / (4.d0 * erfc_scrlen**2)
+                  scr_exp = EXP(-qscr)
+                  IF (igcx == 52) THEN
+                    fac(ig) = e2*fpi/qq*(1._dp + cam_beta*scr_exp) * grid_factor
+                    fac_stress(ig) = e2*fpi * 2.d0/qq**2 * &
+                        (1._dp + cam_beta*scr_exp*(1._dp+qscr)) * grid_factor
+                  ELSE
+                    fac(ig)=e2*fpi/qq*(1._dp-scr_exp) * grid_factor
+                    fac_stress(ig) = -e2*fpi * 2.d0/qq**2 * ( &
+                        (1._dp+qscr)*scr_exp - 1._dp) * &
+                        grid_factor
+                  ENDIF
                 ELSE       
                   fac(ig)=e2*fpi/( qq + yukawa ) * grid_factor       
                   fac_stress(ig) = 2.d0 * e2*fpi/(qq+yukawa)**2 * grid_factor       
@@ -3131,15 +3156,23 @@ end associate
                 !      
              ELSE 
                 ! 
-                fac(ig) = -exxdiv ! or rather something else (see f.gygi)       
-                fac_stress(ig) = 0._dp  ! or -exxdiv_stress (not yet implemented)       
+                ! exxdiv = D_sum + D_ew, with D_ew proportional to omega:
+                ! -delta*fac gives delta*D_sum, fac_stress_div adds -dD_sum/deps
+                fac(ig) = -exxdiv + exxdivergence_ew
+                fac_stress(ig) = 0._dp
+                fac_stress_div(ig) = 1._dp
                 IF ( yukawa> 0._dp .AND. .NOT. x_gamma_extrapolation) THEN       
                   fac(ig) = fac(ig) + e2*fpi/( qq + yukawa )       
                   fac_stress(ig) = 2.d0 * e2*fpi/(qq+yukawa)**2       
                 ENDIF       
                 IF (erfc_scrlen > 0._dp .AND. .NOT. x_gamma_extrapolation) THEN       
-                  fac(ig) = e2*fpi / (4.d0*erfc_scrlen**2)       
-                  fac_stress(ig) = e2*fpi / (8.d0*erfc_scrlen**4)       
+                  IF (igcx == 52) THEN
+                    fac(ig) = fac(ig) - cam_beta * e2*fpi / (4.d0*erfc_scrlen**2)
+                    fac_stress(ig) = -cam_beta * e2*fpi / (8.d0*erfc_scrlen**4)
+                  ELSE
+                    fac(ig) = fac(ig) + e2*fpi / (4.d0*erfc_scrlen**2)
+                    fac_stress(ig) = e2*fpi / (8.d0*erfc_scrlen**4)
+                  ENDIF
                 ENDIF 
                 !
              ENDIF
@@ -3239,14 +3272,16 @@ end associate
                          vc(:,:) = vc(:,:) + x1 * 0.25_dp * &      
                                    ABS( rhoc(dfftt%nl(ig)) + &      
                                    CONJG(rhoc(dfftt%nlm(ig))))**2 * &      
-                                   (fac_tens(:,:,ig)*fac_stress(ig)/2.d0 - delta(:,:)*fac(ig))      
+                                   (fac_tens(:,:,ig)*fac_stress(ig) - delta(:,:)*fac(ig) + &
+                                   exxdiv_stress(:,:)*fac_stress_div(ig))      
                          vc(:,:) = vc(:,:) + x2 * 0.25_dp * &      
                                    ABS( rhoc(dfftt%nl(ig)) - &      
                                    CONJG(rhoc(dfftt%nlm(ig))))**2 * &      
-                                   (fac_tens(:,:,ig)*fac_stress(ig)/2.d0 - delta(:,:)*fac(ig))      
+                                   (fac_tens(:,:,ig)*fac_stress(ig) - delta(:,:)*fac(ig) + &
+                                   exxdiv_stress(:,:)*fac_stress_div(ig))      
                       ENDDO      
 !$omp end parallel do
-                      vc = vc / nqs / 4.d0
+                      vc = vc / nqs / 2.d0
                       exx_stress_ = exx_stress_ + exxalfa * vc * wg(jbnd,ikk)
                    ENDDO
                    !
@@ -3272,12 +3307,12 @@ end associate
                       DO ig = 1, ngm
                          vc(:,:) = vc(:,:) + rhoc(dfftt%nl(ig))  * &
                                    CONJG(rhoc(dfftt%nl(ig))) *     &
-                                   (fac_tens(:,:,ig)*fac_stress(ig)/2.d0 - &
-                                   delta(:,:)*fac(ig))
+                                   (fac_tens(:,:,ig)*fac_stress(ig) - &
+                                   delta(:,:)*fac(ig) + exxdiv_stress(:,:)*fac_stress_div(ig))
                       ENDDO
 !$omp end parallel do
                       !
-                      vc = vc * x_occupation(ibnd,ik) / nqs / 4.d0
+                      vc = vc * x_occupation(ibnd,ik) / nqs / 2.d0
                       exx_stress_ = exx_stress_ + exxalfa * vc * wg(jbnd,ikk)
                       !
                    ENDDO
@@ -3296,7 +3331,7 @@ end associate
        !
     ENDDO ! ikk
     !
-    DEALLOCATE( tempphic, temppsic, rhoc, fac, fac_tens, fac_stress )
+    DEALLOCATE( tempphic, temppsic, rhoc, fac, fac_tens, fac_stress, fac_stress_div )
     !
     CALL mp_sum( exx_stress_, intra_egrp_comm )
     CALL mp_sum( exx_stress_, inter_egrp_comm )
