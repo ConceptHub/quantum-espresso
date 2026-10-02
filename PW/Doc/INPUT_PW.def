@@ -246,7 +246,11 @@ input_description -distribution {Quantum ESPRESSO} -package PWscf -program pw.x 
 
             info {
                 calculate stress. It is set to .TRUE. automatically if
-                @ref calculation == 'vc-md' or 'vc-relax'
+                @ref calculation == 'vc-md' or 'vc-relax'.
+                The stress for hybrid functionals is not implemented with
+                ultrasoft or PAW pseudopotentials: in this case it is not
+                computed (a message is printed), and variable-cell
+                calculations stop.
             }
         }
 
@@ -1460,7 +1464,9 @@ input_description -distribution {Quantum ESPRESSO} -package PWscf -program pw.x 
             info {
                 Fraction of EXX for hybrid functional calculations. In the case of
                 @ref input_dft='PBE0', the default value is 0.25, while for @ref input_dft='B3LYP'
-                the @ref exx_fraction default value is 0.20.
+                the @ref exx_fraction default value is 0.20. For @ref input_dft='CAM' the
+                default is 1.0: in this case @ref exx_fraction is the short-range
+                Fock exchange fraction (see @ref exx_lr_fraction).
             }
         }
 
