@@ -8,8 +8,7 @@
     exxdiv_treatment='gygi-baldereschi'
     x_gamma_extrapolation = .true.
     noncolin = .true.
-!civn
-    exx_type = "bands_outer"
+    exx_type = "bands"
  /
  &electrons
  /

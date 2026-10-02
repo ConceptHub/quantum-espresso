@@ -1149,7 +1149,7 @@ print *, '@vexx_std_k_one'
     ! number of batched bands per fft 
     ! in principle nb=batchsize, but it may vary for the last batch (nb_last).
     ! using a fixed batchsize prevents allocating and deallocating batched variables inside the loop
-    INTEGER :: nblocks, iblock,  
+    INTEGER :: nblocks, iblock
     ! loop over batches
     INTEGER :: i_global
     ! global index of bands ranging (1...m)
@@ -1795,7 +1795,6 @@ print *, '@@vexx_std_gamma_outer'
                     END IF
                   enddo
                 end do 
-                END IF 
                 Call stop_clock('vexx-@6')
                 !
              ENDDO &

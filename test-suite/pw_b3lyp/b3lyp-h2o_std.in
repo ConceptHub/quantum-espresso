@@ -13,7 +13,6 @@
     input_dft = 'B3LYP'
     exxdiv_treatment = 'gygi-baldereschi'
     x_gamma_extrapolation = .TRUE.
-!civn
     exx_type = "bands"
  /
  &electrons
