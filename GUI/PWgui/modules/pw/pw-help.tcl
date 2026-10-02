@@ -1972,17 +1972,45 @@ the "exx_fraction" default value is 0.20.
 
 
 # ------------------------------------------------------------------------
+help exx_lr_fraction -helpfmt helpdoc -helptext {
+      <ul>
+<li> <em>Variable: </em><big><b>exx_lr_fraction</b></big>
+</li>
+<br><li> <em>Type: </em>REAL</li>
+<br><li> <em>Default: </em> it depends on the specified functional
+         </li>
+<br><li> <em>Description:</em>
+</li>
+<blockquote><pre>
+Additional long-range EXX coefficient for range-separated hybrid functional
+calculations. If unset, the default value is determined by "input_dft". For
+"input_dft"='CAM', the default is -0.80. The short-range Fock exchange fraction
+is "exx_fraction", while the long-range Fock exchange fraction is
+"exx_fraction" + "exx_lr_fraction". Thus, for CAM defaults, short-range Fock
+exchange is 1.0 and long-range Fock exchange is 0.2. In reciprocal space the
+EXX kernel is proportional to exx_fraction + exx_lr_fraction *
+exp(-q^2/(4 mu^2)), where mu is "screening_parameter".
+         </pre></blockquote>
+</ul>
+
+}
+
+
+# ------------------------------------------------------------------------
 help screening_parameter -helpfmt helpdoc -helptext {
       <ul>
 <li> <em>Variable: </em><big><b>screening_parameter</b></big>
 </li>
 <br><li> <em>Type: </em>REAL</li>
-<br><li> <em>Default: </em> 0.106
+<br><li> <em>Default: </em> it depends on the specified functional
          </li>
 <br><li> <em>Description:</em>
 </li>
 <blockquote><pre>
-screening_parameter for HSE like hybrid functionals.
+Screening parameter mu for HSE- and CAM-like range-separated hybrid
+functionals, in bohr^-1. It appears in reciprocal space as
+exp(-q^2/(4 mu^2)). The default is 0.106 for HSE-like functionals and 0.7
+for "input_dft"='CAM'.
 For more information, see:
 J. Chem. Phys. 118, 8207 (2003), "doi:10.1063/1.1564060"
 J. Chem. Phys. 124, 219906 (2006), "doi:10.1063/1.2204597"
@@ -7102,4 +7130,3 @@ U, J0, J, B, E2, E3, V in the HUBBARD card.
 </blockquote>
       
 }
-

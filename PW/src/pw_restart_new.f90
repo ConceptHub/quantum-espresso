@@ -128,7 +128,8 @@ MODULE pw_restart_new
       USE mp,                   ONLY : mp_sum
       USE mp_bands,             ONLY : intra_bgrp_comm
       USE xc_lib,               ONLY : xclib_dft_is, get_gau_parameter, &
-                                       get_screening_parameter, xclib_get_exx_fraction, exx_is_active
+                                       get_screening_parameter, xclib_get_exx_fraction, &
+                                       xclib_get_exx_lr_fraction,exx_is_active, xclib_get_id
       USE exx_base,             ONLY : x_gamma_extrapolation, nq1, nq2, nq3, &
                                        exxdiv_treatment, yukawa, ecutvcut
       USE exx,                  ONLY : ecutfock, local_thr, nbndproj, use_ace 
@@ -219,12 +220,12 @@ MODULE pw_restart_new
            efield_corr_tg, potstat_corr_tg, gatefield_corr_tg, &
            dispersion_energy_tg, &
            london_rcut_tg, london_s6_tg, ts_vdw_econv_thr_tg, &
-           xdm_a1_tg, xdm_a2_tg, ecutvcut_tg, scr_par_tg, loc_thr_tg  
+           xdm_a1_tg, xdm_a2_tg, ecutvcut_tg, scr_par_tg, loc_thr_tg, exx_lr_tg
       REAL(DP), POINTER :: homo_pt, lumo_pt, ef_pt, degauss_pt, demet_pt, &
            efield_corr_pt, potstat_corr_pt, gatefield_corr_pt, &
            vdw_term_pt, &
            london_rcut_pt, london_s6_pt, ts_vdw_econv_thr_pt, &
-           xdm_a1_pt, xdm_a2_pt, ecutvcut_pt, scr_par_pt, loc_thr_pt
+           xdm_a1_pt, xdm_a2_pt, ecutvcut_pt, scr_par_pt, loc_thr_pt, exx_lr_pt
       INTEGER, TARGET  :: dftd3_version_tg
       INTEGER,POINTER  :: dftd3_version_pt
       LOGICAL, TARGET  :: dftd3_threebody_tg, ts_vdw_isolated_tg
@@ -250,7 +251,7 @@ MODULE pw_restart_new
            efield_corr_pt, potstat_corr_pt, gatefield_corr_pt, &
            vdw_term_pt, &
            london_rcut_pt, london_s6_pt, ts_vdw_econv_thr_pt, &
-           xdm_a1_pt, xdm_a2_pt, ecutvcut_pt, scr_par_pt, loc_thr_pt )
+           xdm_a1_pt, xdm_a2_pt, ecutvcut_pt, scr_par_pt, loc_thr_pt, exx_lr_pt )
       NULLIFY (dftd3_version_pt)
       NULLIFY (dftd3_threebody_pt, ts_vdw_isolated_pt)
       NULLIFY (vdw_corr_pt, non_local_term_pt)
@@ -440,9 +441,15 @@ MODULE pw_restart_new
                loc_thr_tg = local_thr 
                loc_thr_pt => loc_thr_tg 
             END IF 
+            ! ... exx_lr_fraction is written only for the CAM kernel
+            IF ( xclib_get_id('GGA','EXCH') == 52 ) THEN
+               exx_lr_tg = xclib_get_exx_lr_fraction()
+               exx_lr_pt => exx_lr_tg
+            END IF
             CALL qexsd_init_hybrid(hybrid_obj_opt, DFT_IS_HYBRID = .TRUE., NQ1 = nq1 , NQ2 = nq2, NQ3 =nq3, & 
                                    ECUTFOCK = ecutfock/e2, &
-                                   EXX_FRACTION = xclib_get_exx_fraction(), SCREENING_PARAMETER = scr_par_pt, &
+                                   EXX_FRACTION = xclib_get_exx_fraction(), EXX_LR_FRACTION = exx_lr_pt, &
+                                   SCREENING_PARAMETER = scr_par_pt, &
                                    EXXDIV_TREATMENT = exxdiv_treatment, X_GAMMA_EXTRAPOLATION = x_gamma_extrapolation,&
                                    ECUTVCUT = ecutvcut_pt, LOCAL_THR = loc_thr_pt, &
                                    USE_ACE = use_ace, NBNDPROJ = nbndproj )
@@ -1248,7 +1255,8 @@ MODULE pw_restart_new
       USE funct,           ONLY : enforce_input_dft, get_dft_short
       USE xc_lib,          ONLY : start_exx, exx_is_active,xclib_dft_is,      &
                                   set_screening_parameter, set_gau_parameter, &
-                                  xclib_set_exx_fraction, stop_exx, start_exx  
+                                  xclib_set_exx_fraction, xclib_set_exx_lr_fraction, &
+                                  stop_exx, start_exx
       USE london_module,   ONLY : scal6, lon_rcut, in_C6
       USE tsvdw_module,    ONLY : vdw_isolated
       USE exx_base,        ONLY : x_gamma_extrapolation, nq1, nq2, nq3, &
@@ -1294,12 +1302,16 @@ MODULE pw_restart_new
       CHARACTER(LEN=256) ::dft_
       INTEGER           :: npwx_g, llmax, ntmax
       CHARACTER(LEN=320):: filename
-      REAL(dp) :: exx_fraction, screening_parameter
+      REAL(dp) :: exx_fraction, exx_lr_fraction, screening_parameter
       TYPE (output_type)        :: output_obj 
       TYPE (parallel_info_type) :: parinfo_obj
       TYPE (general_info_type ) :: geninfo_obj
       TYPE (input_type)         :: input_obj
       !
+      !
+      exx_fraction = -1.0_DP
+      exx_lr_fraction = -1.0E6_DP
+      screening_parameter = -1.0_DP
       !
       filename = xmlfile ( )
       !
@@ -1367,7 +1379,7 @@ MODULE pw_restart_new
       Hubbard_V = 0.0_dp
       !
       CALL qexsd_copy_dft ( output_obj%dft, nsp, atm, &
-           dft_name, nq1, nq2, nq3, ecutfock, exx_fraction, screening_parameter, &
+           dft_name, nq1, nq2, nq3, ecutfock, exx_fraction, exx_lr_fraction, screening_parameter, &
            exxdiv_treatment, x_gamma_extrapolation, ecutvcut, local_thr, use_ace, nbndproj, &
            lda_plus_u, apply_u,lda_plus_u_kind, Hubbard_projectors, Hubbard_n, Hubbard_l, Hubbard_lmax, Hubbard_occ,&
            Hubbard_n2, Hubbard_l2, Hubbard_n3, Hubbard_l3, backall, Hubbard_lmax_back, Hubbard_alpha_back, &
@@ -1409,8 +1421,9 @@ MODULE pw_restart_new
       IF ( xclib_dft_is('hybrid') ) THEN
          ecutvcut = ecutvcut*e2
          ecutfock = ecutfock*e2
-         CALL xclib_set_exx_fraction( exx_fraction ) 
-         CALL set_screening_parameter( screening_parameter )
+         IF (exx_fraction >= 0.0_DP) CALL xclib_set_exx_fraction( exx_fraction )
+         IF (exx_lr_fraction > -1.0E5_DP) CALL xclib_set_exx_lr_fraction( exx_lr_fraction )
+         IF (screening_parameter >= 0.0_DP) CALL set_screening_parameter( screening_parameter )
          CALL start_exx ()
       END IF
       !! Band structure section

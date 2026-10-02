@@ -68,6 +68,8 @@ MODULE dft_setting_params
     !! TRUE if Exact Exchange is active
     REAL(DP) :: exx_fraction = 0.0_DP
     !! Exact Exchange fraction parameter
+    REAL(DP) :: exx_lr_fraction = 0.0_DP
+    !! LR Exact Exchange fraction parameter
     !
     INTEGER  :: iexch = notset
     !! LDA exchange index

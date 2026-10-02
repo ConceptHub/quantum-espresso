@@ -22,6 +22,9 @@ MODULE exx_base
   !
   USE io_global,            ONLY : stdout
   !
+  USE xc_lib,               ONLY : xclib_get_exx_fraction,                &
+                                   xclib_get_exx_lr_fraction
+  !
   IMPLICIT NONE
   !
   SAVE
@@ -100,6 +103,9 @@ MODULE exx_base
   !! erf screening
   !
   REAL(DP) :: gau_scrlen = 0.d0
+  !! CAM screening
+  !
+  REAL(DP) :: exxbeta = 0._dp
   !! gau-pbe screening
   !
   ! ... cutoff techniques
@@ -754,6 +760,7 @@ MODULE exx_base
     USE kinds,      ONLY : DP
     USE cell_base,  ONLY : tpiba, at, tpiba2
     USE constants,  ONLY : fpi, e2, pi
+    USE xc_lib,     ONLY : xclib_get_id
     !
     IMPLICIT NONE
     !
@@ -775,6 +782,11 @@ MODULE exx_base
     REAL(DP) :: grid_factor_track(ngm), qq_track(ngm)
     REAL(DP) :: nqhalf_dble(3)
     LOGICAL :: odg(3)
+    !
+    INTEGER :: igcx
+    REAL(DP) :: cam_b
+    igcx = xclib_get_id('GGA','EXCH')
+    cam_b = exx_cam_lr_ratio()
     !
     ! ... First the types of Coulomb potential that need q(3) and an external call
     IF( use_coulomb_vcut_ws ) THEN
@@ -840,7 +852,11 @@ MODULE exx_base
       ELSEIF (qq > eps_qdiv) THEN
          !
          IF ( erfc_scrlen > 0  ) THEN
-            fac(ig) = e2*fpi/qq*(1._DP-EXP(-qq/4._DP/erfc_scrlen**2)) * grid_factor_track(ig)
+            IF ( igcx == 52 ) THEN
+               fac(ig)=e2*fpi/qq*(1._DP+EXP(-qq/4._DP/erfc_scrlen**2)*cam_b)*grid_factor_track(ig)
+            ELSE
+               fac(ig) = e2*fpi/qq*(1._DP-EXP(-qq/4._DP/erfc_scrlen**2)) * grid_factor_track(ig)
+            ENDIF
          ELSEIF( erf_scrlen > 0 ) THEN
             fac(ig) = e2*fpi/qq*(EXP(-qq/4._DP/erf_scrlen**2)) * grid_factor_track(ig)
          ELSE
@@ -854,8 +870,13 @@ MODULE exx_base
          IF (yukawa>0._DP .AND. .NOT.x_gamma_extrapolation) fac(ig) = fac(ig) + &
                                                             e2*fpi/( qq + yukawa )
          !
-         IF (erfc_scrlen>0._DP .AND. .NOT.x_gamma_extrapolation) fac(ig) = fac(ig) + &
-                                                                  e2*pi/(erfc_scrlen**2)
+         IF (erfc_scrlen>0._DP .AND. .NOT.x_gamma_extrapolation) THEN
+            IF ( igcx == 52 ) THEN
+               fac(ig) = fac(ig) - cam_b * e2*pi/(erfc_scrlen**2)
+            ELSE
+               fac(ig) = fac(ig) + e2*pi/(erfc_scrlen**2)
+            ENDIF
+         ENDIF
          !
       ENDIF
       !
@@ -875,6 +896,7 @@ MODULE exx_base
      USE gvecw,          ONLY : gcutw
      USE mp_exx,         ONLY : intra_egrp_comm
      USE mp,             ONLY : mp_sum
+     USE xc_lib,         ONLY : xclib_get_id
      !
      IMPLICIT NONE
      !
@@ -887,6 +909,11 @@ MODULE exx_base
                  tpiba2, alpha, x, q(3)
      INTEGER :: nqq, iq
      REAL(DP) :: aa, dq
+     !
+     INTEGER :: igcx
+     REAL(DP) :: cam_b
+     igcx = xclib_get_id('GGA','EXCH')
+     cam_b = exx_cam_lr_ratio()
      !
      tpiba2 = (fpi / 2.d0 / alat)**2
      !
@@ -931,8 +958,14 @@ MODULE exx_base
                  IF (.NOT.on_double_grid) THEN
                     IF ( qq > 1.d-8 ) THEN
                        IF ( erfc_scrlen > 0 ) THEN
-                          div = div + EXP( -alpha * qq) / qq * &
+                          IF ( igcx == 52 ) THEN
+                             div = div + EXP( -alpha * qq) / qq * &
+                                (1._dp+EXP(-qq*tpiba2/4.d0/erfc_scrlen**2) * cam_b) * &
+                                grid_factor
+                          ELSE
+                             div = div + EXP( -alpha * qq) / qq * &
                                 (1._dp-EXP(-qq*tpiba2/4.d0/erfc_scrlen**2)) * grid_factor
+                          ENDIF
                        ELSEIF ( erf_scrlen >0 ) THEN
                           div = div + EXP( -alpha * qq) / qq * &
                                 (EXP(-qq*tpiba2/4.d0/erf_scrlen**2)) * grid_factor
@@ -960,7 +993,13 @@ MODULE exx_base
         IF ( yukawa > 0._dp) THEN
            div = div + tpiba2/yukawa
         ELSEIF( erfc_scrlen > 0._dp ) THEN
-           div = div + tpiba2/4.d0/erfc_scrlen**2
+           IF ( igcx == 52 ) THEN
+              ! q=0 limit of exp(-alpha*q^2)*(1+b*exp(-q^2/4mu^2))/q^2 minus its
+              ! singular part (1+b)/q^2: bare component (-alpha) + screened one
+              div = div - (1._dp + cam_b)*alpha - cam_b * tpiba2/4.d0/erfc_scrlen**2
+           ELSE
+              div = div + tpiba2/4.d0/erfc_scrlen**2
+           ENDIF
         ELSE
            div = div - alpha
         ENDIF
@@ -978,7 +1017,11 @@ MODULE exx_base
         q_ = dq * (iq+0.5d0)
         qq = q_ * q_
         IF ( erfc_scrlen > 0 ) THEN
-           aa = aa  -EXP( -alpha * qq) * EXP(-qq/4.d0/erfc_scrlen**2)*dq
+             IF (igcx == 52) THEN
+                aa = aa + EXP( -alpha * qq) * EXP(-qq/4.d0/erfc_scrlen**2)*cam_b*dq
+             ELSE
+                aa = aa  -EXP( -alpha * qq) * EXP(-qq/4.d0/erfc_scrlen**2)*dq
+             ENDIF
         ELSEIF ( erf_scrlen > 0 ) THEN
            aa = 0._dp
         ELSE
@@ -1009,6 +1052,7 @@ MODULE exx_base
      USE gvecw,          ONLY : gcutw
      USE mp_exx,         ONLY : intra_egrp_comm
      USE mp,             ONLY : mp_sum
+     USE xc_lib,         ONLY : xclib_get_id
      !
      IMPLICIT NONE
      !
@@ -1019,7 +1063,11 @@ MODULE exx_base
                  tpiba2, alpha, x, q(3), qab(3,3), q_track(3), qq_track, alpha_track
      INTEGER :: nqq, iq
      REAL(DP) :: aa, dq
+     INTEGER  :: igcx
+     REAL(DP) :: cam_b
      !
+     igcx  = xclib_get_id('GGA','EXCH')
+     cam_b = exx_cam_lr_ratio()
      tpiba  = tpi / alat
      tpiba2 = (tpi / alat)**2
      alpha  = 10._dp / gcutw
@@ -1066,8 +1114,15 @@ MODULE exx_base
                        IF ( erfc_scrlen > 0 ) THEN
                           qab = qab * EXP(-alpha_track * qq_track) / qq_track
                           lambda2 = erfc_scrlen**2 * 4._dp
-                          stress = stress - 2._dp * qab * ( alpha_track + 1._dp/qq_track - &
-                                   (alpha_track + 1._dp/qq_track + 1._dp/lambda2) * EXP(-qq_track/lambda2) )
+                          IF ( igcx == 52 ) THEN
+                             ! CAM: d/dqq of exp(-alpha qq)(1 + b exp(-qq/lambda2))/qq
+                             stress = stress - 2._dp * qab * ( alpha_track + 1._dp/qq_track + &
+                                      cam_b * (alpha_track + 1._dp/qq_track + 1._dp/lambda2) * &
+                                      EXP(-qq_track/lambda2) )
+                          ELSE
+                             stress = stress - 2._dp * qab * ( alpha_track + 1._dp/qq_track - &
+                                      (alpha_track + 1._dp/qq_track + 1._dp/lambda2) * EXP(-qq_track/lambda2) )
+                          ENDIF
                        ELSEIF ( erf_scrlen > 0 ) THEN
                           qab = qab * EXP(-alpha_track * qq_track) / qq_track
                           lambda2 = 4._dp * erf_scrlen**2
@@ -1103,6 +1158,7 @@ MODULE exx_base
      USE gvecw,          ONLY : gcutw
      USE mp_exx,         ONLY : intra_egrp_comm
      USE mp,             ONLY : mp_sum
+     USE xc_lib,         ONLY : xclib_get_id
      !
      IMPLICIT NONE
      !
@@ -1112,10 +1168,14 @@ MODULE exx_base
      REAL(DP) :: dq1, dq2, dq3, xq(3), q_, qq, tpiba2, alpha
      INTEGER :: nqq
      REAL(DP) :: aa, dq
+     INTEGER  :: igcx
+     REAL(DP) :: cam_b
      !
      div_ew = 0._dp
      IF ( .NOT. use_regularization ) RETURN
      !
+     igcx  = xclib_get_id('GGA','EXCH')
+     cam_b = exx_cam_lr_ratio()
      tpiba2 = (tpi / alat)**2
      alpha  = 10._dp / gcutw / tpiba2
      nqq = 100000
@@ -1126,7 +1186,11 @@ MODULE exx_base
         q_ = dq * (iq + 0.5d0)
         qq = q_ * q_
         IF ( erfc_scrlen > 0 ) THEN
-           aa = aa - EXP(-alpha * qq) * EXP(-qq/4.d0/erfc_scrlen**2) * dq
+           IF ( igcx == 52 ) THEN
+              aa = aa + EXP(-alpha * qq) * EXP(-qq/4.d0/erfc_scrlen**2) * cam_b * dq
+           ELSE
+              aa = aa - EXP(-alpha * qq) * EXP(-qq/4.d0/erfc_scrlen**2) * dq
+           ENDIF
         ELSEIF ( erf_scrlen > 0 ) THEN
            aa = 0._dp
         ELSE
@@ -1143,4 +1207,29 @@ MODULE exx_base
   END FUNCTION exx_divergence_ew
   !
 !
+  !
+  !-----------------------------------------------------------------------
+  FUNCTION exx_cam_lr_ratio() RESULT(cam_b)
+     !-----------------------------------------------------------------------
+     !! Coefficient b of the CAM kernel (igcx = 52):
+     !!    fac(q) = e2*fpi/q^2 * ( 1 + b*exp(-q^2/(4*mu^2)) ),  mu = erfc_scrlen,
+     !! b = exx_lr_fraction/exx_fraction (exx_fraction multiplies fac downstream).
+     !! Zero for all other functionals. Read from XClib, not from exxalfa/exxbeta,
+     !! which may not be set yet when exx_divergence is first called.
+     !
+     USE xc_lib,  ONLY : xclib_get_id
+     !
+     IMPLICIT NONE
+     !
+     REAL(DP) :: cam_b, a
+     !
+     cam_b = 0._dp
+     IF ( xclib_get_id('GGA','EXCH') /= 52 ) RETURN
+     a = xclib_get_exx_fraction()
+     IF ( a == 0._dp ) CALL errore( 'exx_cam_lr_ratio', &
+                                    'CAM requires a nonzero exx_fraction', 1 )
+     cam_b = xclib_get_exx_lr_fraction() / a
+     !
+  END FUNCTION exx_cam_lr_ratio
+  !
 END MODULE exx_base

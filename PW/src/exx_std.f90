@@ -933,8 +933,10 @@ MODULE exx_std
     USE exx_base,             ONLY : exxdiv, erfc_scrlen, gau_scrlen, grid_factor, eps, &
                                      nq1, nq2, nq3, nqs, on_double_grid, use_coulomb_vcut_spheric, &
                                      use_coulomb_vcut_ws, vcut, x_gamma_extrapolation, yukawa, index_xkq, &
-                                     index_sym, x_occupation, exx_divergence_ew, exx_divergence_stress
+                                     index_sym, x_occupation, exx_divergence_ew, exx_divergence_stress, &
+                                     exxbeta
     USE coulomb_vcut_module,  ONLY : vcut_get,  vcut_spheric_get
+    USE xc_lib,               ONLY : xclib_get_id
     !
     ! ---- local variables -------------------------------------------------
     !
@@ -950,9 +952,10 @@ MODULE exx_std
     REAL(DP),    ALLOCATABLE :: fac(:), fac_tens(:,:,:), fac_stress(:), fac_stress_div(:)
     INTEGER  :: npw, jbnd, ibnd, ik, ikk, ig, ir, ikq, iq, isym
     INTEGER  :: h_ibnd, nqi, iqi, beta, nrxxs, ngm
-    INTEGER  :: ibnd_loop_start
+    INTEGER  :: ibnd_loop_start, igcx
     REAL(DP) :: x1, x2
     REAL(DP) :: qq, xk_cryst(3), sxk(3), xkq(3), vc(3,3), x, q(3)
+    REAL(DP) :: cam_beta, scr_exp, qscr
     ! temp array for vcut_spheric
     REAL(DP) :: delta(3,3)
     ! q=0 divergence: Ewald part of exxdiv and strain derivative of its G-sum part
@@ -962,6 +965,12 @@ MODULE exx_std
     IF (npool>1) CALL errore('exx_stress1','stress not available with pools',1)
     IF (noncolin) CALL errore('exx_stress1','noncolinear stress not implemented',1)
     IF (okvan) CALL infomsg('exx_stress1','USPP stress not tested')
+    igcx = xclib_get_id('GGA','EXCH')
+    cam_beta = 0._DP
+    IF (igcx == 52) THEN
+        IF (exxalfa == 0._DP) CALL errore('exx_stress1','CAM stress requires nonzero exx_fraction',1)
+        cam_beta = exxbeta / exxalfa
+    ENDIF
     !
     nrxxs = dfftt%nnr
     ngmt = dfftt%ngm
@@ -1022,7 +1031,7 @@ MODULE exx_std
 
                 !CALL start_clock ('exxen2_ngmloop')
 
-!$omp parallel do default(shared), private(ig, beta, q, qq, on_double_grid, x)
+!$omp parallel do default(shared), private(ig, beta, q, qq, on_double_grid, x, qscr, scr_exp)
                 DO ig = 1, ngm
                   q(1)= xk(1,current_k) - xkq(1) + g(1,ig)
                   q(2)= xk(2,current_k) - xkq(2) + g(2,ig)
@@ -1074,10 +1083,18 @@ MODULE exx_std
                   ELSEIF (qq > 1.d-8) THEN
                       fac_stress_div(ig) = 0._dp
                       IF ( erfc_scrlen > 0 ) THEN
-                        fac(ig)=e2*fpi/qq*(1._dp-exp(-qq/4.d0/erfc_scrlen**2)) * grid_factor
-                        fac_stress(ig) = -e2*fpi * 2.d0/qq**2 * ( &
-                            (1._dp+qq/4.d0/erfc_scrlen**2)*exp(-qq/4.d0/erfc_scrlen**2) - 1._dp) * &
-                            grid_factor
+                        qscr = qq / (4.d0 * erfc_scrlen**2)
+                        scr_exp = exp(-qscr)
+                        IF (igcx == 52) THEN
+                          fac(ig) = e2*fpi/qq*(1._dp + cam_beta*scr_exp) * grid_factor
+                          fac_stress(ig) = e2*fpi * 2.d0/qq**2 * &
+                              (1._dp + cam_beta*scr_exp*(1._dp+qscr)) * grid_factor
+                        ELSE
+                          fac(ig)=e2*fpi/qq*(1._dp-scr_exp) * grid_factor
+                          fac_stress(ig) = -e2*fpi * 2.d0/qq**2 * ( &
+                              (1._dp+qscr)*scr_exp - 1._dp) * &
+                              grid_factor
+                        ENDIF
                       ELSE
                         fac(ig)=e2*fpi/( qq + yukawa ) * grid_factor
                         fac_stress(ig) = 2.d0 * e2*fpi/(qq+yukawa)**2 * grid_factor
@@ -1099,8 +1116,13 @@ MODULE exx_std
                         fac_stress(ig) = 2.d0 * e2*fpi/(qq+yukawa)**2
                       ENDIF
                       IF (erfc_scrlen > 0._dp .and. .not. x_gamma_extrapolation) THEN
-                        fac(ig) = fac(ig) + e2*fpi / (4.d0*erfc_scrlen**2)
-                        fac_stress(ig) = e2*fpi / (8.d0*erfc_scrlen**4)
+                        IF (igcx == 52) THEN
+                          fac(ig) = fac(ig) - cam_beta * e2*fpi / (4.d0*erfc_scrlen**2)
+                          fac_stress(ig) = -cam_beta * e2*fpi / (8.d0*erfc_scrlen**4)
+                        ELSE
+                          fac(ig) = fac(ig) + e2*fpi / (4.d0*erfc_scrlen**2)
+                          fac_stress(ig) = e2*fpi / (8.d0*erfc_scrlen**4)
+                        ENDIF
                       ENDIF
                   ENDIF
                 ENDDO

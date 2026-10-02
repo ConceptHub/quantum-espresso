@@ -25,7 +25,7 @@ MODULE qe_dft_list
   !
   SAVE
   !
-  INTEGER, PARAMETER :: nxc=10, ncc=14, ngcx=51, ngcc=15, nmeta=8
+  INTEGER, PARAMETER :: nxc=11, ncc=14, ngcx=52, ngcc=15, nmeta=8
   CHARACTER(LEN=4)   :: dft_LDAx_name(0:nxc),  dft_LDAc_name(0:ncc),  &
                         dft_GGAx_name(0:ngcx), dft_GGAc_name(0:ngcc), &
                         dft_MGGA_name(0:nmeta)
@@ -36,14 +36,14 @@ MODULE qe_dft_list
      INTEGER :: IDs(6)
   END TYPE dft_label
   !
-  INTEGER, PARAMETER :: n_dft=43
+  INTEGER, PARAMETER :: n_dft=44
   TYPE(dft_label) :: dft_full(n_dft)
   !
   !
   !
   ! LDA exchange terms
   DATA dft_LDAx_name / 'NOX', 'SLA', 'SL1', 'RXC', 'OEP', 'HF', 'PB0X', & ! 0 to  6
-                       'B3LP', 'KZK', 'xxxx', 'xxxx' /                    ! 7 "  10
+                       'B3LP', 'KZK', 'xxxx', 'xxxx', 'CAM' /             ! 7 "  11
   ! LDA correlation terms
   DATA dft_LDAc_name / 'NOC', 'PZ', 'VWN', 'LYP', 'PW',   'WIG', 'HL',  & ! 0 to  6
                        'OBZ', 'OBW', 'GL', 'KZK', 'xxxx', 'B3LP','xxxx',& ! 7 "  13
@@ -57,7 +57,7 @@ MODULE qe_dft_list
                        'R860', 'CX0P', 'AHCX', 'AHF2', 'AHPB', 'AHPS',  & !30 "  35
                        'CX14', 'CX15', 'BR0',  'CX16', 'C090', 'B86X',  & !36 "  41
                        'B88X', 'BEEX', 'HHNX', 'W31X', 'W32X', 'AHBR',  & !42 "  47 
-                       'EHPB', 'HJPB', 'HJPS', 'W3MX' /                   !48 "  51 
+                       'EHPB', 'HJPB', 'HJPS', 'W3MX', 'CAM' /            !48 "  52
   ! GGA correlation terms
   DATA dft_GGAc_name / 'NOGC', 'P86', 'GGC', 'BLYP', 'PBC', 'HCTH',     & ! 0 to  5
                        'NONE', 'B3LP','PSC', 'PBE' , 'xxxx','xxxx',     & ! 6 "  11
@@ -251,6 +251,10 @@ MODULE qe_dft_list
   DATA dft_full(43)%name2    / 'none'     /
   DATA dft_full(43)%IDs(1:6) / 0,0,0,15,0,0 /  ! placeholder; converted to LibXC ID 286
   !
+  DATA dft_full(44)%name     / 'CAM' /
+  DATA dft_full(44)%name2    / 'CAMPBE'  /
+  DATA dft_full(44)%IDs(1:6) / 11,4,52,4,0,0 /
+  !
 CONTAINS
   !
   !------------------------------------------------------------------
@@ -302,4 +306,3 @@ CONTAINS
   !
   !
 END MODULE
-

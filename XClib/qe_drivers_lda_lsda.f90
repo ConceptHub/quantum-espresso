@@ -14,7 +14,9 @@ MODULE qe_drivers_lda_lsda
   !-----------------------------------------------------------------------
   !! Contains the LDA drivers of QE that calculate XC energy and potential.
   !
-  USE kind_l,               ONLY: DP
+  USE kind_l,             ONLY: DP
+  USE dft_setting_params, ONLY: iexch, icorr, rho_threshold_lda, exx_started, &
+                                exx_fraction, exx_lr_fraction, finite_size_cell_volume
   USE exch_lda
   USE corr_lda
   !
@@ -57,7 +59,7 @@ SUBROUTINE xc_lda( length, rho_in, ex_out, ec_out, vx_out, vc_out )
   USE omp_lib
 #endif
   USE dft_setting_params,   ONLY: iexch, icorr, rho_threshold_lda, exx_started, &
-                                  exx_fraction, finite_size_cell_volume
+                                  exx_fraction, exx_lr_fraction, finite_size_cell_volume
   !
   IMPLICIT NONE
   !
@@ -98,7 +100,7 @@ SUBROUTINE xc_lda( length, rho_in, ex_out, ec_out, vx_out, vc_out )
 !$omp parallel if(ntids==1) default(none) &
 !$omp private( rho, rs, ex, ec, ec_, vx, vc, vc_ ) &
 !$omp shared( rho_in, length, iexch, icorr, ex_out, ec_out, vx_out, vc_out, &
-!$omp         finite_size_cell_volume, exx_fraction, exx_started, &
+!$omp         finite_size_cell_volume, exx_fraction, exx_lr_fraction, exx_started, &
 !$omp         rho_threshold_lda )
 !$omp do
 #endif
@@ -159,6 +161,14 @@ SUBROUTINE xc_lda( length, rho_in, ex_out, ec_out, vx_out, vc_out )
            ex = (1.0_DP - exx_fraction) * ex
            vx = (1.0_DP - exx_fraction) * vx
         ENDIF
+        !
+     CASE( 11 )                     ! 'CAM'
+        !
+        CALL slater( rs, ex, vx )
+        IF ( exx_started) THEN
+           ex = (1.0_DP - exx_fraction - exx_lr_fraction) * ex
+           vx = (1.0_DP - exx_fraction - exx_lr_fraction) * vx
+        END IF
         !
      CASE DEFAULT
         !
@@ -283,7 +293,7 @@ SUBROUTINE xc_lsda( length, rho_in, zeta_in, ex_out, ec_out, vx_out, vc_out )
   USE omp_lib
 #endif
   USE dft_setting_params,   ONLY: iexch, icorr, rho_threshold_lda, exx_started, &
-                                  exx_fraction
+                                  exx_fraction, exx_lr_fraction
   !
   IMPLICIT NONE
   !
@@ -327,7 +337,7 @@ SUBROUTINE xc_lsda( length, rho_in, zeta_in, ex_out, ec_out, vx_out, vc_out )
 !$omp parallel if(ntids==1) default(none) &
 !$omp private( rho, rs, zeta, ex, ec, ec_, vx_up, vx_dw, vc_up, &
 !$omp          vc_dw, vc_up_, vc_dw_ ) &
-!$omp shared( length, iexch, icorr, exx_fraction, &
+!$omp shared( length, iexch, icorr, exx_fraction, exx_lr_fraction, &
 !$omp         vx_out, vc_out, ex_out, ec_out, &
 !$omp         zeta_in, exx_started, rho_in, rho_threshold_lda )
 !$omp do
@@ -398,6 +408,15 @@ SUBROUTINE xc_lsda( length, rho_in, zeta_in, ex_out, ec_out, vx_out, vc_out )
            vx_up = (1.0_DP - exx_fraction) * vx_up
            vx_dw = (1.0_DP - exx_fraction) * vx_dw
         ENDIF
+        !
+     CASE( 11 )
+        !                                           ! 'CAM'
+        CALL slater_spin (rho, zeta, ex, vx_up, vx_dw)
+        IF (exx_started) THEN
+           ex   = (1.0_DP - exx_fraction - exx_lr_fraction) * ex
+           vx_up = (1.0_DP - exx_fraction - exx_lr_fraction) * vx_up
+           vx_dw = (1.0_DP - exx_fraction - exx_lr_fraction) * vx_dw
+        END IF
         !
      CASE DEFAULT
         !
