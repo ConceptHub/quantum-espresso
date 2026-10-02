@@ -128,6 +128,7 @@ MODULE qes_bcast_module
     MODULE PROCEDURE qes_bcast_d3mags
     MODULE PROCEDURE qes_bcast_pseudoPath
     MODULE PROCEDURE qes_bcast_integerMatrix
+    MODULE PROCEDURE qes_bcast_cpscalarQuantity
     MODULE PROCEDURE qes_bcast_scalarQuantity
     MODULE PROCEDURE qes_bcast_rism3d
     MODULE PROCEDURE qes_bcast_rismlaue
@@ -1675,6 +1676,15 @@ MODULE qes_bcast_module
     CALL mp_bcast(obj%diago_rmm_conv_ispresent, ionode_id, comm)
     IF (obj%diago_rmm_conv_ispresent) &
       CALL mp_bcast(obj%diago_rmm_conv, ionode_id, comm)
+    CALL mp_bcast(obj%simple_magn_mix_ispresent, ionode_id, comm)
+    IF (obj%simple_magn_mix_ispresent) &
+      CALL mp_bcast(obj%simple_magn_mix, ionode_id, comm)
+    CALL mp_bcast(obj%maxlinmix_ispresent, ionode_id, comm)
+    IF (obj%maxlinmix_ispresent) &
+      CALL mp_bcast(obj%maxlinmix, ionode_id, comm)
+    CALL mp_bcast(obj%simplemix_ispresent, ionode_id, comm)
+    IF (obj%simplemix_ispresent) &
+      CALL mp_bcast(obj%simplemix, ionode_id, comm)
     !
   END SUBROUTINE qes_bcast_electron_control
   !
@@ -3053,9 +3063,12 @@ MODULE qes_bcast_module
     CALL mp_bcast(obj%lread, ionode_id, comm)
     !
     CALL qes_bcast_cpnumstep(obj%STEP, ionode_id, comm)
-    CALL qes_bcast_scalarQuantity(obj%TIME, ionode_id, comm)
+    CALL qes_bcast_cpscalarQuantity(obj%TIME, ionode_id, comm)
+    CALL mp_bcast(obj%DT_ispresent, ionode_id, comm)
+    IF (obj%DT_ispresent) &
+      CALL qes_bcast_cpscalarQuantity(obj%DT, ionode_id, comm)
     CALL mp_bcast(obj%TITLE, ionode_id, comm)
-    CALL qes_bcast_scalarQuantity(obj%KINETIC_ENERGY, ionode_id, comm)
+    CALL qes_bcast_cpscalarQuantity(obj%KINETIC_ENERGY, ionode_id, comm)
     CALL qes_bcast_scalarQuantity(obj%HARTREE_ENERGY, ionode_id, comm)
     CALL qes_bcast_scalarQuantity(obj%EWALD_TERM, ionode_id, comm)
     CALL qes_bcast_scalarQuantity(obj%GAUSS_SELFINT, ionode_id, comm)
@@ -3348,6 +3361,25 @@ MODULE qes_bcast_module
     CALL mp_bcast(obj%integerMatrix, ionode_id, comm)
     !
   END SUBROUTINE qes_bcast_integerMatrix
+  !
+  !
+  SUBROUTINE qes_bcast_cpscalarQuantity(obj, ionode_id, comm )
+    !
+    IMPLICIT NONE
+    !
+    TYPE(cpscalarQuantity_type), INTENT(INOUT) :: obj
+    INTEGER, INTENT(IN) :: ionode_id, comm
+    !
+    CALL mp_bcast(obj%tagname, ionode_id, comm)
+    CALL mp_bcast(obj%lwrite, ionode_id, comm)
+    CALL mp_bcast(obj%lread, ionode_id, comm)
+    !
+    CALL mp_bcast(obj%UNITS_ispresent, ionode_id, comm)
+    IF (obj%UNITS_ispresent) &
+      CALL mp_bcast(obj%UNITS, ionode_id, comm)
+    CALL mp_bcast(obj%cpscalarQuantity, ionode_id, comm)
+    !
+  END SUBROUTINE qes_bcast_cpscalarQuantity
   !
   !
   SUBROUTINE qes_bcast_scalarQuantity(obj, ionode_id, comm )

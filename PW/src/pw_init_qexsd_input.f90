@@ -47,6 +47,7 @@
                                 diago_thr_init, diago_full_acc,                                                       & 
                                 diago_cg_maxiter, diago_david_ndim,                               &
                                 diago_rmm_ndim, diago_rmm_conv, diago_gs_nblock,                                      &
+                                simple_magn_mix, maxlinmix, simplemix,                                                &
                                 nk1, nk2, nk3, k1, k2, k3, nkstot, ip_xk => xk, ip_wk => wk, ip_labelk => labelk,     &
                                 ion_dynamics, upscale, remove_rigid_rot, refold_pos, pot_extrapolation,               &
                                 wfc_extrapolation, ion_temperature, tempw, tolp, delta_t, nraise, ip_dt => dt,        &
@@ -486,7 +487,9 @@
                                    mixing_ndim, exx_maxstep, electron_maxstep, tqr, real_space, tq_smoothing, &
                                    tbeta_smoothing, diago_thr_init, &
                                    diago_full_acc, diago_cg_maxiter, diago_david_ndim, &
-                                   diago_rmm_ndim, diago_rmm_conv, diago_gs_nblock)
+                                   diago_rmm_ndim, diago_rmm_conv, diago_gs_nblock, &
+                                   SIMPLE_MAGN_MIX = simple_magn_mix, MAXLINMIX = maxlinmix, &
+                                   SIMPLEMIX = simplemix)
   !--------------------------------------------------------------------------------------------------------------------------------
   !                                                   K POINTS IBZ ELEMENT
   !------------------------------------------------------------------------------------------------------------------------------ 

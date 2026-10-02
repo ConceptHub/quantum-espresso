@@ -45,6 +45,15 @@ The following features of the code are tested:
 The following features of the code are tested:
 - structural optimization with B3LYP, unpolarized, Gamma
 
+######################
+# pw_cam : Si        #
+######################
+The following features of the code are tested:
+- CAM (dielectric-dependent range-separated) hybrid functional, energy and
+  stress: k points (nq=1, nq=2), Gamma only, x_gamma_extrapolation on/off,
+  exx_type='bands', positive long-range coefficient, nspin=2
+- PBE0 and HSE limits of the CAM kernel
+
 ##################################
 # pw_cluster : N and NH4 and H2O #
 ##################################

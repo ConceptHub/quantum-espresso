@@ -305,7 +305,7 @@ MODULE cp_restart_new
 !-------------------------------------------------------------------------------
 ! ... XC FUNCTIONAL
 !-------------------------------------------------------------------------------
-        dft_name = get_dft_name()
+        dft_name = ADJUSTL(get_dft_name())
         IF ( lda_plus_U) THEN
            ALLOCATE (dftU_) 
            is_hubbard(:) = (Hubbard_U(:) > 0.0_dp)

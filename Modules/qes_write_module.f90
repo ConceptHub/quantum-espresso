@@ -131,6 +131,7 @@ MODULE qes_write_module
     MODULE PROCEDURE qes_write_d3mags
     MODULE PROCEDURE qes_write_pseudoPath
     MODULE PROCEDURE qes_write_integerMatrix
+    MODULE PROCEDURE qes_write_cpscalarQuantity
     MODULE PROCEDURE qes_write_scalarQuantity
     MODULE PROCEDURE qes_write_rism3d
     MODULE PROCEDURE qes_write_rismlaue
@@ -1639,6 +1640,21 @@ MODULE qes_write_module
         CALL xml_NewElement(xp, "diago_rmm_conv")
            CALL xml_addCharacters(xp, obj%diago_rmm_conv)
         CALL xml_EndElement(xp, "diago_rmm_conv")
+     END IF
+     IF (obj%simple_magn_mix_ispresent) THEN
+        CALL xml_NewElement(xp, "simple_magn_mix")
+           CALL xml_addCharacters(xp, obj%simple_magn_mix)
+        CALL xml_EndElement(xp, "simple_magn_mix")
+     END IF
+     IF (obj%maxlinmix_ispresent) THEN
+        CALL xml_NewElement(xp, "maxlinmix")
+           CALL xml_addCharacters(xp, obj%maxlinmix)
+        CALL xml_EndElement(xp, "maxlinmix")
+     END IF
+     IF (obj%simplemix_ispresent) THEN
+        CALL xml_NewElement(xp, "simplemix")
+           CALL xml_addCharacters(xp, obj%simplemix, fmt='s16')
+        CALL xml_EndElement(xp, "simplemix")
      END IF
      CALL xml_EndElement(xp, TRIM(obj%tagname))
    END SUBROUTINE qes_write_electron_control
@@ -3306,11 +3322,14 @@ MODULE qes_write_module
      ! 
      CALL xml_NewElement(xp, TRIM(obj%tagname))
      CALL qes_write_cpnumstep (xp, obj%STEP)
-     CALL qes_write_scalarQuantity (xp, obj%TIME)
+     CALL qes_write_cpscalarQuantity (xp, obj%TIME)
+     IF (obj%DT_ispresent) THEN
+        CALL qes_write_cpscalarQuantity (xp, obj%DT)
+     END IF
      CALL xml_NewElement(xp, 'TITLE')
         CALL xml_addCharacters(xp, TRIM(obj%TITLE))
      CALL xml_EndElement(xp, 'TITLE')
-     CALL qes_write_scalarQuantity (xp, obj%KINETIC_ENERGY)
+     CALL qes_write_cpscalarQuantity (xp, obj%KINETIC_ENERGY)
      CALL qes_write_scalarQuantity (xp, obj%HARTREE_ENERGY)
      CALL qes_write_scalarQuantity (xp, obj%EWALD_TERM)
      CALL qes_write_scalarQuantity (xp, obj%GAUSS_SELFINT)
@@ -3594,6 +3613,22 @@ MODULE qes_write_module
         END DO
      CALL xml_EndElement(xp, TRIM(obj%tagname))
    END SUBROUTINE qes_write_integerMatrix
+
+   SUBROUTINE qes_write_cpscalarQuantity(xp, obj)
+     !-----------------------------------------------------------------
+     IMPLICIT NONE
+     TYPE (xmlf_t),INTENT(INOUT)                      :: xp
+     TYPE(cpscalarQuantity_type),INTENT(IN)    :: obj
+     ! 
+     INTEGER                                          :: i 
+     ! 
+     IF ( .NOT. obj%lwrite ) RETURN 
+     ! 
+     CALL xml_NewElement(xp, TRIM(obj%tagname))
+     IF (obj%UNITS_ispresent) CALL xml_addAttribute(xp, 'UNITS', TRIM(obj%UNITS) )
+        CALL xml_AddCharacters(xp, obj%cpscalarQuantity, fmt='s16')
+     CALL xml_EndElement(xp, TRIM(obj%tagname))
+   END SUBROUTINE qes_write_cpscalarQuantity
 
    SUBROUTINE qes_write_scalarQuantity(xp, obj)
      !-----------------------------------------------------------------

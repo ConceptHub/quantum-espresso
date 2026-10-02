@@ -794,7 +794,7 @@ MODULE input
      USE london_module,    ONLY : init_london, scal6, lon_rcut
      USE tsvdw_module,     ONLY : vdw_isolated, vdw_econv_thr
      USE xc_lib,           ONLY : xclib_set_exx_fraction, xclib_set_exx_lr_fraction, &
-                                  set_screening_parameter
+                                  set_screening_parameter, xclib_get_id
      !
      IMPLICIT NONE
      !
@@ -972,6 +972,11 @@ MODULE input
         vdw_isolated = ts_vdw_isolated
         vdw_econv_thr= ts_vdw_econv_thr
      END IF
+     !
+     ! ... the CAM kernel is implemented only in PW
+     !
+     IF ( xclib_get_id('GGA','EXCH') == 52 ) CALL errore( 'modules_setup', &
+          'CAM hybrid functionals not implemented in CP', 1 )
      !
      ! ... must be done AFTER dft is read from PP files and initialized
      ! ... or else the two following parameters will be overwritten

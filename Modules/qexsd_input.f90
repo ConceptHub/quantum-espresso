@@ -228,7 +228,8 @@ MODULE qexsd_input
                                           tq_smoothing, tbeta_smoothing, & 
                                           diago_thr_init, diago_full_acc, &
                                           diago_cg_maxiter, diago_david_ndim, &
-                                          diago_rmm_ndim, diago_rmm_conv, diago_gs_nblock)
+                                          diago_rmm_ndim, diago_rmm_conv, diago_gs_nblock, &
+                                          simple_magn_mix, maxlinmix, simplemix)
   !-------------------------------------------------------------------------------------------
   !
   IMPLICIT NONE
@@ -242,6 +243,9 @@ MODULE qexsd_input
                                              diago_rmm_ndim, diago_gs_nblock
   LOGICAL,OPTIONAL,INTENT(IN)             :: diago_full_acc,tqr, real_space, tq_smoothing, tbeta_smoothing, &
                                              diago_rmm_conv
+  LOGICAL,OPTIONAL,INTENT(IN)             :: simple_magn_mix
+  INTEGER,OPTIONAL,INTENT(IN)             :: maxlinmix
+  REAL(DP),OPTIONAL,INTENT(IN)            :: simplemix
   !
   CHARACTER(LEN=*),PARAMETER              :: TAGNAME="electron_control"
   !
@@ -253,6 +257,22 @@ MODULE qexsd_input
                                 DIAGO_FULL_ACC=diago_full_acc,DIAGO_CG_MAXITER=diago_cg_maxiter, &
                                 DIAGO_RMM_NDIM=diago_rmm_ndim, DIAGO_RMM_CONV=diago_rmm_conv, &
                                 DIAGO_GS_NBLOCK=diago_gs_nblock)
+   !
+   ! ... magnetization mixing parameters: written only when simple_magn_mix is used
+   IF ( PRESENT(simple_magn_mix) ) THEN
+      IF ( simple_magn_mix ) THEN
+         obj%simple_magn_mix_ispresent = .TRUE.
+         obj%simple_magn_mix = simple_magn_mix
+         IF ( PRESENT(maxlinmix) ) THEN
+            obj%maxlinmix_ispresent = .TRUE.
+            obj%maxlinmix = maxlinmix
+         END IF
+         IF ( PRESENT(simplemix) ) THEN
+            obj%simplemix_ispresent = .TRUE.
+            obj%simplemix = simplemix
+         END IF
+      END IF
+   END IF
    !
    END SUBROUTINE qexsd_init_electron_control
    !
