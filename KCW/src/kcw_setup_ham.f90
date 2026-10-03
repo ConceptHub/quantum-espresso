@@ -37,14 +37,18 @@ subroutine kcw_setup_ham
                                 read_unitary_matrix, hamlt, alpha_corr_done, io_real_space, &
                                 num_wann, num_wann_occ, num_wann_emp, i_orb, iorb_start, iorb_end, &
                                 calculation, nqstot, occ_mat ,alpha_final_full, spin_component, &
-                                tmp_dir_kcw, tmp_dir_kcwq, x_q, lgamma_iq, io_sp, nrho, nkstot_eff !, wq
-  USE io_global,         ONLY : stdout
+                                tmp_dir_kcw, tmp_dir_kcwq, x_q, lgamma_iq, io_sp, nrho, nkstot_eff, &
+                                iuwfc_wann_allk, igk_k_all, ngk_all, check_ks !, wq
+  USE io_global,         ONLY : stdout, ionode
   USE klist,             ONLY : nkstot, xk, nks, ngk, igk_k, nelec, nelup, neldw
+  USE wvfct,             ONLY : et
+  USE constants,         ONLY : rytoev
+  USE mp_pools,          ONLY : inter_pool_comm
   USE cell_base,         ONLY : at, omega !, bg
   USE fft_base,          ONLY : dffts
   !
   USE control_lr,        ONLY : nbnd_occ
-  USE mp,                ONLY : mp_bcast
+  USE mp,                ONLY : mp_bcast, mp_sum
   USE eqv,               ONLY : dmuxc
   !
   USE io_kcw,            ONLY : read_rhowann, read_rhowann_g
@@ -75,10 +79,14 @@ subroutine kcw_setup_ham
   CHARACTER (LEN=256) :: file_base
   CHARACTER (LEN=6), EXTERNAL :: int_to_char
   !
-  INTEGER :: ik, ik_eff
+  INTEGER :: ik, ik_eff, iwann
   CHARACTER(LEN=256)  :: dirname
-  INTEGER, EXTERNAL :: global_kpoint_index
   LOGICAL :: mlwf_from_u = .FALSE.
+  INTEGER, EXTERNAL :: global_kpoint_index
+  !
+  REAL(DP), ALLOCATABLE :: eigvl_wann_chk(:)
+  !
+  REAL(DP), ALLOCATABLE :: et_wann_chk(:,:), et_pwscf_chk(:,:)
   !
   !LOGICAL :: skip_equivalence
   !INTEGER :: nk1, nk2, nk3, k1, k2, k3
@@ -173,6 +181,16 @@ subroutine kcw_setup_ham
   CALL open_buffer ( iuwfc_wann, 'wfc_wann', lrwfc, io_level, exst )
   if (kcw_iverbosity .gt. 1) WRITE(stdout,'(/,5X, "INFO: Buffer for WFs, OPENED")')
   !
+  ! Open an other buffer for the KS states in the WANNIER gauge which contains
+  ! all the k points (not just the one in this pool). This is needed for each k-point
+  ! to have access to all the other k-points (pool parallelization). MEMORY INTENSE
+  !
+  iuwfc_wann_allk = 210
+  io_level = 1
+  lrwfc = num_wann * npwx * npol
+  CALL open_buffer ( iuwfc_wann_allk, 'wfc_wann_allk', lrwfc, io_level, exst )
+  if (kcw_iverbosity .gt. 1) WRITE(stdout,'(/,5X, "INFO: Buffer for WFs ALL-k, OPENED")')
+  !
   ! Open a buffer for the wannier orbital densities. Those have been written by wann2kcw
   ! and must be in the outdir. If not STOP
   !
@@ -186,8 +204,9 @@ subroutine kcw_setup_ham
   ALLOCATE ( evc0(npwx*npol, num_wann) )
   ALLOCATE ( rhog (ngms) )
   ALLOCATE ( hamlt(nkstot, num_wann, num_wann) )
-  ALLOCATE ( alpha_corr_done (num_wann) ) 
+  ALLOCATE ( alpha_corr_done (num_wann) )
   ALLOCATE ( occ_mat (num_wann, num_wann, nkstot) )
+  ALLOCATE ( igk_k_all(npwx,nkstot), ngk_all(nkstot) )
   occ_mat = 0.D0
   alpha_corr_done = .FALSE.
   hamlt(:,:,:) = ZERO
@@ -199,10 +218,16 @@ subroutine kcw_setup_ham
                   Reading collected, re-writing distributed wavefunctions")')
     CALL rotate_ks () 
     !
-  ELSE 
+  ELSE
     dirname = restart_dir ()
     WRITE(stdout,'(/,5X, "INFO: MLWF read from file: &
                   Reading collected, re-writing distributed wavefunctions")')
+    WRITE(stdout,'(5X, "INFO: Building KS Hamiltonian H(k) in the MLWF gauge")')
+    IF (check_ks) WRITE(stdout,'(5X, "INFO: Going to check KS eigenvalues: Diag H(k)")')
+    ALLOCATE ( eigvl_wann_chk(num_wann) )
+    ALLOCATE ( et_wann_chk(num_wann, nkstot_eff), et_pwscf_chk(num_wann, nkstot_eff) )
+    et_wann_chk = 0.D0
+    et_pwscf_chk = 0.D0
     DO ik = 1, nks
         !
         current_k = ik
@@ -211,11 +236,34 @@ subroutine kcw_setup_ham
         npw = ngk(ik)
         IF ( nkb > 0 ) CALL init_us_2( npw, igk_k(1,ik), xk(1,ik), vkb )
         CALL read_collected_wfc ( dirname, ik, evc0, "wan")
-        ik_eff = ik-(spin_component-1)*nkstot_eff
-        CALL save_buffer ( evc0, lrwfc, iuwfc_wann, ik_eff )
-        CALL ks_hamiltonian(evc0, ik, num_wann) 
+        CALL save_buffer ( evc0, lrwfc, iuwfc_wann, ik )
+        ! LOCAL ik: iuwfc_wann follows the per-pool buffer convention (see rotate_ks.f90)
+        CALL ks_hamiltonian(evc0, ik, num_wann, eigvl_wann_chk)
+        IF (check_ks) THEN
+          ik_eff = global_kpoint_index (nkstot, ik) - (spin_component -1)*nkstot/nspin
+          et_wann_chk(:,ik_eff) = eigvl_wann_chk(:)
+          et_pwscf_chk(:,ik_eff) = et(1:num_wann,ik)
+        ENDIF
     END DO
+    !
+    IF (check_ks) THEN
+      WRITE(stdout,'(/,8x, "KS Hamiltonian eigenvalues CHECK")', advance="yes" )
+      CALL mp_sum ( et_wann_chk, inter_pool_comm )
+      CALL mp_sum ( et_pwscf_chk, inter_pool_comm )
+      IF (ionode) THEN
+        DO ik = 1, nkstot_eff
+          WRITE( stdout, 9020 ) ( xk(i,ik), i = 1, 3 )
+          WRITE( stdout, '(8X, "WANN  ",8F11.4)' ) (et_wann_chk(iwann,ik)*rytoev, iwann=1,num_wann)
+          WRITE( stdout, '(8X, "PWSCF ",8F11.4)' ) (et_pwscf_chk(iwann,ik)*rytoev, iwann=1,num_wann)
+        ENDDO
+      ENDIF
+    ENDIF
+    DEALLOCATE ( eigvl_wann_chk, et_wann_chk, et_pwscf_chk )
   ENDIF
+  !
+  ! ... pass all the WFs to all the pool (needed to have pool parallelization)
+  !
+  CALL bcast_wfc ( igk_k_all, ngk_all )
   !
   !DEALLOCATE ( nbnd_occ )  ! otherwise allocate_ph complains: FIXME
   !
@@ -245,7 +293,7 @@ subroutine kcw_setup_ham
     !
     WRITE( stdout,'(/,8X, 78("="))')
     WRITE( stdout, '( 8X, "iq = ", i5)') iq
-    WRITE( stdout, '( 8X,"The  Wannier density at  q = ",3F12.7, "  [Cart ]")')  xk(:,iq)
+    WRITE( stdout, '( 8X,"The  Wannier density at  q = ",3F12.7, "  [Cart ]")')  x_q(:,iq)
     WRITE( stdout, '( 8X,"The  Wannier density at  q = ",3F12.7, "  [Cryst]")')  xq(:)
     WRITE( stdout, '( 8X, 78("="),/)')
     ! 
@@ -335,6 +383,8 @@ subroutine kcw_setup_ham
   !
   DEALLOCATE (rhowann, rhowann_aux)
   DEALLOCATE (rhog)
+  !
+9020 FORMAT(/'          k =',3F7.4,'     band energies (ev):'/ )
   !
   RETURN
   !

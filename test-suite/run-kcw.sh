@@ -111,9 +111,21 @@ if [[ "$1" == "7" ]]
 then
   echo "Running KCW hamiltonian ..."
   #echo "${PARA_PREFIX} ${ESPRESSO_BUILD}/bin/kcw.x < $2 > $3 2> $4"
+  ${PARA_PREFIX} ${ESPRESSO_BUILD}/bin/kcw.x ${PARA_SUFFIX} < $2 > $3 2> $4
+  if [[ -e CRASH ]]
+  then
+    cat $3
+  fi
+fi
+
+if [[ "$1" == "17" ]]
+then
+  echo "Running KCW hamiltonian ..."
+  #echo "${PARA_PREFIX} ${ESPRESSO_BUILD}/bin/kcw.x < $2 > $3 2> $4"
   ${PARA_PREFIX} ${ESPRESSO_BUILD}/bin/kcw.x < $2 > $3 2> $4
   if [[ -e CRASH ]]
   then
     cat $3
   fi
 fi
+

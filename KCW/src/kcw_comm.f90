@@ -41,6 +41,8 @@ MODULE control_kcw
   INTEGER  :: num_wann_emp                              ! number of wannier function for the EMP manifold
   INTEGER  :: num_wann                                  ! total number of wannier function num_wann = num_wann_occ + num_wann_emp
   INTEGER  :: iuwfc_wann, iurho_wann, iuwfc_wann_allk   ! units for the wannier WFC and densities
+  INTEGER,  ALLOCATABLE   :: igk_k_all(:,:)             ! index of G corresponding to a given index of k+G, ALL k (pool-parallel)
+  INTEGER,  ALLOCATABLE   :: ngk_all(:)                 ! number of plane waves for each k point, ALL k (pool-parallel)
   LOGICAL  :: check_ks                                  ! compute the KS Hamiltonian on top of the localized representation
   LOGICAL  :: do_bands                                  ! if TRUE computes electronic bands
   LOGICAL  :: use_ws_distance                           ! if TRUE uses Wannier centers in the interpolation

@@ -17,11 +17,9 @@ SUBROUTINE compute_map_ikq_single (iq,also_minus)
   !! there exist a G vector such that k + q = k'+ G with k' in the 1BZ
   !
   USE kinds,                ONLY : DP
-  USE klist,                ONLY : xk, nkstot
-  USE io_global,            ONLY : ionode, ionode_id
-  USE control_kcw,          ONLY : map_ikq, shift_1bz, kcw_iverbosity, nkstot_eff, map_ikq_minus, shift_1bz_minus
-  USE mp,                   ONLY : mp_bcast
-  USE mp_global,            ONLY : intra_image_comm 
+  USE klist,                ONLY : nkstot
+  USE io_global,            ONLY : ionode
+  USE control_kcw,          ONLY : map_ikq, shift_1bz, kcw_iverbosity, nkstot_eff, map_ikq_minus, shift_1bz_minus, x_q
   USE io_global,            ONLY : stdout
   USE lsda_mod,             ONLY : nspin
   USE cell_base,            ONLY : at
@@ -81,72 +79,73 @@ SUBROUTINE compute_map_ikq_single (iq,also_minus)
 !  ENDIF
   
   !
-  IF (ionode) THEN 
-    !
-    DO ik = 1, nkstot_eff
-      !
-      xkq(:) = xk(:,ik)+xk(:,iq)
-      IF (do_minus) THEN
-      xkq_m(:) = -xk(:,ik)+xk(:,iq)
-      END IF
-      ! the k+q coordinate (cart)
-      !
-#ifdef DEBUG
-      xq_(:) = xk(:,iq)
-      CALL cryst_to_cart(1, xq_, at, -1)
-      xk_(:) = xk(:,ik)
-      CALL cryst_to_cart(1, xk_, at, -1)
-      WRITE(mpime+100,,'("iq, xq", i5, 3f8.4)') iq, xq_(:)
-      WRITE(mpime+100,,'("ik, xk", i5, 3f8.4)') ik, xk_(:)
-#endif
-      gvect(:) = 0.D0
-      gvect_m(:) = 0.D0
-      ! the index of the corresponding k point in the IBZ
-      !
-      !CALL find_index_1bz(xkq, gvect, ikq)
-      CALL find_index_1bz_iterate(xkq, gvect, ikq)
-      IF (do_minus) THEN
-      CALL find_index_1bz_iterate(xkq_m, gvect_m, ikq_m)
-      ! NsC >>
-      gvect_m = -gvect_m
-      ! NsC <<
-      END IF
-      !
-      ! ... Store the result in a global variable 
-      map_ikq(ik) = ikq
-      shift_1bz(:,ik) = gvect(:)
-      gvect_(:) = gvect(:)
-      CALL cryst_to_cart(1, gvect_, at, -1)
-      IF (do_minus) THEN
-      map_ikq_minus(ik) = ikq_m
-      shift_1bz_minus(:,ik) = gvect_m(:)
-      gvect_m_(:) = gvect_m(:)
-      CALL cryst_to_cart(1, gvect_m_, at, -1)
-      END IF
-#ifdef DEBUG
-      xkq_(:) = xkq(:)
-      CALL cryst_to_cart(1, xkq_, at, -1)
-      WRITE(mpime+100,'("The map (iq,ik) --> ikq", 2i, 8x, i)') iq,ik, ikq
-      WRITE(mpime+100,,'("xkq, shift" , 5x, 3f8.4, 5x, 3f8.4)') xkq_(:), gvect_(:)
-      WRITE(mpime+100,,'("ikq, xkq_1BZ", i5, 3f8.4,/)') ikq, xq_(:) + xk_(:) -gvect_(:)
-#endif
-      !
-      IF (kcw_iverbosity .gt. 1) THEN
-        WRITE(stdout,'(8X, "The map (iq,ik) --> ip + G", 5x, & 
-                            &  " ( ", 2(i4,1x), " ) " , 5x, i4 , 7x, "+", 3f8.4, " [Cryst]" )') iq, ik, ikq, gvect_
-        IF (do_minus) THEN
-          WRITE(stdout,'(8X, "The map [-q] (iq,ik) --> ip + G", 5x, & 
-          &  " ( ", 2(i4,1x), " ) " , 5x, i4 , 7x, "+", 3f8.4, " [Cryst]" )') iq, ik, ikq_m, gvect_m_
-        END IF
-      END IF
-    ENDDO
-    !
-  ENDIF 
+  ! NOTE: this used to be computed on ionode only and then broadcast over
+  ! intra_image_comm. With the hamiltonian calculation now pool-parallelized,
+  ! this routine is called once per LOCAL k-point inside a loop whose trip
+  ! count (nks) can differ from pool to pool (uneven k-point distribution),
+  ! so a collective over intra_image_comm here would deadlock: some pools
+  ! would keep calling mp_bcast while others have already left the loop.
+  ! x_q holds the FULL k/q mesh replicated on every process (see above), so
+  ! there is nothing to communicate: every process just computes its own
+  ! (identical) copy of the map locally.
   !
-  CALL mp_bcast ( map_ikq, ionode_id, intra_image_comm )
-  CALL mp_bcast ( shift_1bz, ionode_id, intra_image_comm )
-  CALL mp_bcast ( map_ikq_minus, ionode_id, intra_image_comm )
-  CALL mp_bcast ( shift_1bz_minus, ionode_id, intra_image_comm )
+  DO ik = 1, nkstot_eff
+    !
+    xkq(:) = x_q(:,ik)+x_q(:,iq)
+    IF (do_minus) THEN
+    xkq_m(:) = -x_q(:,ik)+x_q(:,iq)
+    END IF
+    ! the k+q coordinate (cart)
+    !
+#ifdef DEBUG
+    xq_(:) = x_q(:,iq)
+    CALL cryst_to_cart(1, xq_, at, -1)
+    xk_(:) = x_q(:,ik)
+    CALL cryst_to_cart(1, xk_, at, -1)
+    WRITE(mpime+100,,'("iq, xq", i5, 3f8.4)') iq, xq_(:)
+    WRITE(mpime+100,,'("ik, xk", i5, 3f8.4)') ik, xk_(:)
+#endif
+    gvect(:) = 0.D0
+    gvect_m(:) = 0.D0
+    ! the index of the corresponding k point in the IBZ
+    !
+    !CALL find_index_1bz(xkq, gvect, ikq)
+    CALL find_index_1bz_iterate(xkq, gvect, ikq)
+    IF (do_minus) THEN
+    CALL find_index_1bz_iterate(xkq_m, gvect_m, ikq_m)
+    ! NsC >>
+    gvect_m = -gvect_m
+    ! NsC <<
+    END IF
+    !
+    ! ... Store the result in a global variable
+    map_ikq(ik) = ikq
+    shift_1bz(:,ik) = gvect(:)
+    gvect_(:) = gvect(:)
+    CALL cryst_to_cart(1, gvect_, at, -1)
+    IF (do_minus) THEN
+    map_ikq_minus(ik) = ikq_m
+    shift_1bz_minus(:,ik) = gvect_m(:)
+    gvect_m_(:) = gvect_m(:)
+    CALL cryst_to_cart(1, gvect_m_, at, -1)
+    END IF
+#ifdef DEBUG
+    xkq_(:) = xkq(:)
+    CALL cryst_to_cart(1, xkq_, at, -1)
+    WRITE(mpime+100,'("The map (iq,ik) --> ikq", 2i, 8x, i)') iq,ik, ikq
+    WRITE(mpime+100,,'("xkq, shift" , 5x, 3f8.4, 5x, 3f8.4)') xkq_(:), gvect_(:)
+    WRITE(mpime+100,,'("ikq, xkq_1BZ", i5, 3f8.4,/)') ikq, xq_(:) + xk_(:) -gvect_(:)
+#endif
+    !
+    IF (kcw_iverbosity .gt. 1 .AND. ionode) THEN
+      WRITE(stdout,'(8X, "The map (iq,ik) --> ip + G", 5x, &
+                          &  " ( ", 2(i4,1x), " ) " , 5x, i4 , 7x, "+", 3f8.4, " [Cryst]" )') iq, ik, ikq, gvect_
+      IF (do_minus) THEN
+        WRITE(stdout,'(8X, "The map [-q] (iq,ik) --> ip + G", 5x, &
+        &  " ( ", 2(i4,1x), " ) " , 5x, i4 , 7x, "+", 3f8.4, " [Cryst]" )') iq, ik, ikq_m, gvect_m_
+      END IF
+    END IF
+  ENDDO
   !
   IF (kcw_iverbosity .gt. 1) WRITE(stdout, *) ""
   WRITE( stdout, '(8X,"INFO: Map k+q -> p in 1BZ DONE  ",/)') 
@@ -239,11 +238,12 @@ SUBROUTINE find_index_1bz_iterate(xkq, gvect, ikq)
   ! 
   USE kinds,                ONLY : DP
   USE cell_base,            ONLY : at, bg
-  USE klist,                ONLY : xk, nkstot
+  USE klist,                ONLY : nkstot
   USE lsda_mod,             ONLY : nspin
+  USE control_kcw,          ONLY : x_q
   USE noncollin_module,  ONLY : domag, noncolin, m_loc, angle1, angle2, ux, nspin_lsda, nspin_gga, nspin_mag, npol
   !USE mp_world,             ONLY : mpime
-  
+
   !USE io_global,            ONLY : stdout
   !
   IMPLICIT NONE
@@ -281,7 +281,7 @@ SUBROUTINE find_index_1bz_iterate(xkq, gvect, ikq)
          DO ik = 1, nkstot_eff
            ! 
            ! The k point in crystal coordinates
-           xk_(:)  = xk(:,ik)
+           xk_(:)  = x_q(:,ik)
            CALL cryst_to_cart(1, xk_, at, -1)
            !
            dist = sum( (xk_(:)-xkq_(:))**2 )
