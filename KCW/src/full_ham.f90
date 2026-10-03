@@ -18,7 +18,7 @@ SUBROUTINE full_ham (ik)
   !
   USE wavefunctions,         ONLY : psic
   USE kinds,                 ONLY : DP
-  USE io_global,             ONLY : stdout
+  USE io_global,             ONLY : stdout, ionode
   USE wvfct,                 ONLY : npw, nbnd, npwx
   USE wvfct,                 ONLY : et
   USE fft_base,              ONLY : dffts, dfftp
@@ -28,7 +28,7 @@ SUBROUTINE full_ham (ik)
   USE buffers,               ONLY : get_buffer
   USE fft_interfaces,        ONLY : fwfft, invfft
   USE control_kcw,           ONLY : kcw_at_ks, homo_only, alpha_final_full, hamlt, num_wann_occ, iuwfc_wann, &
-                                    kcw_iverbosity, qp_symm, evc0, kipz_corr, num_wann, spin_component
+                                    kcw_iverbosity, qp_symm, evc0, kipz_corr, num_wann, spin_component, check_ks
   USE control_lr,            ONLY : lrpa
   USE mp,                    ONLY : mp_sum
   USE mp_bands,              ONLY : intra_bgrp_comm
@@ -68,6 +68,7 @@ SUBROUTINE full_ham (ik)
   COMPLEX(DP) , ALLOCATABLE :: psic_1(:) , eigvc_ki(:,:)
   COMPLEX(DP) , ALLOCATABLE :: ham (:,:), ham_up(:,:), ham_dw(:,:), vpsi(:), vpsi_r(:), ham_aux(:,:), v_ki(:,:)
   REAL(DP), ALLOCATABLE :: eigvl_ki(:), et_aux(:,:)
+  REAL(DP), ALLOCATABLE :: eigvl_wann_chk(:)
   !
   LOGICAL :: off_diag = .TRUE.
   REAL(DP) :: ehomo, elumo
@@ -113,7 +114,13 @@ SUBROUTINE full_ham (ik)
   !
   ! ... KS Hamiltonian ....
   ik_eff = ik + (spin_component -1)*nkstot/nspin_mag
-  CALL ks_hamiltonian (evc0, ik_eff, dim_ham)
+  ALLOCATE ( eigvl_wann_chk(dim_ham) )
+  CALL ks_hamiltonian (evc0, ik_eff, dim_ham, eigvl_wann_chk)
+  IF (check_ks .AND. ionode) THEN
+    WRITE( stdout, '(8X, "WANN  ",8F11.4)' ) (eigvl_wann_chk(ibnd)*rytoev, ibnd=1,dim_ham)
+    WRITE( stdout, '(8X, "PWSCF ",8F11.4)' ) (et(ibnd,ik_eff)*rytoev, ibnd=1,dim_ham)
+  ENDIF
+  DEALLOCATE ( eigvl_wann_chk )
   !
   v_ki(:,:) = (0.D0,0.D0)
   !GOTO 101

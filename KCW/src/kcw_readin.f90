@@ -37,7 +37,6 @@ SUBROUTINE kcw_readin()
   USE input_parameters,   ONLY : assume_isolated
   USE martyna_tuckerman,  ONLY : do_comp_mt
   USE exx_base,           ONLY : x_gamma_extrapolation
-  USE mp_pools,           ONLY : npool
   USE xc_lib,             ONLY : xclib_dft_is
   USE upf_utils,          ONLY : imatches
   !
@@ -259,8 +258,6 @@ SUBROUTINE kcw_readin()
   IF ( (mp1 .lt. 1 .OR. mp2 .lt. 1 .OR. mp3 .lt. 1) )&
      CALL errore('kcw_readin', ' WRONG k/q grid: check input for mp1, mp2, mp3', 1)
   !
-  IF (calculation == 'ham' .AND. npool .gt. 1) &
-     CALL errore('kcw_readin', 'pools not implemented for "ham" calculation', npool)
   !
   IF (trim( assume_isolated ) == 'mt' .OR. trim( assume_isolated ) == 'm-t' .OR. trim(assume_isolated) == 'martyna-tuckerman' ) THEN 
     do_comp_mt_kcw =.true. 

@@ -12,24 +12,32 @@
 SUBROUTINE koopmans_ham ()
   !---------------------------------------------------------------------
   !
-  USE io_global,             ONLY : stdout
+  USE io_global,             ONLY : stdout, ionode
   USE kinds,                 ONLY : DP
-  USE klist,                 ONLY : nkstot, xk
-  USE lsda_mod,              ONLY : nspin
+  USE klist,                 ONLY : nkstot, nks
+  USE lsda_mod,              ONLY : nspin, lsda, isk
   USE control_kcw,           ONLY : num_wann, Hamlt, nqstot, l_alpha_corr, evc0, &
                                     alpha_final, num_wann_occ, on_site_only, iuwfc_wann, &
-                                    nkstot_eff
+                                    nkstot_eff, x_q, spin_component
   USE constants,             ONLY : rytoev
   USE wvfct,                 ONLY : npwx, npw, et, nbnd
   USE units_lr,              ONLY : lrwfc, iuwfc
   USE wavefunctions,         ONLY : evc
   USE buffers,               ONLY : get_buffer, save_buffer
   USE noncollin_module,      ONLY : npol, nspin_lsda, nspin_gga, nspin_mag
+  USE mp,                    ONLY : mp_sum, mp_max, mp_min
+  USE mp_pools,              ONLY : inter_pool_comm
   !
   IMPLICIT NONE
   !
-  ! The k point index 
-  INTEGER :: ik
+  INTEGER, EXTERNAL :: global_kpoint_index
+  !! The global index of a local (pool) k-point
+  !
+  INTEGER :: ik, ik_eff
+  !
+  REAL(DP), ALLOCATABLE :: et_eff(:,:)
+  !
+  REAL(DP), ALLOCATABLE :: et_ks_eff(:,:)
   !
   ! The scalar part (independent on k) <rho_0i|v_0i|rho_0i>delta_ij
   COMPLEX(DP) :: deltah_scal (num_wann, num_wann)
@@ -85,13 +93,24 @@ SUBROUTINE koopmans_ham ()
   ehomo_ks=-1D+6
   elumo_ks=+1D+6
   !
-  DO ik = 1, nkstot_eff
+  ! The new (KI) eigenvalues, filled only for the k-points owned by this pool
+  ! (zero elsewhere) then summed across pools right after the loop.
+  ALLOCATE ( et_eff(num_wann, nkstot_eff) )
+  ALLOCATE ( et_ks_eff(num_wann, nkstot_eff) )
+  et_eff = 0.D0
+  et_ks_eff = 0.D0
+  !
+  DO ik = 1, nks
+    !
+    IF ( lsda .AND. isk(ik) /= spin_component ) CYCLE
+    !
+    ik_eff = global_kpoint_index (nkstot, ik) - (spin_component-1)*nkstot_eff
     !
     deltah_real = CMPLX(0.D0, 0.D0, kind = DP)
     !
-    IF (.NOT. on_site_only) THEN 
+    IF (.NOT. on_site_only) THEN
        ! General routine for empty state hamiltonian at k
-       CALL koopmans_ham_real_k ( ik, deltah_real )
+       CALL koopmans_ham_real_k ( ik, ik_eff, deltah_real )
     ELSE
       ! SKIP off-diagonal elements in REAL SPACE (i.e. R/=0 i/=j) 
       ! If only R=0 and i=j, then the "real" contribution for empty states
@@ -111,68 +130,101 @@ SUBROUTINE koopmans_ham ()
 #endif
     !
     ! The KS hamiltonian in the Wannier Gauge (just to check)
-    ham(:,:) = Hamlt(ik,:,:) 
+    ham(:,:) = Hamlt(ik_eff,:,:)
     CALL cdiagh( num_wann, ham, num_wann, eigvl, eigvc )
     !
     ! The KI contribution at k
     deltaH = deltah_scal + deltah_real
     !
     ! Apply the screening coefficient
-!    DO iwann = 1, num_wann; deltaH(:,iwann) = alpha_final (iwann)* deltaH(:,iwann) ; ENDDO  
+!    DO iwann = 1, num_wann; deltaH(:,iwann) = alpha_final (iwann)* deltaH(:,iwann) ; ENDDO
     DO iwann = 1, num_wann
       DO jwann = iwann , num_wann
         deltaH(iwann,jwann) = deltaH(iwann,jwann)*alpha_final(jwann)
         deltaH(jwann,iwann) = CONJG(deltaH(iwann,jwann))
       ENDDO
     ENDDO
-  
+
     !
     ! Add to the KS Hamiltonian
-    Hamlt(ik,:,:) = Hamlt(ik,:,:) + deltaH(:,:) 
+    Hamlt(ik_eff,:,:) = Hamlt(ik_eff,:,:) + deltaH(:,:)
     !
 #ifdef DEBUG
-    WRITE(stdout, '("KI Contribution to the Hamiltonian at k = ", i4)') ik
+    WRITE(stdout, '("KI Contribution to the Hamiltonian at k = ", i4)') ik_eff
     DO iwann = 1, num_wann
       WRITE(stdout, '(200(2f8.4,2x))') (REAL(deltaH(iwann,jwann)),AIMAG(deltaH(iwann,jwann)), jwann=1,num_wann)
     ENDDO
     !
-    WRITE(stdout, '(/, "KI Hamiltonian at k = ", i4)') ik
+    WRITE(stdout, '(/, "KI Hamiltonian at k = ", i4)') ik_eff
     DO iwann = 1, num_wann
-      WRITE(stdout, '(200(2f8.4,2x))') (REAL(Hamlt(ik, iwann,jwann)),AIMAG(Hamlt(ik,iwann,jwann)), jwann=1,num_wann)
+      WRITE(stdout, '(200(2f8.4,2x))') (REAL(Hamlt(ik_eff, iwann,jwann)),AIMAG(Hamlt(ik_eff,iwann,jwann)), jwann=1,num_wann)
     ENDDO
 #endif
     !
-    WRITE( stdout, 9020 ) ( xk(i,ik), i = 1, 3 )
-    WRITE( stdout, '(10x, "KS  ",8F11.4)' ) (eigvl(iwann)*rytoev, iwann=1,num_wann)
+    ! Stash the KS-in-Wannier-gauge eigenvalues for this k-point; the actual
+    ! "KS"/"KI" report is printed after the pool loop (see below), once every
+    ! process has the full, gathered table - printing here would only ever
+    ! reach the log for the k-points owned by ionode's own pool.
+    DO iwann = 1, num_wann
+      et_ks_eff(iwann,ik_eff) = eigvl(iwann)
+    ENDDO
     !
     ehomo_ks = MAX ( ehomo_ks, eigvl(num_wann_occ ) )
     IF (num_wann .gt. num_wann_occ) elumo_ks = MIN ( elumo_ks, eigvl(num_wann_occ+1 ) )
     !
-    ham(:,:) = Hamlt(ik,:,:) 
+    ham(:,:) = Hamlt(ik_eff,:,:)
     CALL cdiagh( num_wann, ham, num_wann, eigvl, eigvc )
-    WRITE( stdout, '(10x, "KI  ",8F11.4)' ) (eigvl(iwann)*rytoev, iwann=1,num_wann)
     !
     nbnd = num_wann
     ! Canonical wfc at each k point (overwrite the evc from DFT)
     lrwannfc = num_wann*npwx*npol
     !
     CALL get_buffer ( evc0, lrwannfc, iuwfc_wann, ik )
-    ! Retrive the ks function at k (in the Wannier Gauge)
+    ! Retrive the ks function at k (in the Wannier Gauge) - LOCAL ik: this pool's own buffer
     CALL ZGEMM( 'N','N', npw*npol, num_wann, num_wann, ONE, evc0, npwx*npol, eigvc, num_wann, &
                  ZERO, evc, npwx*npol )
     lrwfc = nbnd * npwx*npol
     !
     CALL save_buffer ( evc, lrwfc, iuwfc, ik )
+    ! LOCAL ik: iuwfc follows the standard (per-pool) PW buffer convention
     !
     !nbnd = num_wann
     DO iwann = 1, nbnd
-      et(iwann,ik) = eigvl(iwann)
+      et_eff(iwann,ik_eff) = eigvl(iwann)
     ENDDO
     !
     ehomo = MAX ( ehomo, eigvl(num_wann_occ ) )
     IF (num_wann > num_wann_occ) elumo = MIN ( elumo, eigvl(num_wann_occ+1 ) )
     !
   ENDDO
+  !
+  ! ... Gather across pools the k-point-resolved quantities computed above: each
+  ! pool has filled only the entries for the k-points it owns (zero elsewhere, since
+  ! Hamlt/et_eff start at zero and each effective k-point index is owned by exactly
+  ! one pool), so a sum over inter_pool_comm reconstructs the full array everywhere.
+  !
+  CALL mp_sum ( Hamlt(1:nkstot_eff,:,:), inter_pool_comm )
+  CALL mp_sum ( et_eff, inter_pool_comm )
+  CALL mp_sum ( et_ks_eff, inter_pool_comm )
+  et(1:num_wann,1:nkstot_eff) = et_eff(1:num_wann,1:nkstot_eff)
+  CALL mp_max ( ehomo_ks, inter_pool_comm )
+  CALL mp_max ( ehomo, inter_pool_comm )
+  CALL mp_min ( elumo_ks, inter_pool_comm )
+  CALL mp_min ( elumo, inter_pool_comm )
+  !
+  ! ... The per-k "KS"/"KI" report, now that every process holds the full,
+  ! gathered table: print once, in k-point order, from ionode only (x_q is
+  ! already replicated on every process - see compute_map_ikq_single.f90).
+  !
+  IF (ionode) THEN
+    DO ik_eff = 1, nkstot_eff
+      WRITE( stdout, 9020 ) ( x_q(i,ik_eff), i = 1, 3 )
+      WRITE( stdout, '(10x, "KS  ",8F11.4)' ) (et_ks_eff(iwann,ik_eff)*rytoev, iwann=1,num_wann)
+      WRITE( stdout, '(10x, "KI  ",8F11.4)' ) (et_eff(iwann,ik_eff)*rytoev, iwann=1,num_wann)
+    ENDDO
+  ENDIF
+  DEALLOCATE ( et_eff )
+  DEALLOCATE ( et_ks_eff )
   !
   IF ( elumo < 1d+6) THEN
      WRITE( stdout, 9042 ) ehomo_ks*rytoev, elumo_ks*rytoev
@@ -181,7 +233,7 @@ SUBROUTINE koopmans_ham ()
      WRITE( stdout, 9043 ) ehomo_ks*rytoev
      WRITE( stdout, 9045 ) ehomo*rytoev
   END IF
-  ! 
+  !
   ! For an isolated molecule the full Hamiltonian is also available
   ik=1
   IF (nkstot/nspin == 1 .AND. .NOT. nspin_mag==4 ) CALL full_ham ( ik )
@@ -397,11 +449,16 @@ SUBROUTINE koopmans_ham ()
   END SUBROUTINE ham_scalar
   !
   !-----------------------------------------------------------------------
-  SUBROUTINE koopmans_ham_real_k (ik, deltaH)
+  SUBROUTINE koopmans_ham_real_k (ik, ik_eff, deltaH)
     !---------------------------------------------------------------------
     !
     ! This routine compute the KI real term correction to second order to the KS
-    ! Hamiltonian at a given k point ik given from input
+    ! Hamiltonian at a given k point. ik is the LOCAL (pool) index of this k-point
+    ! (used for the per-pool iuwfc_wann buffer and the local igk_k/ngk arrays);
+    ! ik_eff is the "effective" index (1:nkstot_eff) used for the k+q/k-q map and
+    ! for the iuwfc_wann_allk/igk_k_all/ngk_all buffers, which hold ALL k-points
+    ! (not just the ones owned by this pool - needed since k+q, k-q in general
+    ! belong to a different pool, see bcast_wfc.f90).
     !
     USE kinds,                ONLY : DP
     USE fft_base,             ONLY : dffts
@@ -410,7 +467,8 @@ SUBROUTINE koopmans_ham ()
     USE klist,                ONLY : igk_k, ngk
     USE mp,                   ONLY : mp_sum
     USE control_kcw,          ONLY : spin_component, num_wann, x_q, &
-                                     num_wann_occ, evc0, iuwfc_wann, &
+                                     num_wann_occ, evc0, iuwfc_wann, iuwfc_wann_allk, &
+                                     igk_k_all, ngk_all, &
                                      map_ikq, shift_1bz, nrho, &
                                      map_ikq_minus, shift_1bz_minus
     USE buffers,              ONLY : get_buffer, save_buffer
@@ -435,9 +493,9 @@ SUBROUTINE koopmans_ham ()
     ! 
     !
     IMPLICIT NONE
-    ! 
-    INTEGER, INTENT(IN) :: ik
-    ! the k-point index in hte orignal mesh of k-points
+    !
+    INTEGER, INTENT(IN) :: ik, ik_eff
+    ! ik: local (pool) k-point index; ik_eff: effective (1:nkstot_eff) k-point index
     !
     ! The KI real term contribution to the Hamiltonian
     COMPLEX(DP), INTENT (INOUT) :: deltaH(num_wann, num_wann)
@@ -495,7 +553,7 @@ SUBROUTINE koopmans_ham ()
     !
     IF (nspin_mag==2 .AND. debug_nc) &
       WRITE (stdout, '(/,5X,"INFO: debug_nc = ", L2, " Note: the k-q formula will be used.")') debug_nc
-    WRITE( stdout, '(/,/,5X,"INFO: KI[2nd] HAMILTONIAN CALCULATION ik= ", i4, " ...", /)') ik
+    WRITE( stdout, '(/,/,5X,"INFO: KI[2nd] HAMILTONIAN CALCULATION ik= ", i4, " ...", /)') ik_eff
     !
     nqs = nqstot
     !
@@ -510,7 +568,7 @@ SUBROUTINE koopmans_ham ()
     ! Retrive the ks function at k (in the Wannier Gauge)
     ! IF (kcw_iverbosity .gt. 0 ) WRITE(stdout,'(8X, "INFO: u_k(g) RETRIEVED"/)') 
     !
-    CALL compute_map_ikq_single (ik,.true.)
+    CALL compute_map_ikq_single (ik_eff,.true.)
     ! find the map k+q --> k'+G and store the res 
     ! find also the map k-q --> k'+G and store the res 
 
@@ -519,6 +577,7 @@ SUBROUTINE koopmans_ham ()
     !
     ALLOCATE ( rhog (ngms,nrho) , delta_vg(ngms,nspin_mag), vh_rhog(ngms), delta_vg_(ngms,nspin_mag) )
     !$acc enter data create(rhor, rhog, vh_rhog, delta_vr, delta_vr_, delta_vg, delta_vg_)
+    !$acc enter data copyin(igk_k_all)
     !
     deltaH = CMPLX(0.D0,0.D0,kind=DP)
     rho_r_nm = CMPLX(0.D0,0.D0,kind=DP)
@@ -561,11 +620,13 @@ SUBROUTINE koopmans_ham ()
       evc0_kq = CMPLX(0.D0,0.D0,kind=DP)
       lrwfc = num_wann * npwx * npol
       IF (nspin==4 .or. debug_nc ) THEN
-        CALL get_buffer ( evc0_kq, lrwfc, iuwfc_wann, ikq_m )
-        !Retrive the ks function at k-q (in the Wannier Gauge):
+        CALL get_buffer ( evc0_kq, lrwfc, iuwfc_wann_allk, ikq_m )
+        !Retrive the ks function at k-q (in the Wannier Gauge): ikq_m may belong to
+        ! a different pool, hence the ALL-k buffer (see bcast_wfc.f90)
       ELSE
-        CALL get_buffer ( evc0_kq, lrwfc, iuwfc_wann, ikq )
-        ! Retrive the ks function at k+q (in the Wannier Gauge): 
+        CALL get_buffer ( evc0_kq, lrwfc, iuwfc_wann_allk, ikq )
+        ! Retrive the ks function at k+q (in the Wannier Gauge): ikq may belong to
+        ! a different pool, hence the ALL-k buffer (see bcast_wfc.f90)
       ENDIF
       !
       !IF (kcw_iverbosity .gt. 0 ) WRITE(stdout,'(8X, "INFO: u_kq(g) RETRIEVED")') 
@@ -604,11 +665,11 @@ SUBROUTINE koopmans_ham ()
             evc_kq_g = evc0_kq(:,jwann)
             !$acc enter data copyin(evc_kq_g) 
             IF(nspin==4 .or. debug_nc ) THEN
-              npw_kq_m = ngk(ikq_m)
-              CALL invfft_wave (npwx, npw_kq_m, igk_k (1,ikq_m), evc_kq_g , evc_kq_r )
+              npw_kq_m = ngk_all(ikq_m)
+              CALL invfft_wave (npwx, npw_kq_m, igk_k_all (1,ikq_m), evc_kq_g , evc_kq_r )
             ELSE
-              npw_kq = ngk(ikq)
-              CALL invfft_wave (npwx, npw_kq, igk_k (1,ikq), evc_kq_g , evc_kq_r )
+              npw_kq = ngk_all(ikq)
+              CALL invfft_wave (npwx, npw_kq, igk_k_all (1,ikq), evc_kq_g , evc_kq_r )
             END IF
             !! !$acc exit data copyout(evc_kq_r) delete(evc_kq_g)
             !$acc exit data delete(evc_kq_g)
@@ -724,11 +785,11 @@ SUBROUTINE koopmans_ham ()
       !    
     ENDDO ! qpoints
     !$acc exit data delete(rhor, rhog, delta_vg, vh_rhog, delta_vg_, delta_vr, delta_vr_)
+    !$acc exit data delete(igk_k_all)
 
     !WRITE( stdout, '(5X,"INFO: KC HAMILTONIAN CALCULATION ik= ", i4, " ... DONE")') ik
     !
     deltaH = nqstot*deltaH
-    write(stdout,*) 'BEFORE MP SUM'
     CALL mp_sum (deltaH, intra_bgrp_comm)
     CALL mp_sum (sh, intra_bgrp_comm)
     ! Sum over different processes (G vectors) 

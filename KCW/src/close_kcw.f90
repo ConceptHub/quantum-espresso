@@ -21,7 +21,7 @@ SUBROUTINE close_kcw ()
   CALL close_buffer  ( iuwfc, 'delete' )
   !
   IF (calculation /= 'wann2kcw') CALL close_buffer  ( iurho_wann,'delete')
-  IF (calculation == 'wann2kcw') CALL close_buffer  ( iuwfc_wann_allk,'delete')
+  IF (calculation == 'wann2kcw' .OR. calculation == 'ham') CALL close_buffer  ( iuwfc_wann_allk,'delete')
   IF (calculation /= 'screen' ) CALL close_buffer  ( iuwfc_wann,'delete')
   !
 END SUBROUTINE close_kcw

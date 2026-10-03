@@ -87,7 +87,6 @@ $ECHO " done"
 PW_COMMAND="$PARA_PREFIX $BIN_DIR/pw.x $PARA_POSTFIX"
 W90_COMMAND="$BIN_DIR/wannier90.x"
 PW2W90_COMMAND="$PARA_PREFIX $BIN_DIR/pw2wannier90.x"
-KCW_COMMAND_noPOSTFIX="$PARA_PREFIX $BIN_DIR/kcw.x"
 KCW_COMMAND="$PARA_PREFIX $BIN_DIR/kcw.x $PARA_POSTFIX"
 MERGE_WANN_COMMAND="$BIN_DIR/merge_wann.x"
 KMESH_COMMAND="$BIN_DIR/../external/wannier90/utility/kmesh.pl"
@@ -358,5 +357,5 @@ K_POINTS crystal_b
 EOF
 
 $ECHO "  Running kcw.x ham for $PREFIX...\c"
-$KCW_COMMAND_noPOSTFIX -in kc.khi > kc.kho
+$KCW_COMMAND -in kc.khi > kc.kho
 $ECHO "DONE"

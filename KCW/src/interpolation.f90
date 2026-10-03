@@ -163,6 +163,9 @@ CONTAINS
     REAL(DP) :: xq(3)
     REAL(DP) :: dist_ij(3)       ! distance between WFs |0i> and |0j>
     !
+    INTEGER, EXTERNAL :: global_kpoint_index
+    !! The global index of a local (pool) k-point
+    !
     !
     ham_t(:,:) = (0.D0,0D0)
     !
@@ -173,7 +176,7 @@ CONTAINS
           DO ik = 1, nks
             !
             IF ( lsda .AND. isk(ik) /= spin_component) CYCLE
-            ik_eff = ik - (spin_component -1)*nkstot_eff
+            ik_eff = global_kpoint_index (nkstot, ik) - (spin_component -1)*nkstot_eff
             !
             xq = xk(:,ik)
             CALL cryst_to_cart( 1, xq, at, -1 )
@@ -183,10 +186,10 @@ CONTAINS
             !
           ENDDO
           !
-          CALL mp_sum(ham_t, inter_pool_comm)
-          !
         ENDDO
       ENDDO
+      !
+      CALL mp_sum(ham_t, inter_pool_comm)
       !
       ham_t = ham_t / (nkstot_eff)   ! 1/Nk factor for the FT from H(k) to H(R)
       !
