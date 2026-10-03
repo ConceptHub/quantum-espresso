@@ -63,8 +63,8 @@ input_description -distribution {Quantum ESPRESSO} -package PWscf -program pw2wa
             info {
                 'standalone': for standalone execution of wannier90
                 'library': wannier90 runs inside pw2wannier90.x, reading its
-                input from "seedname".win; no "wannier90.x -pp" prerun and no
-                .nnkp/.amn/.mmn files. The k-point list, unit cell and number
+                input from "seedname".win; no "wannier90.x -pp" prerun is
+                needed. The k-point list, unit cell and number
                 of k-points in the .win must match the nscf run; they are
                 checked and a mismatch stops the run. The number of
                 projections must equal num_wann, so wannier90's
