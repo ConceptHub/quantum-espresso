@@ -42,7 +42,7 @@ SUBROUTINE run_pwscf( exit_status )
   USE parameters,           ONLY : ntypx, npk
   USE upf_params,           ONLY : lmaxx
   USE upf_utils,            ONLY : matches
-  USE cell_base,            ONLY : fix_volume, fix_area
+  USE cell_base,            ONLY : fix_volume, fix_area, isotropic
   USE control_flags,        ONLY : conv_elec, gamma_only, ethr, lscf, treinit_gvecs
   USE control_flags,        ONLY : conv_ions, istep, nstep, restart, lmd, lbfgs,&
                                    lensemb, lforce, tstress, tr2
@@ -243,6 +243,7 @@ SUBROUTINE run_pwscf( exit_status )
         !
         IF (fix_volume) CALL impose_deviatoric_stress( sigma )
         IF (fix_area)   CALL impose_deviatoric_stress_2d( sigma )
+        IF (isotropic)  CALL impose_isotropic_stress( sigma )
         !
         ! ... save data needed for potential and wavefunction extrapolation
         !

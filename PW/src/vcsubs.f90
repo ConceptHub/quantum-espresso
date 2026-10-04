@@ -33,6 +33,7 @@ SUBROUTINE vcinit( mxdtyp, mxdatm, ntype, natot, rat, ityp, avec, vcell, force, 
   ! avmod(3) 
   !
   USE kinds
+  USE cell_base, ONLY : isotropic
   !
   IMPLICIT NONE
   !
@@ -321,6 +322,12 @@ SUBROUTINE vcinit( mxdtyp, mxdatm, ntype, natot, rat, ityp, avec, vcell, force, 
            enddo
         enddo
      endif
+     !
+     ! isotropic cell (cell_dofree='volume'): the cell has a single degree
+     ! of freedom h -> s*h, project the cell acceleration onto h so that
+     ! cell velocity and cell position stay proportional to h
+     !
+     if (isotropic) avec2d = SUM( avec2d*avec ) / SUM( avec*avec ) * avec
   else
      do i = 1, 3
         do j = 1, 3
@@ -475,6 +482,7 @@ SUBROUTINE vcmove( mxdtyp, mxdatm, ntype, ityp, rat, avec, vcell, force, if_pos,
   USE constants,     ONLY : pi, eps16, k_boltzmann_ry
   USE io_global,     ONLY : stdout
   USE dynamics_module, ONLY: HaddT_to_RyddT, Ha_to_Ry 
+  USE cell_base,     ONLY : isotropic
   !
   IMPLICIT NONE
   !
@@ -773,6 +781,13 @@ SUBROUTINE vcmove( mxdtyp, mxdatm, ntype, ityp, rat, avec, vcell, force, if_pos,
         enddo
 
 666     continue
+        !
+        ! isotropic cell (cell_dofree='volume'): single degree of freedom
+        ! h -> s*h, project the cell acceleration onto h. Velocities and
+        ! positions then stay proportional to h, and the component-wise
+        ! quench of damped dynamics acts on all components at once
+        !
+        if (isotropic) avec2d = SUM( avec2d*avec ) / SUM( avec*avec ) * avec
         !
         ! calculate correct lattice velocities and ...
         !

@@ -98,3 +98,46 @@ SUBROUTINE impose_deviatoric_stress_2d ( sigma )
   sigma(2,2) = sigma(2,2) - tr
   WRITE (stdout,'(5x,"Area is kept fixed: isostatic in-plane pressure in xy set to zero")')
 END SUBROUTINE impose_deviatoric_stress_2d
+!
+!---------------------------------------------------------------------
+SUBROUTINE impose_isotropic_strain ( at_old, at )
+  !---------------------------------------------------------------------
+  !! Impose a pure isotropic deformation at = s*at_old, i.e. keep the
+  !! shape of the cell and change only its volume. The scaling factor
+  !! s is the projection of at onto at_old: s = (at:at_old)/(at_old:at_old).
+  !! Needed to enforce isotropic expansion (cell_dofree='volume') in
+  !! variable-cell MD/optimization for any Bravais lattice.
+  !
+  USE kinds, ONLY: dp
+  IMPLICIT NONE
+  REAL(dp), INTENT(in)    :: at_old(3,3)
+  REAL(dp), INTENT(inout) :: at(3,3)
+  REAL(dp) :: s
+
+  s  = SUM( at*at_old ) / SUM( at_old*at_old )
+  at = s * at_old
+
+END SUBROUTINE impose_isotropic_strain
+!
+!---------------------------------------------------------------------
+SUBROUTINE impose_isotropic_stress ( sigma )
+  !---------------------------------------------------------------------
+  !! Impose a pure isotropic stress: only the hydrostatic part
+  !! Tr(sigma)/3 is retained, as it is the only component that
+  !! couples to an isotropic deformation of the cell.
+  !
+  USE kinds, ONLY: dp
+  USE io_global, ONLY: stdout
+  IMPLICIT NONE
+  REAL(dp), INTENT(inout) :: sigma(3,3)
+  REAL(dp) :: tr
+  INTEGER :: i
+
+  tr = (sigma(1,1)+sigma(2,2)+sigma(3,3))/3.d0
+  sigma = 0.d0
+  DO i = 1, 3
+     sigma(i,i) = tr
+  ENDDO
+  WRITE (stdout,'(5x,"Cell shape is kept fixed: only isotropic pressure is retained")')
+
+END SUBROUTINE impose_isotropic_stress

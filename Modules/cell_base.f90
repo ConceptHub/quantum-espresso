@@ -108,7 +108,8 @@
         LOGICAL   :: fix_area = .FALSE.
         !! True if area in xy plane is kept constant
         LOGICAL   :: isotropic = .FALSE.
-        !! True if volume option is chosen for cell_dofree 
+        !! True if volume option is chosen for cell_dofree: the cell is
+        !! scaled isotropically (h -> s*h), keeping its shape fixed
         REAL(DP) :: wmass = 0.0_DP
         !! cell fictitious mass
         REAL(DP) :: press = 0.0_DP
@@ -714,15 +715,10 @@
               fix_area = .true.
 ! 2DSHAPE
             CASE ( 'volume' )
-              !CALL errore(' init_dofree ', &
-              !   ' cell_dofree = '//TRIM(cell_dofree)//' not yet implemented ', 1 )
-              IF ( ibrav /= 1 ) THEN
-                CALL errore('cell_dofree', 'Isotropic expansion is only allowed for ibrav=1; i.e. for simple cubic', 1)
-              END IF
-              iforceh      = 0
-              iforceh(1,1) = 1
-              iforceh(2,2) = 1
-              iforceh(3,3) = 1
+              ! isotropic expansion h -> s*h: all components of h move,
+              ! the cell force is projected onto h itself (see cell_force)
+              ! so that the shape of the cell is preserved for any ibrav
+              iforceh      = 1
               isotropic    = .TRUE.
             CASE ('fixa')
               iforceh      = 1
@@ -883,30 +879,18 @@
     INTEGER,      INTENT(IN) :: iforceh(3,3)
     REAL(DP), INTENT(IN) :: delt
     INTEGER      :: i, j
-    REAL(DP) :: dt2,fiso
+    REAL(DP) :: dt2
     dt2 = delt * delt
     !
-    IF( isotropic ) THEN
-      !
-      ! Isotropic force on the cell
-      !
-      fiso = (fcell(1,1)+fcell(2,2)+fcell(3,3))/3.0_DP
-      !
-      DO j=1,3
-        DO i=1,3
-          hnew(i,j) = h(i,j) + dt2 * fiso * REAL( iforceh(i,j), DP )
-        ENDDO
+    ! if isotropic, fcell is already projected onto h by cell_force
+    !
+    DO j=1,3
+      DO i=1,3
+        hnew(i,j) = h(i,j) + dt2 * fcell(i,j) * REAL( iforceh(i,j), DP )
       ENDDO
-      !
-    ELSE
-      !
-      DO j=1,3
-        DO i=1,3
-          hnew(i,j) = h(i,j) + dt2 * fcell(i,j) * REAL( iforceh(i,j), DP )
-        ENDDO
-      ENDDO
-      !
-    END IF
+    ENDDO
+    !
+    IF( isotropic ) CALL impose_isotropic_strain( h, hnew )
     !
     RETURN
   END SUBROUTINE cell_steepest
@@ -922,7 +906,7 @@
     LOGICAL,      INTENT(IN) :: tnoseh
 
     REAL(DP) :: htmp(3,3)
-    REAL(DP) :: verl1, verl2, verl3, dt2, ftmp, v1, v2, v3, fiso
+    REAL(DP) :: verl1, verl2, verl3, dt2, ftmp, v1, v2, v3
     INTEGER      :: i, j
   
     dt2 = delt * delt
@@ -940,32 +924,22 @@
     verl3 = dt2 / ( 1.0_DP + ftmp )
     verl1 = verl1 - 1.0_DP
 
-    IF( isotropic ) THEN
-      !
-      fiso = (fcell(1,1)+fcell(2,2)+fcell(3,3))/3.0_DP
-      !
-      DO j=1,3
-        DO i=1,3
-          v1 = verl1 * h(i,j)
-          v2 = verl2 * hold(i,j)
-          v3 = verl3 * ( fiso - htmp(i,j) )
-          hnew(i,j) = h(i,j) + ( v1 + v2 + v3 ) * REAL( iforceh(i,j), DP )
-        ENDDO
+    ! if isotropic, fcell is already projected onto h by cell_force
+    !
+    DO j=1,3
+      DO i=1,3
+        v1 = verl1 * h(i,j)
+        v2 = verl2 * hold(i,j)
+        v3 = verl3 * ( fcell(i,j) - htmp(i,j) )
+        hnew(i,j) = h(i,j) + ( v1 + v2 + v3 ) * REAL( iforceh(i,j), DP )
       ENDDO
-      !
-    ELSE
-      !
-      DO j=1,3
-        DO i=1,3
-          v1 = verl1 * h(i,j)
-          v2 = verl2 * hold(i,j)
-          v3 = verl3 * ( fcell(i,j) - htmp(i,j) )
-          hnew(i,j) = h(i,j) + ( v1 + v2 + v3 ) * REAL( iforceh(i,j), DP )
-        ENDDO
-      ENDDO
-      !
-    END IF
-  
+    ENDDO
+    !
+    ! remove any residual deviation from the shape of h (e.g. from hold or
+    ! the Nose term), keeping only the isotropic scaling
+    !
+    IF( isotropic ) CALL impose_isotropic_strain( h, hnew )
+
     RETURN
   END SUBROUTINE cell_verlet
 
@@ -992,12 +966,13 @@
 
   subroutine cell_force( fcell, ainv, stress, omega, press, wmassIN )
     USE constants, ONLY : eps8
+    USE matrix_inversion, ONLY : invmat
     REAL(DP), intent(out) :: fcell(3,3)
     REAL(DP), intent(in) :: stress(3,3), ainv(3,3)
     REAL(DP), intent(in) :: omega, press
     REAL(DP), intent(in), optional :: wmassIN
     integer        :: i, j
-    REAL(DP) :: wmass, fiso
+    REAL(DP) :: wmass, fiso, hcell(3,3), atmp(3,3)
     IF (.not. present(wmassIN)) THEN
       wmass = 1.0
     ELSE
@@ -1019,12 +994,16 @@
 ! added this :
     IF( isotropic ) THEN
       !
-      ! Isotropic force on the cell
+      ! Isotropic force on the cell: for h constrained to s*h the force is
+      ! the projection of fcell onto h, fcell -> (fcell:h)/(h:h) * h, where
+      ! fcell:h = omega*Tr(stress-press)/wmass. Valid for any ibrav; for
+      ! ibrav=1 it reduces to Tr(fcell)/3 on the diagonal. The projection
+      ! is invariant under h -> -h (PW passes ainv = -bg^T/alat).
       !
-      fiso = (fcell(1,1)+fcell(2,2)+fcell(3,3))/3.0_DP
-      do i=1,3
-          fcell(i,i)=fiso
-      end do
+      atmp = ainv
+      CALL invmat( 3, atmp, hcell )
+      fiso  = SUM( fcell*hcell ) / SUM( hcell*hcell )
+      fcell = fiso * hcell
     END IF
 ! 
     return

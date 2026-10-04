@@ -53,7 +53,8 @@ SUBROUTINE cprmain( tau_out, fion_out, etot_out )
   USE cell_base,                ONLY : at, bg, ainv, frich, &
                                        greash, tpiba2, omega, alat, ibrav,  &
                                        celldm, h, hold, hnew, velh,         &
-                                       wmass, press, iforceh, cell_force
+                                       wmass, press, iforceh, cell_force, &
+                                       isotropic
   USE local_pseudo,             ONLY : allocate_local_pseudo, vps
   USE io_global,                ONLY : stdout, ionode, ionode_id
   USE dener,                    ONLY : detot
@@ -701,7 +702,13 @@ USE cp_main_variables,        ONLY : eigr_d
         !
      END IF
      !
-     IF ( COUNT( iforceh == 1 ) > 0 ) THEN
+     IF ( isotropic ) THEN
+        !
+        ! only one degree of freedom (the scaling factor) for isotropic cell
+        !
+        temphc = 2.D0 / k_boltzmann_au * ekinh
+        !
+     ELSE IF ( COUNT( iforceh == 1 ) > 0 ) THEN
         !
         temphc = 2.D0 / k_boltzmann_au * ekinh / DBLE( COUNT( iforceh == 1 ) )
         !
