@@ -605,12 +605,16 @@ CONTAINS
       !
       ! ... Velocity Verlet integration scheme
       !
-      ! we first compute v(t) 
+      ! we first compute v(t) from v(t-dt/2). When starting from scratch
+      ! md_init provides v(t) directly (from input, thermalization or zero),
+      ! so the first half-step must be skipped
       !
-      FORALL( na = 1:nat) vel(:,na) = vel(:,na) + 0.5_dp * dt * acc(:,na)
-      IF (tnosep) THEN 
-         FORALL ( na = 1:nat) vel(:,na) = vel(:,na)/(1 + 0.5 * dt * HaddT_to_RyddT * vnhp(atm2nhp(na)))
-      END IF 
+      IF ( is_restart ) THEN
+         FORALL( na = 1:nat) vel(:,na) = vel(:,na) + 0.5_dp * dt * acc(:,na)
+         IF (tnosep) THEN
+            FORALL ( na = 1:nat) vel(:,na) = vel(:,na)/(1 + 0.5 * dt * HaddT_to_RyddT * vnhp(atm2nhp(na)))
+         END IF
+      END IF
       !
       ! ... remove the component of the velocity along the
       ! ... constraint gradient
@@ -625,7 +629,7 @@ CONTAINS
       !
       ! then we compute tau(t+dt)
       !
-      tau_new(:,:) = tau(:,:) + vel(:,:) * 0.5 * dt + acc(:,:) * dt**2
+      tau_new(:,:) = tau(:,:) + vel(:,:) * dt + 0.5_DP * acc(:,:) * dt**2
       !   
 
       !
