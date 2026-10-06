@@ -9,6 +9,9 @@ New in 8.0 version
     variables simple_magn_mix, maxlinmix, simplemix (Aurora Ponzi)
   * pw2wannier90: new write_vmn, write_pmn options for velocity and momentum
     matrix elements (Martin Thümmler and Jae-Mo Lihm)
+  * pw2wannier90: wan_mode='library' uses Wannier90 v4 and runs the
+    Wannierization in parallel
+  * EPW: Wannierization uses Wannier90 v4 and runs in parallel
   * ...
 
 Fixed in 7.6.1 version(s)

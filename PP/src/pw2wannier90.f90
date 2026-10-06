@@ -870,6 +870,7 @@ PROGRAM pw2wannier90
     call errore('pw2wannier90','Sigma in the SCDM method must be positive.', 1)
   IF (irr_bz) THEN
      IF (gamma_only) CALL errore('pw2wannier90', "irr_bz and gamma_only are not compatible", 1)
+     IF (npool > 1) CALL errore('pw2wannier90', "irr_bz and pools (-nk > 1) not implemented", 1)
      IF (write_spn) CALL errore('pw2wannier90', "irr_bz and write_spn not implemented", 1)
      IF (write_unk) CALL errore('pw2wannier90', "irr_bz and write_unk not implemented", 1)
      IF (write_uHu) CALL errore('pw2wannier90', "irr_bz and write_uHu not implemented", 1)
@@ -1211,7 +1212,6 @@ SUBROUTINE setup_nnkp
   USE cell_base, ONLY : at, bg, alat
   USE gvect,     ONLY : g, gg
   USE ions_base, ONLY : nat, tau, ityp, atm
-  USE klist,     ONLY : xk
   USE mp,        ONLY : mp_bcast, mp_sum
   USE mp,        ONLY : mp_get_comm_self
   USE w90_library, ONLY : w90_set_comm, w90_input_reader, w90_print_info,      &
@@ -1271,8 +1271,10 @@ SUBROUTINE setup_nnkp
 
   ! real lattice (Cartesians, Angstrom), for the cross-check against the .win
   rlatt(:,:) = transpose(at(:,:))*alat*bohr
-  ! convert Cartesian k-points to crystallographic co-ordinates
-  kpt_latt(:,1:iknum)=xk(:,1:iknum)
+  ! convert Cartesian k-points to crystallographic co-ordinates. xk_all is the
+  ! whole list, xk holds only this pool's k-points. ikstart and ikstop are
+  ! global indices.
+  kpt_latt(:,1:iknum)=xk_all(:,ikstart:ikstop)
   CALL cryst_to_cart(iknum,kpt_latt,at,-1)
 
   ! MP grid dimensions
@@ -1367,11 +1369,25 @@ SUBROUTINE setup_nnkp
                        r_w, xaxis, zaxis, spin_qaxis, alpha_w,                &
                        w90out, w90err, ierr)
      IF (ierr /= 0) CALL errore('setup_nnkp', 'Error in w90_get_proj', ierr)
-     ! library mode cannot represent more projections than Wannier functions:
-     ! u_matrix_opt is (num_bands, num_wann, num_kpts), with no room for the
-     ! select_projections step standalone wannier90.x applies
+     ! select_projections is applied when the .amn is read, which library mode
+     ! never does, so it would be silently ignored. u_matrix_opt is
+     ! (num_bands, num_wann, num_kpts): no room for extra projections either.
+     IF (w90main%select_proj%lselproj) CALL errore('setup_nnkp', &
+        ' select_projections is not supported in library mode, use wan_mode=standalone', 1)
      IF (n_proj_found /= n_wannier) CALL errore('setup_nnkp', &
         ' number of projections in .win does not equal num_wann', n_proj_found)
+     !
+     ! Wannier90 normalises the z and x axes of a projection but not its spin
+     ! quantisation axis, so [1,1,1] in the .win arrives here with length sqrt(3).
+     ! compute_amn and compute_spin build unit spinors from it and need it
+     ! normalised, which is what read_nnkp does for the standalone path.
+     IF (noncolin) THEN
+        DO iw = 1, n_wannier
+           xnorm = SQRT(SUM(spin_qaxis(:,iw)**2))
+           IF (xnorm < eps6) CALL errore('setup_nnkp', ' |spin_qaxis| < eps ', iw)
+           spin_qaxis(:,iw) = spin_qaxis(:,iw) / xnorm
+        ENDDO
+     ENDIF
      !
      ! w90out and w90err stay open for run_wannier, which closes them
   ENDIF
@@ -1392,14 +1408,9 @@ SUBROUTINE setup_nnkp
   CALL mp_bcast(spin_qaxis,ionode_id, world_comm)
   CALL mp_bcast(exclude_bands,ionode_id, world_comm)
 
-  ! n_proj = n_wannier/2 is the v3 convention, where wannier_setup returned one
-  ! entry per projection line. w90_get_proj instead returns num_wann entries for
-  ! spinors, two per line, so half of a_mat would be left zero here. Library
-  ! mode has never supported spinor projections; refuse it rather than return
-  ! silently wrong overlaps.
-  IF(noncolin) CALL errore('setup_nnkp', &
-     ' noncollinear spinor projections are not supported in library mode, use wan_mode=standalone', 1)
-  n_proj=n_wannier
+  ! Wannier90 v4 spin-expands the projections block. So the number of projections
+  ! equals the number of Wannier functions.
+  n_proj = n_wannier
 
   ALLOCATE( gf(npwx,n_proj), csph(16,n_proj), stat=ierr)
   IF (ierr /= 0) CALL errore('pw2wannier90', 'Error allocating gf/csph', 1)
@@ -1610,7 +1621,7 @@ SUBROUTINE find_mp_grid()
   IF ( (mp_grid(2)==0) .or. (mp_grid(3)==0) ) &
        CALL errore('find_mp_grid',' one or more mp_grid dimensions is zero', 1)
 
-  mpg1=iknum/(mp_grid(2)*mp_grid(3))
+  mpg1 = real(iknum,kind=DP) / real(mp_grid(2)*mp_grid(3),kind=DP)
 
   mp_grid(1) = nint(mpg1)
 
@@ -5491,19 +5502,17 @@ END SUBROUTINE utility_open_output_file
 SUBROUTINE compute_amn
    !-----------------------------------------------------------------------
    !!
-   !! In the collinear case, n_proj and n_wannier are always the same.
-   !! In the noncollinear case,
-   !! 1) standalone mode: n_proj is the number of spinor projections.
-   !!                     n_wannier = n_proj, but is never used here.
-   !! 2) library mode: n_proj is the number of scaler projections.
-   !!                  n_wannier = 2 * n_proj
-   !! (For the standalone mode, n_wannier used only in SCDM projections.)
-   !!
-   !! library mode for noncollinear spinor projection is not working.
-   !!
-   !! nocolin: we have half as many projections g(r) defined as wannier
-   !!          functions. We project onto (1,0) (ie up spin) and then onto
-   !!          (0,1) to obtain num_wann projections. jry
+   !! n_proj is the number of projections, n_wannier the number of Wannier
+   !! functions. A spinor projection line counts once per Wannier function,
+   !! carrying its own spin_eig and spin_qaxis, so the noncollinear case needs no
+   !! separate count.
+   !! 1) standalone mode: n_proj comes from the .nnkp and n_wannier is set equal
+   !!    to it. With wannier90's select_projections the .win may declare more
+   !!    projections than Wannier functions; wannier90 does that selection itself,
+   !!    afterwards, from the .amn.
+   !! 2) library mode: setup_nnkp requires the two to be equal, so
+   !!    select_projections is not available there.
+   !! (n_wannier is used here only for SCDM projections.)
    !!
    !-----------------------------------------------------------------------
    !

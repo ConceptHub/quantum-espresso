@@ -56,8 +56,8 @@ N.B.
   (i) The WAN_DIR variable in the run_example script must be set to the 
       directory of the wannier90 executable. 
 
- (ii) Multiple CPUs: distribution of k-points (the -npool command line option)
-      is not yet supported, only G-vectors.
+ (ii) Multiple CPUs, and wan_mode='library': see PP/examples/WAN90_example/README,
+      which this example follows.
 
  (iii) Library mode needs no special build: QE links pw2wannier90.x against
        the Wannier90 library and its modules in both build systems.

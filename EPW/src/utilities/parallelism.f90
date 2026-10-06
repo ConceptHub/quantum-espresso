@@ -180,7 +180,7 @@
     !-----------------------------------------------------------------------
     !
     !-----------------------------------------------------------------------
-    SUBROUTINE fkbounds(nktot, lower_bnd, upper_bnd)
+    SUBROUTINE fkbounds(nktot, lower_bnd, upper_bnd, ipool)
     !-----------------------------------------------------------------------
     !!
     !!   Subroutine finds the lower and upper bounds a k-grid in parallel
@@ -201,10 +201,18 @@
     !! Lower kpt bounds for that image pool
     INTEGER, INTENT(out) :: upper_bnd
     !! Upper kpt for that image pool
+    INTEGER, INTENT(in), OPTIONAL :: ipool
+    !! Pool to report on, counted from zero. Defaults to my_pool_id; pass it to
+    !! get the bounds of a pool other than the current one
     !
 #if defined(__MPI)
     !
     INTEGER :: nkl, nkr
+    INTEGER :: pool_id
+    !! The pool the bounds are wanted for
+    !
+    pool_id = my_pool_id
+    IF (PRESENT(ipool)) pool_id = ipool
     !
     ! find the bounds of k-dependent arrays in the parallel case
     ! number of kpoint blocks, kpoints per pool and reminder
@@ -214,12 +222,12 @@
     !
     ! the reminder goes to the first nkr pools (0...nkr-1)
     !
-    IF (my_pool_id < nkr ) nkl = nkl + 1
+    IF (pool_id < nkr ) nkl = nkl + 1
     !
     ! the index of the first k point in this pool
     !
-    lower_bnd = my_pool_id * nkl + 1
-    IF (my_pool_id >= nkr ) lower_bnd = my_pool_id * nkl + 1 + nkr
+    lower_bnd = pool_id * nkl + 1
+    IF (pool_id >= nkr ) lower_bnd = pool_id * nkl + 1 + nkr
     !
     ! the index of the last k point in this pool
     !

@@ -54,11 +54,19 @@ N.B.
   (i) The WAN_DIR variable in the run_example script must be set to the 
       directory of the wannier90 executable. 
 
- (ii) Multiple CPUs: distribution of k-points (the -npool command line option)
-      is not yet supported, only G-vectors.
+ (ii) Multiple CPUs: both G-vector and k-point (the -npool command line option)
+      distribution are supported. In library mode the A and M matrices are
+      computed pool-by-pool and gathered before Wannier90 runs, which it does
+      serially on one process.
 
  (iii) Library mode needs no special build: QE links pw2wannier90.x against
        the Wannier90 library and its modules in both build systems.
+
+ (iv) In library mode wannier90 reads its own input from seedname.win; no
+      "wannier90.x -pp" prerun and no .nnkp/.amn/.mmn files. The k-point list,
+      unit cell and number of k-points in the .win must match the nscf run;
+      they are checked and a mismatch stops the run. The number of projections
+      must equal num_wann, so wannier90's select_projections is not available.
 
 Input variables for pw2wannier90:
 

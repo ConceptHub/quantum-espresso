@@ -15,9 +15,14 @@
   !!
   !! This module contains routine to go from PW results to Wannier90 to EPW
   !!
+  !! Everything here is reached through wann_run, which epw.f90 calls on the root
+  !! image alone, so ionode and meta_ionode select the same process. File writes
+  !! use ionode, matching the ionode_id/intra_image_comm root they are shared from.
+  !!
   IMPLICIT NONE
   !
   CONTAINS
+    !
     !
     !------------------------------------------------------------------------
     SUBROUTINE pw2wan90epw
@@ -39,15 +44,15 @@
     !!
     !------------------------------------------------------------------------
     USE io_global,        ONLY : stdout, ionode, ionode_id
-    USE mp_global,        ONLY : intra_pool_comm, inter_pool_comm, nproc_pool
+    USE mp_global,        ONLY : intra_pool_comm, inter_pool_comm, nproc_pool, npool
     USE mp,               ONLY : mp_sum, mp_bcast
     USE mp_images,        ONLY : intra_image_comm
     USE klist,            ONLY : nkstot
     USE io_files,         ONLY : prefix
     USE input,            ONLY : scdm_proj, scdm_entanglement, bands_skipped, scdm_sigma,  &
                                  wannier_plot, lsda, lwfpt, dis_froz_max, dis_froz_min,    &
-                                 dis_win_max, dis_win_min, iprint, nbndsub, num_iter, vme, &
-                                 proj, xk_all
+                                 dis_win_max, dis_win_min, iprint, nbndsub, num_iter,      &
+                                 proj
     USE io_ahc,           ONLY : check_ahc_bands
     USE wann_common,      ONLY : seedname2, ispinw, ikstart, ikstop, iknum, excluded_band, &
                                  g_kpb, kpb, ig_, zaxis, xaxis, zerophase, alpha_w,        &
@@ -64,15 +69,16 @@
                                  w90_get_proj, w90_get_centres, w90_get_spreads, w90_plot, &
                                  w90_set_eigval, w90_set_u_opt, w90_set_m_local,           &
                                  w90_set_u_matrix, w90_input_reader, w90_print_info,       &
-                                 w90_print_timings
+                                 w90_print_timings, w90_is_mpi_build
+    USE w90_library_extra, ONLY : write_chkpt
     USE kinds,            ONLY : DP
     USE cell_base,        ONLY : at, alat, bg 
     USE ions_base,        ONLY : nat, tau, ityp, atm
     USE wvfct,            ONLY : nbnd, npwx
     USE gvect,            ONLY : g, gg
-    USE global_var,       ONLY : nbndep, nbndskip, ibndkept
+    USE global_var,       ONLY : nbndep, nbndskip, ibndkept, nkpts
+    USE parallelism,      ONLY : fkbounds
     USE pwcom,            ONLY : nelec
-    USE kfold,            ONLY : ktokpmq
     !
     IMPLICIT NONE
     !
@@ -100,18 +106,16 @@
     !! Cpu number
     INTEGER :: ik
     !! k-point index
-    INTEGER :: spin_save
-    !! buffer spin channel
+    INTEGER :: lower_bnd
+    !! First k-point of a pool, in the global list
+    INTEGER :: upper_bnd
+    !! Last k-point of a pool, in the global list
     INTEGER :: iat
     !! Atom counter
     INTEGER :: ibnd
     !! Counter on band index
     INTEGER :: jbnd
     !! Counter on band index
-    INTEGER :: nkq
-    !! Number of k-point per pool
-    INTEGER :: nkq_abs
-    !! Total number of k-point
     INTEGER :: iw, ip
     !! Counters for wannier functions, projectors
     INTEGER :: n_proj_found
@@ -124,10 +128,8 @@
     !! Square of g_(3)
     REAL(KIND = DP) :: g_(3)
     !! Temporary vector G_k+b, g_(:) = g_kpb(:,ik,ib)
-    REAL(KIND = DP) :: zero_vect(3)
     !
     ierr = 0
-    zero_vect(:) = zero
     !
     outdir = './'
     seedname2 = prefix
@@ -191,23 +193,14 @@
     ALLOCATE(kindex(iknum), STAT = ierr)
     IF (ierr /= 0) CALL errore('pw2wan90epw', 'Error allocating kindex', ierr)
     !
+    ! Each pool owns a contiguous block of the single-spin k list. One process per
+    ! pool is enforced above, so the pool index is also the rank Wannier90 sees,
+    ! and Wannier90 counts ranks from zero.
     kindex(:) = 0
-    ! In LSDA the global k list holds both spins, but the Wannierisation runs on one spin at a
-    ! time, so ktokpmq is temporarily shown the single-spin count to return the right pool index
-    IF (TRIM(lsda) /= 'none') THEN
-      nkstot = iknum
-      spin_save = current_spin
-      current_spin = 1
-    ENDIF
-    DO ik = 1, iknum
-      CALL ktokpmq(xk_all(:, ik), zero_vect, +1, ipool, nkq, nkq_abs)
-      !ktokpmq returns rank index (ipool), locak k index (nkq) and absolute index (nkq_abs) of k-point xk
-      kindex(nkq_abs) = ipool - 1 ! wannier90 counts mpi ranks from zero
+    DO ipool = 0, npool - 1
+      CALL fkbounds(nkpts, lower_bnd, upper_bnd, ipool)
+      kindex(lower_bnd:upper_bnd) = ipool
     ENDDO
-    IF (TRIM(lsda) /= 'none') THEN
-      current_spin = spin_save
-      nkstot = 2 * iknum
-    ENDIF
     !
     ALLOCATE(symbol_all_atoms(nat), STAT = ierr)
     IF (ierr /= 0) CALL errore('pw2wan90epw', 'Error allocating symbol_all_atoms', ierr)
@@ -216,9 +209,25 @@
       symbol_all_atoms(iat) = atm(ityp(iat))
     ENDDO
     ! 
-    ! Setup library output streams
-    IF (ionode) OPEN(NEWUNIT = w90out, FILE = TRIM(seedname2)//'.wout', STATUS = 'replace')
-    IF (ionode) OPEN(NEWUNIT = w90err, FILE = TRIM(seedname2)//'.werr', STATUS = 'replace')
+    ! Setup library output streams. Only ionode holds the .wout/.werr files:
+    ! Wannier90 writes from rank 0 of its communicator only, but prterr flushes
+    ! both units on every rank, so the others need a unit that is connected.
+    IF (ionode) THEN
+      OPEN(NEWUNIT = w90out, FILE = TRIM(seedname2)//'.wout', STATUS = 'replace')
+      OPEN(NEWUNIT = w90err, FILE = TRIM(seedname2)//'.werr', STATUS = 'replace')
+    ELSE
+      w90out = stdout
+      w90err = stdout
+    ENDIF
+    !
+    ! The internal Wannier90 is built with MPI whenever QE is
+    ! (external/wannier90.cmake, install/make_wannier90.inc.in), but an external
+    ! one need not be. A serial library accepts w90_set_comm and ignores it, then
+    ! would reject the k-point distribution below and, without it, take one
+    ! rank's slice of m_mat for the whole matrix.
+    IF (npool > 1 .AND. .NOT. w90_is_mpi_build()) CALL errore('pw2wan90epw', &
+      'the Wannier90 library is not built with MPI: rebuild it with MPI &
+      &support, or run on a single process', 1)
     !
     ! Required settings for library
     CALL w90_set_comm(w90main, inter_pool_comm) ! Setup/copy communicator in W90 library
@@ -466,6 +475,12 @@
     !
     CALL w90_wannierise(w90main, w90out, w90err, ierr)
     IF (ierr /= 0) CALL errore('pw2wan90epw', 'Error in w90_wannierise call', ierr)
+    !
+    ! Write the .chk file, so that postw90.x and other readers can be run on the
+    ! Wannier functions EPW obtained. write_chkpt writes the complete checkpoint,
+    ! so the one call after the minimisation is enough.
+    CALL write_chkpt(w90main, 'postwann', w90out, w90err, ierr)
+    IF (ierr /= 0) CALL errore('pw2wan90epw', 'Error writing the postwann checkpoint', ierr)
     !
     CALL w90_plot(w90main, w90out, w90err, ierr)
     IF (ierr /= 0) CALL errore('pw2wan90epw', 'Error in w90_plot call', ierr)
@@ -880,7 +895,7 @@
     !
     USE kinds,           ONLY : DP
     USE ep_constants,    ONLY : rytoev
-    USE io_global,       ONLY : stdout, meta_ionode, ionode_id
+    USE io_global,       ONLY : stdout, ionode, ionode_id
     USE wvfct,           ONLY : nbnd, npw, npwx, et, g2kin
     USE gvecw,           ONLY : gcutw
     USE wavefunctions,   ONLY : evc, psic, psic_nc
@@ -1044,7 +1059,7 @@
       IF (ierr /= 0) CALL errore('compute_amn_with_scdm', 'Error allocating piv_pos', 1)
       ALLOCATE(piv_spin(n_wannier), STAT = ierr)
       IF (ierr /= 0) CALL errore('compute_amn_with_scdm', 'Error allocating piv_spin', 1)
-      IF (meta_ionode) THEN
+      IF (ionode) THEN
         ALLOCATE(qr_tau(2 * minmn), STAT = ierr)
         IF (ierr /= 0) CALL errore('compute_amn_with_scdm', 'Error allocating qr_tau', 1)
         ALLOCATE(rwork(2 * 2 * nrtot), STAT = ierr)
@@ -1056,7 +1071,7 @@
       minmn = MIN(numbands, nrtot)
       ALLOCATE(piv(nrtot), STAT = ierr)
       IF (ierr /= 0) CALL errore('compute_amn_with_scdm', 'Error allocating piv', 1)
-      IF (meta_ionode) THEN
+      IF (ionode) THEN
         ALLOCATE(qr_tau(2 * minmn), STAT = ierr)
         IF (ierr /= 0) CALL errore('compute_amn_with_scdm', 'Error allocating qr_tau', 1)
         ALLOCATE(rwork(2 * nrtot), STAT = ierr)
@@ -1105,7 +1120,7 @@
                   kpt_latt(3, 1) == 0.0d0
     IF (.NOT. found_gamma) CALL errore('compute_amn_with_scdm', 'No Gamma point found.', 1)
     !
-    IF (meta_ionode) THEN
+    IF (ionode) THEN
       ! read wfc at G-point
       ik = 1
       CALL ktokpmq(xk_all(:,ik), zero_vect, +1, ipool, nkq, nkq_abs)
@@ -1225,7 +1240,7 @@
       IF (ierr /= 0) CALL errore('compute_amn_with_scdm', 'Error deallocating psi_gamma', 1)
       DEALLOCATE(cwork, STAT = ierr)
       IF (ierr /= 0) CALL errore('compute_amn_with_scdm', 'Error deallocating cwork', 1)
-    ENDIF ! meta_ionode
+    ENDIF ! ionode
     !
     CALL mp_bcast(piv, ionode_id, intra_image_comm)
     !
@@ -1554,14 +1569,14 @@
     !!  10/2008 Jesse Noffsinger UC Berkeley
     !!
     USE kinds,           ONLY : DP
-    USE io_global,       ONLY : stdout, meta_ionode
+    USE io_global,       ONLY : stdout, ionode
     USE io_files,        ONLY : diropn, prefix
     USE wvfct,           ONLY : nbnd, npw, npwx, g2kin
     USE wavefunctions,   ONLY : evc, psic, psic_nc
     USE units_lr,        ONLY : lrwfc, iuwfc
     USE fft_base,        ONLY : dffts
     USE fft_interfaces,  ONLY : fwfft, invfft
-    USE input,           ONLY : xk_all, xk_loc, igk_k_loc, lsda
+    USE input,           ONLY : xk_all, xk_loc, igk_k_loc
     USE gvect,           ONLY : g, ngm
     USE gvecw,           ONLY : gcutw
     USE cell_base,       ONLY : omega, tpiba, bg
@@ -1580,13 +1595,13 @@
     USE f90_unix_io,     ONLY : flush
 #endif
     USE mp,              ONLY : mp_sum
-    USE mp_global,       ONLY : my_pool_id, npool, intra_pool_comm, inter_pool_comm
+    USE mp_global,       ONLY : npool, intra_pool_comm, inter_pool_comm
     USE kfold,           ONLY : ktokpmq
     USE io,              ONLY : readwfc
     USE global_var,      ONLY : nbndep, nk_loc, nkpts
+    USE parallelism,     ONLY : fkbounds
     USE uspp_init,       ONLY : init_us_2
     USE lsda_mod,        ONLY : current_spin
-    USE klist,           ONLY : nkstot
     !
     IMPLICIT NONE
     !
@@ -1641,8 +1656,10 @@
     !! Starting index for k-point nearest neighbours in each pool
     INTEGER :: ierr
     !! Error status
-    INTEGER :: spin_save
-    !! store current spin value
+    INTEGER :: lower_bnd
+    !! First k-point of this pool, in the global list
+    INTEGER :: upper_bnd
+    !! Last k-point of this pool, in the global list
     INTEGER, ALLOCATABLE  :: igkq(:)
     !!
     REAL(KIND = DP) :: arg
@@ -1681,8 +1698,8 @@
     !! Local variables for uspp
     COMPLEX(KIND = DP), ALLOCATABLE :: qq_so(:, :, :, :)
     !! Local variables for uspp
-    COMPLEX(KIND = DP), ALLOCATABLE :: m_mat_global(:, :, :, :)
-    !! Temporary for coallescing distributed m-matrix onto root rank
+    COMPLEX(KIND = DP), ALLOCATABLE :: m_mat_k(:, :, :)
+    !! One k-point of the distributed m-matrix, collected on every rank for writing
     !
     any_uspp = ANY(upf(:)%tvanp)
     !
@@ -1976,61 +1993,55 @@
             IF (excluded_band(m)) CYCLE
             ibnd_m = ibnd_m + 1
             !
-            !m_mat(ibnd_m, ibnd_n, ib, ik_g) = Mkb(m, n)
-            m_mat(ibnd_m, ibnd_n, ib, ik) = Mkb(m, n) ! Jerome Jackson 19Feb24 only local part now passed to w90 lib
+            m_mat(ibnd_m, ibnd_n, ib, ik) = Mkb(m, n)
           ENDDO ! m
         ENDDO ! n
         !
       ENDDO ! ib
     ENDDO ! ik
 
-    ALLOCATE(m_mat_global(num_bands, num_bands, nnb, iknum), STAT = ierr)
-    IF (ierr /= 0) CALL errore('compute_mmn_para', 'Error allocating m_mat_global', 1)
-    m_mat_global(:, :, :, :) = czero ! every pool contributes only its own k-points, so the rest must be zero for the mp_sum below
+    ! Write Mmn to file. vmebloch2wan reads it back, unconditionally, so this is
+    ! not optional. m_mat holds only this pool's k-points, so the k-points are
+    ! collected one at a time rather than as a full copy of the matrix on every
+    ! rank: m_mat is the largest array here and a second one would double the
+    ! high-water mark for the sake of a file written once.
     !
-    ! Same single-spin k count as above, so that ktokpmq maps to the right pool
-    IF (TRIM(lsda) /= 'none') THEN
-      nkstot = nkpts
-      spin_save = current_spin
-      current_spin = 1
-    ENDIF
+    CALL fkbounds(nkpts, lower_bnd, upper_bnd)
+    IF (upper_bnd - lower_bnd + 1 /= nk_loc) CALL errore('compute_mmn_para', &
+      'k-point distribution does not match the one epw_readin used', 1)
     !
-    DO ik = 1, nk_loc
-      ! returns in-pool index nkq and absolute index nkq_abs of xk
-      CALL ktokpmq(xk_loc(:, ik), zero_vect, +1, ipool, nkq, nkq_abs)
-      m_mat_global(:, :, :, nkq_abs) = m_mat(:, :, :, ik) ! m_mat is filled by pool-local index, matching the loop above
-    ENDDO
+    ALLOCATE(m_mat_k(num_bands, num_bands, nnb), STAT = ierr)
+    IF (ierr /= 0) CALL errore('compute_mmn_para', 'Error allocating m_mat_k', 1)
     !
-    IF (TRIM(lsda) /= 'none') THEN
-      current_spin = spin_save
-      nkstot = 2 * nkpts
-    ENDIF
-    ! need to coallese the full m-matrix for write out to file
-    CALL mp_sum(m_mat_global, inter_pool_comm)
-    !
-    ! RM - write mmn to file (file needed with vme = true)
-    IF (meta_ionode) THEN
-      !
+    IF (ionode) THEN
       filmmn = TRIM(prefix)//'.mmn'
       IF (ispinw == 2) filmmn = TRIM(prefix)//'.down.mmn'
       OPEN(UNIT = iummn, FILE = filmmn, FORM = 'formatted')
-      DO ik = 1, iknum
+    ENDIF
+    !
+    DO ik = 1, iknum
+      !
+      ! Only the owning pool contributes; the sum leaves that block on every rank
+      m_mat_k(:, :, :) = czero
+      IF (ik >= lower_bnd .AND. ik <= upper_bnd) m_mat_k(:, :, :) = m_mat(:, :, :, ik - lower_bnd + 1)
+      CALL mp_sum(m_mat_k, inter_pool_comm)
+      !
+      IF (ionode) THEN
         DO ib = 1, nnb
-          !
           DO n = 1, nbndep
             DO m = 1, nbndep
-              ! m_mat holds only this pool's k-points, the gathered array holds all of them
-              WRITE(iummn,*) m_mat_global(m, n, ib, ik)
+              WRITE(iummn,*) m_mat_k(m, n, ib)
             ENDDO ! m
           ENDDO ! n
-          !
         ENDDO ! ib
-      ENDDO ! ik
+      ENDIF
       !
-      CLOSE(iummn)
-    ENDIF ! meta_ionode
-    DEALLOCATE(m_mat_global, STAT = ierr)
-    IF (ierr /= 0) CALL errore('compute_mmn_para', 'Error deallocating Mmn_global', 1)
+    ENDDO ! ik
+    !
+    IF (ionode) CLOSE(iummn)
+    !
+    DEALLOCATE(m_mat_k, STAT = ierr)
+    IF (ierr /= 0) CALL errore('compute_mmn_para', 'Error deallocating m_mat_k', 1)
     !
     DEALLOCATE(Mkb, STAT = ierr)
     IF (ierr /= 0) CALL errore('compute_mmn_para', 'Error deallocating Mkb', 1)
@@ -2374,7 +2385,7 @@
                              excluded_band, num_bands, wann_centers
     USE input,        ONLY : filukk, lsda
     USE ep_constants, ONLY : czero, bohr
-    USE io_global,    ONLY : meta_ionode
+    USE io_global,    ONLY : ionode
     USE cell_base,    ONLY : alat
     USE global_var,   ONLY : nbndep, nbndskip, ibndkept
     !
@@ -2394,7 +2405,7 @@
     COMPLEX(KIND = DP), ALLOCATABLE :: u_kc(:, :, :)
     !! Rotation matrix
     !
-    IF (meta_ionode) THEN
+    IF (ionode) THEN
       !
       ndimwin(:) = 0
       DO ik = 1, iknum
@@ -2607,7 +2618,7 @@
     USE input,         ONLY : et_all, eig_read
     USE io_files,      ONLY : prefix
     USE io_var,        ONLY : iuqpeig
-    USE io_global,     ONLY : stdout, meta_ionode, ionode_id
+    USE io_global,     ONLY : stdout, ionode, ionode_id
     USE global_var,    ONLY : nkpts
     USE mp,            ONLY : mp_bcast
     USE mp_images,     ONLY : intra_image_comm
@@ -2638,7 +2649,7 @@
     !
     IF (eig_read) THEN
       ! External (e.g. GW) eigenvalues, so that the disentanglement windows act on them rather than on the DFT ones
-      IF (meta_ionode) THEN
+      IF (ionode) THEN
         ALLOCATE(eigvaltmp(nbnd, iknum), STAT = ierr)
         IF (ierr /= 0) CALL errore('write_band', 'Error allocating eigvaltmp', 1)
         eigvaltmp(:, :) = zero
@@ -2702,7 +2713,7 @@
     !! and Wannier90 (subroutine of plot_wannier in /src/plot.F90)
     !!
     USE kinds,           ONLY : DP
-    USE io_global,       ONLY : stdout, meta_ionode, ionode_id
+    USE io_global,       ONLY : stdout, ionode, ionode_id
     USE wvfct,           ONLY : nbnd, npw, npwx
     USE wavefunctions,   ONLY : evc, psic, psic_nc
     USE wann_common,     ONLY : excluded_band, u_mat, u_mat_opt, iknum, &
@@ -3112,7 +3123,7 @@
       ENDDO ! ik
       !
 #if defined(__MPI)
-      IF (meta_ionode) THEN
+      IF (ionode) THEN
         CALL MPI_REDUCE( MPI_IN_PLACE, wann_func, 2 * npol * ngridwf_max, MPI_DOUBLE_PRECISION, &
                          MPI_SUM, ionode_id, intra_image_comm, ierr )
       ELSE
@@ -3122,7 +3133,7 @@
       IF (ierr /= 0) CALL errore('write_plot', 'mpi_reduce', ierr)
 #endif
       !
-      IF (meta_ionode) THEN
+      IF (ionode) THEN
         !
         !! [HL] For spinor Wannier functions, the step below is not necessary.
         !

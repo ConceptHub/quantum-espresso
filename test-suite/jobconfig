@@ -360,6 +360,10 @@ inputs_args = ('si.scf.in', '1'), ('si.pw2wan.in', '3')
 program = PP
 inputs_args = ('si.scf.in', '1'), ('si.pw2wan.in', '3')
 
+[pp_w90_library_nc/]
+program = PP
+inputs_args = ('pb_nc.scf.in', '1'), ('pb_nc.pw2wan.in', '3')
+
 [image_para/]
 program = IMAGE
 inputs_args = ('si.scf.in', '1'), ('si.ph.in', '2')
