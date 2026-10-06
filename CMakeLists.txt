@@ -441,7 +441,18 @@ add_library(qe_mpi_fortran INTERFACE)
 qe_install_targets(qe_mpi_fortran)
 ###########################################################
 if(QE_ENABLE_MPI)
+    if(NOT CMAKE_CROSSCOMPILING)
+        set(MPI_DETERMINE_LIBRARY_VERSION TRUE)
+    endif()
+
     find_package(MPI REQUIRED Fortran)
+
+    set(MPI_IS_OPENMPI FALSE)
+    if("${MPI_Fortran_LIBRARY_VERSION_STRING}" MATCHES "Open MPI"
+       OR "${MPI_Fortran_COMPILER}" MATCHES "openmpi"
+       OR "${MPI_Fortran_LIBRARIES}" MATCHES "openmpi")
+      set(MPI_IS_OPENMPI TRUE)
+    endif()
 
     # choose using mpi module or header file.
     if(MPI_Fortran_HAVE_F90_MODULE)
@@ -510,14 +521,15 @@ add_library(qe_scalapack INTERFACE)
 qe_install_targets(qe_scalapack)
 ###########################################################
 if(QE_ENABLE_SCALAPACK)
-    find_package(SCALAPACK REQUIRED QUIET)
-    message(STATUS "Found SCALAPACK: ${SCALAPACK_LIBRARIES};${SCALAPACK_LINKER_FLAGS}")
-    target_link_libraries(qe_scalapack
-        INTERFACE
-            ${SCALAPACK_LIBRARIES}
-            ${SCALAPACK_LINKER_FLAGS})
+    if(MPI_IS_OPENMPI)
+        set(VPL_MPI "openmpi")
+    else()
+        set(VPL_MPI "mpich")
+    endif()
+    find_package(VendorPerfLibs REQUIRED COMPONENTS scalapack)
+    target_link_libraries(qe_scalapack INTERFACE VPL::scalapack)
     if(QE_ENABLE_SCALAPACK_QRCP)
-        set(CMAKE_REQUIRED_LIBRARIES "${SCALAPACK_LIBRARIES}")
+        set(CMAKE_REQUIRED_LIBRARIES VPL::scalapack)
         check_fortran_function_exists("pzgeqpf" SCALAPACK_PZGEQPF_WORKS)
         unset(CMAKE_REQUIRED_LIBRARIES)
         if(SCALAPACK_PZGEQPF_WORKS)
