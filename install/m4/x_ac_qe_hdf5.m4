@@ -114,14 +114,11 @@ if test "$use_parallel" -ne 0; then
           fi
       fi
       if test "$have_hdf5" -eq 1; then
-        version=`grep "HDF5 Version" $with_hdf5_path/lib/libhdf5.settings | cut -d: -f2` 
-        major=`echo $version | cut -d. -f2` 
-        minor=`echo $version | cut -d. -f3` 
-	if test "$major" -lt 8 || (test "$major" -eq 8 && test "$minor" -lt 16); then 
-		AC_MSG_WARN([ HDF5 version: 1.$major.$minor]);
+        version=`grep "HDF5 Version" $with_hdf5_path/lib/libhdf5.settings | cut -d: -f2 | tr -d ' '`
+        AS_VERSION_COMPARE([$version], [1.8.16], [
+		AC_MSG_WARN([ HDF5 version: $version]);
 		AC_MSG_WARN([*** HDF5 version must be 1.8.16 or later]);
-                have_hdf5=0;
-        fi 
+                have_hdf5=0])
       fi           
 
       if test "$have_hdf5" -eq 1 ; then
@@ -129,27 +126,27 @@ if test "$use_parallel" -ne 0; then
              if test $with_hdf5_libs -eq 1; then 
                 hdf5_libs=$with_hdf5_libline 
              else
-                hdf5_libs=`$with_hdf5_path/bin/h5pfc -show | awk -F'-L' '{@S|@1=""; for (i=2; i<=NF;i++) @S|@i="-L"@S|@i; print @S|@0}' | xargs`
+                hdf5_libs=`$with_hdf5_path/bin/h5pfc -show | awk '{for (i=2; i<=NF; i++) if (@S|@i !~ /^-I/ && @S|@i != "-show") printf "%s ", @S|@i}' | xargs`
              fi 
          elif command -v h5pfc >/dev/null; then
              if test $with_hdf5_libs -eq 1; then 
                 hdf5_libs=$with_hdf5_libline 
              else
-                hdf5_libs=`h5pfc -show | awk -F'-L' '{@S|@1=""; for (i=2; i<=NF;i++) @S|@i="-L"@S|@i; print @S|@0}' | xargs`
+                hdf5_libs=`h5pfc -show | awk '{for (i=2; i<=NF; i++) if (@S|@i !~ /^-I/ && @S|@i != "-show") printf "%s ", @S|@i}' | xargs`
              fi 
 
          elif test -e $with_hdf5_path/bin/h5fc; then 
              if test $with_hdf5_libs -eq 1; then 
                 hdf5_libs=$with_hdf5_libline 
              else
-                hdf5_libs=`$with_hdf5_path/bin/h5fc -show | awk -F'-L' '{@S|@1=""; for (i=2; i<=NF;i++) @S|@i="-L"@S|@i; print @S|@0}' | xargs`
+                hdf5_libs=`$with_hdf5_path/bin/h5fc -show | awk '{for (i=2; i<=NF; i++) if (@S|@i !~ /^-I/ && @S|@i != "-show") printf "%s ", @S|@i}' | xargs`
              fi 
              try_dflags="$try_dflags -D__HDF5_SERIAL"
          elif command -v h5fc>/dev/null; then 
              if test $with_hdf5_libs -eq 1; then 
                 hdf5_libs=$with_hdf5_libline 
              else
-                hdf5_libs=`h5fc -show | awk -F'-L' '{@S|@1=""; for (i=2; i<=NF;i++) @S|@i="-L"@S|@i; print @S|@0}' | xargs`
+                hdf5_libs=`h5fc -show | awk '{for (i=2; i<=NF; i++) if (@S|@i !~ /^-I/ && @S|@i != "-show") printf "%s ", @S|@i}' | xargs`
              fi 
              try_dflags="$try_dflags -D__HDF5_SERIAL"
 
@@ -160,6 +157,10 @@ if test "$use_parallel" -ne 0; then
                 hdf5_libs="-L$with_hdf5_path/lib -lhdf5_fortran -lhdf5 -lrt -lz -ldl -lm -Wl,-rpath -Wl,$with_hdf5_path/lib"
              fi
          fi 
+         # CMake-built HDF5 wrappers print no -L (HDF5 >= 2.0 is CMake-only)
+         if test $with_hdf5_libs -eq 0; then
+            hdf5_libs="-L$with_hdf5_path/lib $hdf5_libs"
+         fi
          if test $with_hdf5_include -eq 1; then 
             try_iflags="$try_iflags -I$with_hdf5_include_line"
          else 
@@ -227,23 +228,21 @@ else
               have_hdf5=0])
       fi
       if test "$have_hdf5" -eq 1; then
-        version=`grep "HDF5 Version" $with_hdf5_path/lib/libhdf5.settings | cut -d: -f2` 
-        major=`echo $version | cut -d. -f2` 
-        minor=`echo $version | cut -d. -f3` 
-	if test "$major" -lt 8 || (test "$major" -eq 8 && test "$minor" -lt 16); then 
-		AC_MSG_WARN([ HDF5 version: 1.$major.$minor]);
+        version=`grep "HDF5 Version" $with_hdf5_path/lib/libhdf5.settings | cut -d: -f2 | tr -d ' '`
+        AS_VERSION_COMPARE([$version], [1.8.16], [
+		AC_MSG_WARN([ HDF5 version: $version]);
 		AC_MSG_WARN([*** HDF5 version must be 1.8.16 or later]);
-                have_hdf5=0;
-        fi 
+                have_hdf5=0])
       fi           
 
       if test "$have_hdf5" -eq 1 ; then
          if test -e $with_hdf5_path/bin/h5fc; then 
-             hdf5_libs=`$with_hdf5_path/bin/h5fc -show | awk -F'-L' '{@S|@1="";@S|@2="-L"@S|@2; print @S|@0}'`
+             hdf5_libs=`$with_hdf5_path/bin/h5fc -show | awk '{for (i=2; i<=NF; i++) if (@S|@i !~ /^-I/ && @S|@i != "-show") printf "%s ", @S|@i}' | xargs`
              try_dflags="$try_dflags -D__HDF5_SERIAL"
          else
           hdf5_libs="-L$with_hdf5_path/lib -lhdf5_fortran -lhdf5 -lrt -lz -ldl -lm -Wl,-rpath -Wl,$with_hdf5_path/lib"
          fi 
+         hdf5_libs="-L$with_hdf5_path/lib $hdf5_libs"
          try_iflags="$try_iflags -I$with_hdf5_path/include"
          try_dflags="$try_dflags -D__HDF5"
       fi
