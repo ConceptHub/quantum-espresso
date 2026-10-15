@@ -1129,8 +1129,8 @@ print *, '@vexx_std_k_one'
     ! local variables
     COMPLEX(DP),ALLOCATABLE :: RESULT(:), temppsic(:)
     !
-    COMPLEX(DP),ALLOCATABLE :: rhoc(:), vc(:), deexx(:,:)
-    REAL(DP),   ALLOCATABLE :: fac(:)
+    COMPLEX(DP),ALLOCATABLE :: rhoc(:), deexx(:,:)
+    REAL(DP),   ALLOCATABLE :: fac(:), facmask(:)
     INTEGER          :: ibnd
     INTEGER          :: ir, ig, idx, idxm
     INTEGER          :: current_ik
@@ -1193,7 +1193,7 @@ print *, '@@vexx_std_gamma_outer'
     if( nb_last > 0 ) nblocks = nblocks + 1 ! add one more block for the last nb_last bands 
     !
     ALLOCATE( temppsic( batchsize/2 * nrxxs) ) ! Gamma trick here
-    ALLOCATE( rhoc(batchsize*nrxxs), RESULT(batchsize*nrxxs), vc(batchsize*nrxxs) )
+    ALLOCATE( rhoc(batchsize*nrxxs), RESULT(batchsize*nrxxs), facmask(nrxxs) )
     !
     IF(okvan) ALLOCATE(deexx(nkb, batchsize))
     !
@@ -1213,11 +1213,26 @@ print *, '@@vexx_std_gamma_outer'
     !
     ! Here the loops start
     !
-    !$acc data create(rhoc, vc, fac, temppsic, result) copy(hpsi) present(exxbuff) 
+    !$acc data create(rhoc, fac, temppsic, result, facmask) copy(hpsi) present(exxbuff) 
     !
     ! calculate the 1/|r-r'| (actually, k+q+g) factor and place it in fac
     CALL g2_convolution(ngmt, gt, xkg, xkg, fac)
     !$acc update device(fac)
+    !
+    ! facmask = fac inside the ngmt sphere, 0 otherwise 
+    ! (can be used in loops over nrxxs)
+    !
+    !$acc kernels
+    facmask = 0.0_dp
+    !$acc end kernels 
+    !
+    !$acc parallel loop private(idx, idxm)
+    do ig = 1, ngmt
+      idx  = dfftt%nl(ig)
+      idxm = dfftt%nlm(ig)
+      facmask( idx ) = fac(ig) 
+      facmask( idxm) = fac(ig) 
+    end do
     !
     IF ( okvan .and..not.tqr ) CALL qvan_init (ngmt, xkg, xkg)
     !
@@ -1348,47 +1363,41 @@ print *, '@@vexx_std_gamma_outer'
           ENDIF
           !   >>>> charge density done
           !
-          !$acc kernels
-          vc = 0._DP
-          !$acc end kernels
-          !
-          !$acc parallel loop collapse(2) private(idx, idxm)
+          !$acc parallel loop collapse(2) private(idx)
           do ib = 1, batchsize
-            do ig = 1, ngmt
-              idx  = (ib-1)*nrxxs + dfftt%nl(ig) 
-              idxm = (ib-1)*nrxxs + dfftt%nlm(ig) 
-              vc( idx ) = fac(ig) * rhoc( idx )
-              vc( idxm) = fac(ig) * rhoc( idxm)
+            do ir = 1, nrxxs
+              idx = (ib-1)*nrxxs + ir
+              rhoc( idx ) = rhoc( idx ) * facmask(ir) 
             end do 
           end do  
           !
           !   >>>>  compute <psi|H_fock G SPACE here
           IF(okvan .and. .not. tqr) THEN
-             !$acc update host(vc)
+             !$acc update host(rhoc)
              do ib = 1, nb
                IF(ibnd>=ibnd_start) &
-               CALL newdxx_g(dfftt, vc((ib-1)*nrxxs+1), xkg, xkg, 'r', deexx(:,ib), &
+               CALL newdxx_g(dfftt, rhoc((ib-1)*nrxxs+1), xkg, xkg, 'r', deexx(:,ib), &
                              becphi_r=x1*becxx(current_ik)%r(:,ibnd))
                IF(ibnd<ibnd_end) &
-               CALL newdxx_g(dfftt, vc((ib-1)*nrxxs+1), xkg, xkg, 'i', deexx(:,ib), &
+               CALL newdxx_g(dfftt, rhoc((ib-1)*nrxxs+1), xkg, xkg, 'i', deexx(:,ib), &
                              becphi_r=x2*becxx(current_ik)%r(:,ibnd+1))
              end do
           ENDIF
           !
           !brings back v in real space
-          !$acc host_data use_device(vc)
-          CALL invfft ('Rho', vc, dfftt, howmany=batchsize)
+          !$acc host_data use_device(rhoc)
+          CALL invfft ('Rho', rhoc, dfftt, howmany=batchsize)
           !$acc end host_data
           !
           !   >>>>  compute <psi|H_fock REAL SPACE here
           IF(okvan .and. tqr) THEN
-             !$acc update host(vc)
+             !$acc update host(rhoc)
              do ib = 1, nb 
                IF(ibnd>=ibnd_start) &
-                 CALL newdxx_r(dfftt, vc((ib-1)*nrxxs+1:ib*nrxxs), _CX(x1*becxx(current_ik)%r(:,ibnd)), &
+                 CALL newdxx_r(dfftt, rhoc((ib-1)*nrxxs+1:ib*nrxxs), _CX(x1*becxx(current_ik)%r(:,ibnd)), &
                                                                                                      deexx(:,ib))
                IF(ibnd<ibnd_end) &
-                 CALL newdxx_r(dfftt, vc((ib-1)*nrxxs+1:ib*nrxxs), _CY(x2*becxx(current_ik)%r(:,ibnd+1)), &
+                 CALL newdxx_r(dfftt, rhoc((ib-1)*nrxxs+1:ib*nrxxs), _CY(x2*becxx(current_ik)%r(:,ibnd+1)), &
                                                                                                      deexx(:,ib))
              end do 
           ENDIF
@@ -1410,8 +1419,8 @@ print *, '@@vexx_std_gamma_outer'
           do ib = 1, batchsize
             DO ir = 1, nrxxs
                idx  = (ib-1)*nrxxs + ir 
-               RESULT(idx) = RESULT(idx)+x1* dble(vc(idx))* dble(exxbuff(ir,h_ibnd,current_k))&
-                                        +x2*aimag(vc(idx))*aimag(exxbuff(ir,h_ibnd,current_k))
+               RESULT(idx) = RESULT(idx)+x1* dble(rhoc(idx))* dble(exxbuff(ir,h_ibnd,current_k))&
+                                        +x2*aimag(rhoc(idx))*aimag(exxbuff(ir,h_ibnd,current_k))
             ENDDO
           end do 
           !
@@ -1465,7 +1474,7 @@ print *, '@@vexx_std_gamma_outer'
     !
     DEALLOCATE( RESULT, temppsic)
     !
-    DEALLOCATE(rhoc, vc, fac )
+    DEALLOCATE(rhoc, fac, facmask )
     !
     IF(okvan) DEALLOCATE( deexx )
     !
