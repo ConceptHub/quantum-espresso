@@ -377,7 +377,6 @@ MODULE exx_std
     LOGICAL :: l_fft_singleband
     INTEGER :: ngmt
     !
-print *, '@vexx_std_gamma_one'
     ngmt = dfftt%ngm
     ALLOCATE( fac(ngmt) )
     nrxxs= dfftt%nnr
@@ -750,7 +749,6 @@ print *, '@vexx_std_gamma_one'
     INTEGER :: ngmt
     REAL(DP) :: x_occ
     !
-print *, '@vexx_std_k_one'
     ngmt = dfftt%ngm 
     ALLOCATE( fac(ngmt) )
     nrxxs= dfftt%nnr
@@ -1159,7 +1157,6 @@ print *, '@vexx_std_k_one'
     ! backup values in case FFT internal batching is changed 
     LOGICAL, SAVE :: first_call = .true.
     !
-print *, '@@vexx_std_gamma_outer'
     if ( mod(batchsize, 2) /= 0 ) Call errore('vexx_std_gamma_outer', 'odd batchsize values not allowed', 1)
     !
     ngmt = dfftt%ngm
@@ -1675,7 +1672,6 @@ print *, '@@vexx_std_gamma_outer'
              ik   = index_xk(ikq)
              xkq  = xkq_collect(:,ikq)
              !
-             Call start_clock('vexx-@1')
              ! calculate the 1/|r-r'| (actually, k+q+g) factor and place it in fac
              CALL g2_convolution(ngmt, gt, xkp, xkq, fac)
              !$acc update device(fac)
@@ -1693,8 +1689,6 @@ print *, '@@vexx_std_gamma_outer'
                facmask( idx ) = fac(ig) 
              end do
              !
-             Call stop_clock('vexx-@1')
-             !
              IF ( okvan .and..not.tqr ) CALL qvan_init (ngmt, xkq, xkp)
              !
              IBND_LOOP_K : &
@@ -1706,7 +1700,6 @@ print *, '@@vexx_std_gamma_outer'
                 !
                 !loads the phi from file
                 !
-                Call start_clock('vexx-@2')
                 !   >>>> calculate rho in real space
                 !$acc parallel loop collapse(2) private(idx)
                 DO ib = 1,nb 
@@ -1720,8 +1713,6 @@ print *, '@@vexx_std_gamma_outer'
                   ENDDO
                 ENDDO
                 !
-                Call stop_clock('vexx-@2')
-                !
                 !   >>>> add augmentation in REAL space HERE
                 IF(okvan .and. tqr) THEN ! augment the "charge" in real space
                    !$acc update host(rhoc)
@@ -1733,11 +1724,9 @@ print *, '@@vexx_std_gamma_outer'
                 ENDIF
                 !
                 !   >>>> brings it to G-space
-                Call start_clock('vexx-@3')
                 !$acc host_data use_device(rhoc)
                 CALL fwfft('Rho', rhoc, dfftt, howmany=nb)
                 !$acc end host_data
-                Call stop_clock('vexx-@3')
                 !
                 !   >>>> add augmentation in G space HERE
                 IF(okvan .and. .not. tqr) THEN
@@ -1753,7 +1742,6 @@ print *, '@@vexx_std_gamma_outer'
                 !
                 ! inizializations on the whole allocation dimension (batchsize)
                 !
-                Call start_clock('vexx-@4')
                 !$acc parallel loop collapse(2) private(idx)
                 do ib = 1, nb
                   do ir = 1, nrxxs
@@ -1761,7 +1749,6 @@ print *, '@@vexx_std_gamma_outer'
                      rhoc( idx ) = rhoc(idx) * facmask(ir) * x_occ 
                   enddo
                 enddo
-                Call stop_clock('vexx-@4')
                 !
                 ! Add ultrasoft contribution (RECIPROCAL SPACE)
                 ! compute alpha_I,j,k+q = \sum_J \int <beta_J|phi_j,k+q> V_i,j,k,q Q_I,J(r) d3r
@@ -1775,11 +1762,9 @@ print *, '@@vexx_std_gamma_outer'
                 ENDIF
                 !
                 !brings back v in real space
-                Call start_clock('vexx-@5')
                 !$acc host_data use_device(rhoc)
                 CALL invfft('Rho', rhoc, dfftt, howmany=nb)
                 !$acc end host_data
-                Call stop_clock('vexx-@5')
                 !
                 ! Add ultrasoft contribution (REAL SPACE)
                 IF(okvan .and. tqr) THEN
@@ -1799,7 +1784,6 @@ print *, '@@vexx_std_gamma_outer'
                 !
                 !accumulates over bands and k points
                 !
-                Call start_clock('vexx-@6')
                 !$acc parallel loop collapse(2) private(idx)
                 do ib = 1, nb
                   do ir = 1, nrxxs
@@ -1811,7 +1795,6 @@ print *, '@@vexx_std_gamma_outer'
                     END IF
                   enddo
                 end do 
-                Call stop_clock('vexx-@6')
                 !
              ENDDO &
              IBND_LOOP_K
