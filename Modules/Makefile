@@ -89,6 +89,7 @@ mbdlib.o\
 version.o \
 wannier_gw.o\
 wannier_new.o \
+wannier90_readback.o \
 wavefunctions.o \
 ws_base.o \
 xc_vdW_DF.o \
