@@ -356,6 +356,10 @@ inputs_args = ('scf_vdw.in', '1'), ('ppacf_fock.in', '2')
 program = PP
 inputs_args = ('si.scf.in', '1'), ('si.pw2wan.in', '3'), ('si.pw2wan.in', '4'), ('si.pw2wan.in', '5'), ('si.pw2wan_low_io.in', '5')
 
+[pp_w90_decompose/]
+program = PP
+inputs_args = ('si.scf.in', '1'), ('si.win', '7'), ('si.pw2wan.in', '9'), ('si.win', '8'), ('si.decompose.in', '6'), ('si.decompose_low_io.in', '6')
+
 [pp_w90_library_radial/]
 program = PP
 inputs_args = ('si.scf.in', '1'), ('si.pw2wan.in', '3')

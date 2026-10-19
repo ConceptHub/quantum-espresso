@@ -12,6 +12,9 @@ New in 8.0 version
   * pw2wannier90: wan_mode='library' uses Wannier90 v4 and runs the
     Wannierization in parallel
   * EPW: Wannierization uses Wannier90 v4 and runs in parallel
+  * pw2wannier90: new wan_mode='decompose', projecting Wannier-function
+    densities onto Gaussian radial functions times real spherical harmonics
+    (Edward Linscott)
   * ...
 
 Fixed in 7.6.1 version(s)

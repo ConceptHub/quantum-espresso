@@ -659,6 +659,7 @@ PROGRAM pw2wannier90
   USE control_flags,    ONLY : gamma_only, io_level
   USE environment,ONLY : environment_start, environment_end
   USE wannier
+  USE wannier_decompose, ONLY : compute_decompose
   use atproj, only : atom_proj, atom_proj_dir, atom_proj_ext, &
                      atom_proj_exclude, atom_proj_ortho, atom_proj_sym, &
                      atom_proj_frozen
@@ -690,7 +691,9 @@ PROGRAM pw2wannier90
    ! end change Vitale
        atom_proj, atom_proj_dir, atom_proj_ext, atom_proj_exclude, &
        atom_proj_ortho, atom_proj_frozen, &
-       write_vmn, write_pmn, disk_io
+       write_vmn, write_pmn, &
+       decompose_n_max, decompose_l_max, decompose_r_min, decompose_r_max, &
+       decompose_centres_file, disk_io
   !
   ! initialise environment
   !
@@ -758,6 +761,11 @@ PROGRAM pw2wannier90
      atom_proj_sym = .false.
      write_vmn = .false.
      write_pmn = .false.
+     decompose_n_max = 6
+     decompose_l_max = 6
+     decompose_r_min = 0.5_dp
+     decompose_r_max = 4.0_dp
+     decompose_centres_file = ''
      disk_io = 'medium'
      !
      !     reading the namelist inputpp
@@ -819,6 +827,11 @@ PROGRAM pw2wannier90
   CALL mp_bcast(atom_proj_frozen, ionode_id, world_comm)
   CALL mp_bcast(write_vmn, ionode_id, world_comm)
   CALL mp_bcast(write_pmn, ionode_id, world_comm)
+  CALL mp_bcast(decompose_n_max, ionode_id, world_comm)
+  CALL mp_bcast(decompose_l_max, ionode_id, world_comm)
+  CALL mp_bcast(decompose_r_min, ionode_id, world_comm)
+  CALL mp_bcast(decompose_r_max, ionode_id, world_comm)
+  CALL mp_bcast(decompose_centres_file, ionode_id, world_comm)
   CALL mp_bcast(disk_io, ionode_id, world_comm)
   !
   ! io_level must be set before read_file: with io_level = 0 the
@@ -833,8 +846,8 @@ PROGRAM pw2wannier90
   END SELECT
   !
   IF (wan_mode /= 'standalone' .AND. wan_mode /= 'library' .AND. &
-      wan_mode /= 'wannier2sic') CALL errore('pw2wannier90', &
-      'wan_mode must be standalone, library or wannier2sic, not '//TRIM(wan_mode), 1)
+      wan_mode /= 'wannier2sic' .AND. wan_mode /= 'decompose') CALL errore('pw2wannier90', &
+      'wan_mode must be standalone, library, wannier2sic or decompose, not '//TRIM(wan_mode), 1)
   !
   ! Check: bands distribution not implemented
   IF (nbgrp > 1) CALL errore('pw2wannier90', 'bands (-nb) not implemented', nbgrp)
@@ -1164,6 +1177,25 @@ PROGRAM pw2wannier90
      !
   ENDIF
   !
+  IF(wan_mode=='decompose') THEN
+     !
+     ! Post-wannierization mode: reads back the wannier90 U matrices and
+     ! centres, then decomposes the Wannier-function densities in
+     ! reciprocal space (see compute_decompose).
+     !
+     WRITE(stdout,*) ' --------------------------------------'
+     WRITE(stdout,*) ' *** Wannier-density decomposition mode'
+     WRITE(stdout,*) ' --------------------------------------'
+     WRITE(stdout,*)
+     CALL read_nnkp
+     IF (io_level > 0) THEN
+        WRITE(stdout,*) ' Opening pp-files '
+        CALL openfil_pp
+     ENDIF
+     CALL compute_decompose
+     !
+  ENDIF
+  !
   CALL print_clock_pw2wannier90()
   !
   CALL mp_barrier(world_comm)
@@ -1197,6 +1229,7 @@ SUBROUTINE print_clock_pw2wannier90
   CALL print_clock('write_unk')
   CALL print_clock('write_parity')
   CALL print_clock('run_wannier')
+  CALL print_clock('compute_dcp')
   !
   WRITE(stdout, '(/5x, "Internal routines:")')
   CALL print_clock('atomproj_wfc')

@@ -78,6 +78,7 @@ set(src_modules
     version.f90 
     wannier_gw.f90
     wannier_new.f90 
+    wannier90_readback.f90
     wavefunctions.f90 
     ws_base.f90 
     xc_vdW_DF.f90 
