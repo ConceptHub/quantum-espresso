@@ -37,6 +37,9 @@ Fixed in 7.6.1 version(s)
     EELS and Berry phase calculations with USPP. Also in compute_qq*: missing
     initialization for norm-conserving PPs could leads to unpredictable Berry
     phases if US and NC PPs are mixed (see !2941, courtesy Ikenna Odinaka)
+  * Meta-GGA, nspin=1: the whole xc energy density and potential were set to
+    zero where |grad rho|^2 <= grho2_threshold_mgga, e.g. at atoms on FFT grid
+    points (issue #903, courtesy Derk Joester)
   * Too small thresholds for rho and grho2 in meta-GGA lead to numerical noise 
     (Pietro Delugas)
   * Symmetrization error in noncolinear magnetic phonon calculations
