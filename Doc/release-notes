@@ -39,6 +39,9 @@ Fixed in 7.6.1 version(s)
     phases if US and NC PPs are mixed (see !2941, courtesy Ikenna Odinaka)
   * Too small thresholds for rho and grho2 in meta-GGA lead to numerical noise 
     (Pietro Delugas)
+  * Meta-GGA stress was wrong for ecutrho > 4*ecutwfc and depended on the
+    parallelization: kinetic-energy-density terms on the dense grid were
+    used as if on the smooth grid (issue #882, courtesy Derk Joester)
   * Symmetrization error in noncolinear magnetic phonon calculations
     See !2931, courtesy Seung-Ju Hong
     
