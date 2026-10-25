@@ -17,13 +17,6 @@ if(NOT QE_FFTW_INTERNAL)
         if(VPL_fft_ID STREQUAL "IntelMKL")
             qe_add_global_compile_definitions(__DFTI)
             set(qe_ext_fft_wrappers fft_scalar.DFTI.f90)
-        elseif(VPL_fft_ID STREQUAL "ARMPL")
-            ## ARMPL implements the same interface of the standard FFTW
-            ## no need of QE ARMPL wrapper
-            #qe_add_global_compile_definitions(__ARM_LIB)
-            #set(qe_ext_fft_wrappers fft_scalar.ARM_LIB.f90)
-            qe_add_global_compile_definitions(__FFTW3)
-            set(qe_ext_fft_wrappers fft_scalar.FFTW3.f90)
         else()
             qe_add_global_compile_definitions(__FFTW3)
             set(qe_ext_fft_wrappers fft_scalar.FFTW3.f90)
