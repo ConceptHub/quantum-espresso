@@ -1,7 +1,5 @@
  &control
     calculation='scf',
-    tprnfor=.true.
-    tstress=.true.
  /
  &system
     ibrav=1, celldm(1)=8.00,
@@ -10,6 +8,7 @@
     input_dft='ctb09'
  /
  &electrons
+    conv_thr=1.d-9,
     diago_david_ndim=4
  /
 ATOMIC_SPECIES
