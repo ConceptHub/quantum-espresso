@@ -7,7 +7,7 @@
 !
 !
 !-------------------------------------------------------------------------------------
-SUBROUTINE xc_metagcx( length, ns, np, rho, grho, tau, ex, ec, v1x, v2x, v3x, v1c, &
+SUBROUTINE xc_metagcx( length, ns, np, rho, grho, tau, lapl, ex, ec, v1x, v2x, v3x, v1c, &
                        v2c, v3c, gpu_args_ )
   !----------------------------------------------------------------------------------
   !! Wrapper to gpu or non gpu version of \(\texttt{xc_metagcx}\).
@@ -28,6 +28,8 @@ SUBROUTINE xc_metagcx( length, ns, np, rho, grho, tau, ex, ec, v1x, v2x, v3x, v1
   !! grho = \nabla rho
   REAL(DP), INTENT(IN) :: tau(length,ns)
   !! kinetic energy density
+  REAL(DP), INTENT(IN) :: lapl(length,ns)
+  !! laplacian of the density
   REAL(DP), INTENT(OUT) :: ex(length)
   !! sx = E_x(rho,grho)
   REAL(DP), INTENT(OUT) :: ec(length)
@@ -54,15 +56,15 @@ SUBROUTINE xc_metagcx( length, ns, np, rho, grho, tau, ex, ec, v1x, v2x, v3x, v1
   !
   IF ( gpu_args ) THEN
     !
-    !$acc data present( rho, grho, tau, ex, ec, v1x, v2x, v3x, v1c, v2c, v3c )
-    CALL xc_metagcx_( length, ns, np, rho, grho, tau, ex, ec, v1x, v2x, v3x, v1c, &
+    !$acc data present( rho, grho, tau, lapl, ex, ec, v1x, v2x, v3x, v1c, v2c, v3c )
+    CALL xc_metagcx_( length, ns, np, rho, grho, tau, lapl, ex, ec, v1x, v2x, v3x, v1c, &
                       v2c, v3c )
     !$acc end data
     !
   ELSE
     !
-    !$acc data copyin( rho, grho, tau ), copyout( ex, ec, v1x, v2x, v3x, v1c, v2c, v3c )
-    CALL xc_metagcx_( length, ns, np, rho, grho, tau, ex, ec, v1x, v2x, v3x, v1c, &
+    !$acc data copyin( rho, grho, tau, lapl ), copyout( ex, ec, v1x, v2x, v3x, v1c, v2c, v3c )
+    CALL xc_metagcx_( length, ns, np, rho, grho, tau, lapl, ex, ec, v1x, v2x, v3x, v1c, &
                       v2c, v3c )
     !$acc end data
     !
@@ -74,7 +76,7 @@ END SUBROUTINE
 !
 !
 !----------------------------------------------------------------------------------------
-SUBROUTINE xc_metagcx_( length, ns, np, rho, grho, tau, ex, ec, v1x, v2x, v3x, v1c, v2c, v3c )
+SUBROUTINE xc_metagcx_( length, ns, np, rho, grho, tau, lapl, ex, ec, v1x, v2x, v3x, v1c, v2c, v3c )
   !-------------------------------------------------------------------------------------
   !! Wrapper routine. Calls internal metaGGA drivers or the Libxc ones,
   !! depending on the input choice.
@@ -105,6 +107,8 @@ SUBROUTINE xc_metagcx_( length, ns, np, rho, grho, tau, ex, ec, v1x, v2x, v3x, v
   !! grho = \nabla rho
   REAL(DP), INTENT(IN) :: tau(length,ns)
   !! kinetic energy density
+  REAL(DP), INTENT(IN) :: lapl(length,ns)
+  !! laplacian of the density
   REAL(DP), INTENT(OUT) :: ex(length)
   !! sx = E_x(rho,grho)
   REAL(DP), INTENT(OUT) :: ec(length)
@@ -133,7 +137,8 @@ SUBROUTINE xc_metagcx_( length, ns, np, rho, grho, tau, ex, ec, v1x, v2x, v3x, v
   REAL(DP), ALLOCATABLE :: ex_lxc(:), ec_lxc(:)
   REAL(DP), ALLOCATABLE :: vx_rho(:), vx_sigma(:), vx_tau(:)
   REAL(DP), ALLOCATABLE :: vc_rho(:), vc_sigma(:), vc_tau(:)
-  REAL(DP), ALLOCATABLE :: lapl_rho(:), vlapl_rho(:) ! not used in QE
+  REAL(DP), ALLOCATABLE :: lapl_lxc(:)
+  REAL(DP), ALLOCATABLE :: vlapl_rho(:) ! not used in QE
   !
   REAL(DP) :: rh, ggrho2, atau, xcoef
 #if (XC_MAJOR_VERSION > 4)
@@ -143,14 +148,14 @@ SUBROUTINE xc_metagcx_( length, ns, np, rho, grho, tau, ex, ec, v1x, v2x, v3x, v
 #endif
 #endif
   !
-  !$acc data present( rho, grho, tau, ex, ec, v1x, v2x, v3x, v1c, v2c, v3c )
+  !$acc data present( rho, grho, tau, lapl, ex, ec, v1x, v2x, v3x, v1c, v2c, v3c )
   !
 #if defined(__LIBXC)
   lengthxc = length
   !
   ALLOCATE( rho_lxc(length*ns), sigma(length*np) )
-  ALLOCATE( tau_lxc(length*ns), lapl_rho(length*ns) )
-  !$acc data create( rho_lxc, sigma, tau_lxc, lapl_rho )
+  ALLOCATE( tau_lxc(length*ns), lapl_lxc(length*ns) )
+  !$acc data create( rho_lxc, sigma, tau_lxc, lapl_lxc )
   !
   IF ( is_libxc(5) ) THEN
     ALLOCATE( ex_lxc(length) )
@@ -191,7 +196,7 @@ SUBROUTINE xc_metagcx_( length, ns, np, rho, grho, tau, ex, ec, v1x, v2x, v3x, v
       sigma(k) = MAX( grho(1,k,1)**2 + grho(2,k,1)**2 + grho(3,k,1)**2, &
                       grho2_threshold_mgga )
       tau_lxc(k) = MAX( tau(k,1), tau_threshold_mgga )
-      lapl_rho(k) = 0.d0
+      lapl_lxc(k) = lapl(k,1)
     ENDDO
     !
   ELSE
@@ -208,13 +213,13 @@ SUBROUTINE xc_metagcx_( length, ns, np, rho, grho, tau, ex, ec, v1x, v2x, v3x, v
                            grho2_threshold_mgga )
        tau_lxc(2*k-1) = MAX( tau(k,1), small )
        tau_lxc(2*k)   = MAX( tau(k,2), small )
-       lapl_rho(2*k-1) = 0.d0
-       lapl_rho(2*k)   = 0.d0
+       lapl_lxc(2*k-1) = lapl(k,1)
+       lapl_lxc(2*k)   = lapl(k,2)
     ENDDO
     !
   ENDIF
   !
-  !$acc update self( rho_lxc, sigma, tau_lxc, lapl_rho )
+  !$acc update self( rho_lxc, sigma, tau_lxc, lapl_lxc )
   !
 #endif
   !
@@ -251,10 +256,10 @@ SUBROUTINE xc_metagcx_( length, ns, np, rho, grho, tau, ex, ec, v1x, v2x, v3x, v
     !
     CALL xc_f03_func_set_dens_threshold( xc_func(5), rho_threshold_mgga )
     IF (libxc_flags(5,0)==1) THEN
-      CALL xc_f03_mgga_exc_vxc( xc_func(5), lengthxc, rho_lxc(1), sigma(1), lapl_rho(1), tau_lxc(1), &
+      CALL xc_f03_mgga_exc_vxc( xc_func(5), lengthxc, rho_lxc(1), sigma(1), lapl_lxc(1), tau_lxc(1), &
                                 ex_lxc(1), vx_rho(1), vx_sigma(1), vlapl_rho(1), vx_tau(1) )
     ELSE
-      CALL xc_f03_mgga_vxc( xc_func(5), lengthxc, rho_lxc(1), sigma(1), lapl_rho(1), tau_lxc(1), &
+      CALL xc_f03_mgga_vxc( xc_func(5), lengthxc, rho_lxc(1), sigma(1), lapl_lxc(1), tau_lxc(1), &
                             vx_rho(1), vx_sigma(1), vlapl_rho(1), vx_tau(1) )
       ex_lxc = 0.d0 
     ENDIF
@@ -320,10 +325,10 @@ SUBROUTINE xc_metagcx_( length, ns, np, rho, grho, tau, ex, ec, v1x, v2x, v3x, v
     !
     CALL xc_f03_func_set_dens_threshold( xc_func(6), rho_threshold_mgga )
     IF (libxc_flags(6,0)==1) THEN
-      CALL xc_f03_mgga_exc_vxc( xc_func(6), lengthxc, rho_lxc(1), sigma(1), lapl_rho(1), tau_lxc(1), &
+      CALL xc_f03_mgga_exc_vxc( xc_func(6), lengthxc, rho_lxc(1), sigma(1), lapl_lxc(1), tau_lxc(1), &
                                 ec_lxc(1), vc_rho(1), vc_sigma(1), vlapl_rho(1), vc_tau(1) )
     ELSE
-      CALL xc_f03_mgga_vxc( xc_func(6), lengthxc, rho_lxc(1), sigma(1), lapl_rho(1), tau_lxc(1), &
+      CALL xc_f03_mgga_vxc( xc_func(6), lengthxc, rho_lxc(1), sigma(1), lapl_lxc(1), tau_lxc(1), &
                             vc_rho(1), vc_sigma(1), vlapl_rho(1), vc_tau(1) )
       ec_lxc = 0.d0
     ENDIF
@@ -381,7 +386,7 @@ SUBROUTINE xc_metagcx_( length, ns, np, rho, grho, tau, ex, ec, v1x, v2x, v3x, v
   IF ( ANY(is_libxc(5:6)) ) DEALLOCATE( vlapl_rho )
   !
   !$acc end data
-  DEALLOCATE( rho_lxc, sigma, tau_lxc, lapl_rho )
+  DEALLOCATE( rho_lxc, sigma, tau_lxc, lapl_lxc )
   !
 #endif
   !
