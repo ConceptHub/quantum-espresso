@@ -140,7 +140,7 @@ SUBROUTINE xc_metagcx_( length, ns, np, rho, grho, tau, lapl, ex, ec, v1x, v2x, 
   REAL(DP), ALLOCATABLE :: lapl_lxc(:)
   REAL(DP), ALLOCATABLE :: vlapl_rho(:) ! not used in QE
   !
-  REAL(DP) :: rh, ggrho2, atau, xcoef
+  REAL(DP) :: rh, atau, xcoef
 #if (XC_MAJOR_VERSION > 4)
   INTEGER(8) :: lengthxc
 #else
@@ -271,9 +271,10 @@ SUBROUTINE xc_metagcx_( length, ns, np, rho, grho, tau, lapl, ex, ec, v1x, v2x, 
     IF ( ns==1 ) THEN
       !$acc parallel loop
       DO k = 1, length
+        ! sigma is floored at grho2_threshold_mgga above: testing it here zeroed the whole energy density at
+        ! points where grad rho vanishes (e.g. atoms on FFT grid points), so only rho and tau are tested
         IF ( ABS(rho_lxc(k))<=rho_threshold_mgga .OR. &
-             sigma(k)<=grho2_threshold_mgga      .OR. &
-             ABS(tau_lxc(k))<=rho_threshold_mgga ) THEN
+             ABS(tau_lxc(k))<=tau_threshold_mgga ) THEN
           ex(k) = 0.d0    ; v1x(k,1) = 0.d0
           v2x(k,1) = 0.d0 ; v3x(k,1) = 0.d0
           CYCLE
@@ -294,7 +295,6 @@ SUBROUTINE xc_metagcx_( length, ns, np, rho, grho, tau, lapl, ex, ec, v1x, v2x, 
         ENDIF
         ex(k) = xcoef * ex_lxc(k) * (rho_lxc(2*k-1)+rho_lxc(2*k))
         IF ( ABS(rho_lxc(2*k-1))>rho_threshold_mgga .AND. &
-             sigma(3*k-2)>grho2_threshold_mgga      .AND. &
              ABS(tau_lxc(2*k-1))>tau_threshold_mgga ) THEN
           v1x(k,1) = xcoef * vx_rho(2*k-1)
           v2x(k,1) = xcoef * vx_sigma(3*k-2)*2.d0
@@ -303,7 +303,6 @@ SUBROUTINE xc_metagcx_( length, ns, np, rho, grho, tau, lapl, ex, ec, v1x, v2x, 
           v1x(k,1) = 0.d0 ; v2x(k,1) = 0.d0 ; v3x(k,1) = 0.d0
         ENDIF
         IF ( ABS(rho_lxc(2*k))>rho_threshold_mgga .AND. &
-             sigma(3*k)>grho2_threshold_mgga      .AND. &
              ABS(tau_lxc(2*k))>tau_threshold_mgga ) THEN
           v1x(k,2) = xcoef * vx_rho(2*k)
           v2x(k,2) = xcoef * vx_sigma(3*k)*2.d0
@@ -338,8 +337,7 @@ SUBROUTINE xc_metagcx_( length, ns, np, rho, grho, tau, lapl, ex, ec, v1x, v2x, 
        !$acc parallel loop
        DO k = 1, length
          IF ( ABS(rho_lxc(k))<=rho_threshold_mgga    .OR. &
-                     sigma(k)<=grho2_threshold_mgga  .OR. &
-              ABS(tau_lxc(k))<=rho_threshold_mgga  ) THEN
+              ABS(tau_lxc(k))<=tau_threshold_mgga ) THEN
            ec(k) = 0.d0      ; v1c(k,1) = 0.d0
            v2c(1,k,1) = 0.d0 ; v3c(k,1) = 0.d0
            CYCLE
@@ -354,10 +352,7 @@ SUBROUTINE xc_metagcx_( length, ns, np, rho, grho, tau, lapl, ex, ec, v1x, v2x, 
        DO k = 1, length
           rh   = rho_lxc(2*k-1) + rho_lxc(2*k)
           atau = ABS(tau_lxc(2*k-1) + tau_lxc(2*k))
-          ggrho2 = (sigma(3*k-2) + sigma(3*k))*4.0_DP
-          IF ( rh <= rho_threshold_mgga   .OR. &
-           ggrho2 <= grho2_threshold_mgga .OR. &
-             atau <= tau_threshold_mgga  ) THEN
+          IF ( rh <= rho_threshold_mgga .OR. atau <= tau_threshold_mgga ) THEN
             ec(k) = 0.d0    
             v1c(k,1) = 0.d0 ; v3c(k,1) = 0.d0
             v1c(k,2) = 0.d0 ; v3c(k,2) = 0.d0
