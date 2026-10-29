@@ -215,7 +215,6 @@ MODULE io_base
       !! if ierr is present, return 0 if everything is ok, /= 0 if not
       !------------------------------------------------------------------------
       !
-      USE mp_wave,     ONLY : splitwf, splitkg
       USE mp,          ONLY : mp_bcast, mp_size, mp_rank, mp_max
       !
 #if defined (__HDF5)
@@ -233,16 +232,15 @@ MODULE io_base
       REAL(DP),           INTENT(OUT)   :: scalef
       REAL(DP),           INTENT(OUT)   :: xk(3)
       REAL(DP),           INTENT(OUT)   :: b1(3), b2(3), b3(3)
-      INTEGER,            INTENT(OUT)   :: mill_k(:,:)
+      INTEGER,            INTENT(INOUT) :: mill_k(:,:)
       LOGICAL,            INTENT(OUT)   :: gamma_only
       INTEGER, OPTIONAL,  INTENT(OUT)   :: ierr
       !
       INTEGER                           :: j
-      INTEGER, ALLOCATABLE              :: itmp(:,:)
+      INTEGER, ALLOCATABLE              :: mill_g(:,:)
       COMPLEX(DP), ALLOCATABLE, TARGET  :: wtmp(:)
-      COMPLEX(DP), POINTER              :: wtmp2(:)
       INTEGER                           :: ierr_
-      INTEGER                           :: igwx, igwx_, npwx, ik_, nbnd_
+      INTEGER                           :: igwx_, npwx, ik_, nbnd_
       INTEGER                           :: me_in_group, nproc_in_group
       LOGICAL                           :: ionode_in_group
 #if defined(__HDF5)
@@ -254,9 +252,6 @@ MODULE io_base
       me_in_group     = mp_rank( intra_group_comm )
       nproc_in_group  = mp_size( intra_group_comm )
       ionode_in_group = ( me_in_group == root_in_group )
-      !
-      igwx = MAXVAL( igl(1:ngwl) )
-      CALL mp_max( igwx, intra_group_comm )
       !
       IF ( ionode_in_group ) THEN
 #if !defined __HDF5
@@ -310,36 +305,33 @@ MODULE io_base
       npwx = SIZE( wfc, 1 ) / npol
       !
       IF ( ionode_in_group ) THEN 
-         ALLOCATE( itmp( 3,MAX( igwx_, igwx ) ) )
+         ALLOCATE( mill_g(3,igwx_) )
 #if defined(__HDF5)
        CALL qeh5_open_dataset(h5file, h5dset_mill, ACTION = 'read', NAME = 'MillerIndices')
-       IF ( h5dset_mill%filespace%dims(2) .GT. MAX(igwx_, igwx)  ) &
+       IF ( h5dset_mill%filespace%dims(2) > igwx_ ) &
           CALL errore ( 'read_wfc', 'real dimensions of Miller Indices dataset do not  match with igwx attribute', 8) 
        ! no reading of b1, b2, and b3 from file. They should be already set. 
-       CALL qeh5_read_dataset ( itmp(:,1), h5dset_mill) 
+       CALL qeh5_read_dataset ( mill_g, h5dset_mill) 
        CALL qeh5_close ( h5dset_mill) 
 #else
          READ (iuni) b1, b2, b3
-         READ (iuni) itmp(1:3,1:igwx_)
+         READ (iuni) mill_g(1:3,1:igwx_)
 #endif
-         IF ( igwx > igwx_ ) itmp(1:3,igwx_+1:igwx) = 0
-      ELSE
-         ALLOCATE( itmp( 3, 1 ) )
       END IF
-      CALL splitkg( mill_k(:,:), itmp, ngwl, igl, me_in_group, &
-           nproc_in_group, root_in_group, intra_group_comm )
-      DEALLOCATE (itmp)
+      !
+      !! fill array "index_file" with indices of G-components as a function
+      !! of the Miller indices
+      !
+      IF(ionode_in_group) CALL fill_index_file ( igwx_, mill_g ) 
       !
       IF ( ionode_in_group ) THEN 
-         ALLOCATE( wtmp( npol*MAX( igwx_, igwx ) ) )
-         IF ( npol == 2 ) wtmp2 => wtmp(igwx_+1:2*igwx_)
+         ALLOCATE( wtmp( npol*igwx_ ) )
 #if defined (__HDF5) 
          CALL qeh5_open_dataset( h5file, h5dset_wfc, ACTION = 'read', NAME = 'evc')
          CALL qeh5_set_space ( h5dset_wfc, wtmp(1), RANK = 1, DIMENSIONS = [npol*igwx_], MODE = 'm') 
 #endif
       ELSE
          ALLOCATE( wtmp(1) )
-         IF ( npol == 2 ) wtmp2 => wtmp( 1:1 )
       ENDIF
       nbnd = nbnd_ 
       DO j = 1, nbnd_ 
@@ -354,30 +346,18 @@ MODULE io_base
 #else
                READ (iuni) wtmp(1:npol*igwx_) 
 #endif
-               IF ( igwx > igwx_ ) wtmp((npol*igwx_+1):npol*igwx) = 0.0_DP
-               !
             END IF
             !
-            IF ( npol == 2 ) THEN
-               !
-               ! Quick-and-dirty noncolinear case - splitwf should be modified
-               ! Collect into wtmp(1:igwx_) first set of plane wave components
-               !
-               CALL splitwf( wfc(1:npwx,       j), wtmp ,   &
-                    ngwl, igl, me_in_group, nproc_in_group, root_in_group, &
-                    intra_group_comm )
-               !
-               ! Collect into wtmp(igwx_+1:2*igwx_) the second set of plane wave
-               ! components - instead of wtmp(igwx_+1:2*igwx_), pointer wtmp2
-               ! is used, in order to prevent a bogus out-of-bound error
-               !
-               CALL splitwf( wfc(npwx+1:2*npwx,j), wtmp2,  &
-                    ngwl, igl, me_in_group, nproc_in_group, root_in_group, &
-                    intra_group_comm )
-            ELSE
-               CALL splitwf( wfc(:,j), wtmp, ngwl, igl, me_in_group, &
-                    nproc_in_group, root_in_group, intra_group_comm )
-            END IF
+            !! Distribute each wave-function read from file across processors,
+            !! ensuring consistency with the ordering of the current calculation
+            !! also convert from half to full G-vector sphere, or vice versa
+            !
+            CALL distribute_charge ( root_in_group, intra_group_comm, &
+                 igwx_, mill_g, wtmp(1:igwx_), gamma_only, ngwl, mill_k, &
+                 wfc(1:npwx,j) )
+            IF ( npol == 2) CALL distribute_charge ( root_in_group, &
+                 intra_group_comm, igwx_, mill_g, wtmp(igwx_+1:npol*igwx_),&
+                 gamma_only, ngwl, mill_k, wfc(npwx+1:2*npwx,j) )
             !
          END IF
          !
@@ -392,8 +372,8 @@ MODULE io_base
 #endif
       END IF
       !
-      IF ( npol == 2 ) NULLIFY ( wtmp2 )
       DEALLOCATE( wtmp )
+      IF(ionode_in_group) DEALLOCATE(index_file)
       !
       RETURN
       !
@@ -895,7 +875,7 @@ MODULE io_base
        index_file ( n(1), n(2), n(3) ) = ig
     END DO
     !
-    END SUBROUTINE
+    END SUBROUTINE fill_index_file
     !
     SUBROUTINE fill_rho (ngm, mill, gamma_only_file, rho_g_file, &
                  rho, ig_miss )
