@@ -18,6 +18,7 @@ MODULE io_base
   !
   INTEGER, ALLOCATABLE::  index_file(:,:,:) 
   !! contains indices of G-components as a function of the Miller indices
+  !! Note: defined here to avoid trouble with negative indices
   INTEGER, ALLOCATABLE::  index_l2f(:) 
   !! contains indices of local G-components in the file
   PRIVATE
@@ -319,13 +320,14 @@ MODULE io_base
 #endif
       END IF
       !
-      !! fill array "index_file" with indices of G-components as a function
-      !! of the Miller indices
+      !! fill array "index_l2f" containing the correspondence between
+      !! the local and on-file indices of G-components 
+      !! requires Miller indices for both file and local G-components
       !
-      IF(ionode_in_group) CALL fill_index_file ( igwx_, mill_g ) 
       ALLOCATE ( index_l2f(ngwl) )
       CALL fill_index_l2f ( root_in_group, intra_group_comm, &
-           igwx_, gamma_only, ngwl, mill_k, index_l2f )
+           igwx_, mill_g, gamma_only, ngwl, mill_k, index_l2f )
+      IF (ALLOCATED(mill_g))  DEALLOCATE( mill_g )
       !
       IF ( ionode_in_group ) THEN 
          ALLOCATE( wtmp_g( npol*igwx_ ) )
@@ -391,7 +393,6 @@ MODULE io_base
       DEALLOCATE ( index_l2f )
       DEALLOCATE( wtmp )
       DEALLOCATE( wtmp_g )
-      IF(ionode_in_group) DEALLOCATE(index_file)
       !
       RETURN
       !
@@ -735,13 +736,14 @@ MODULE io_base
       END IF
 #endif 
       !
-      !! fill array "index_file" with indices of G-components as a function
-      !! of the Miller indices
+      !! fill array "index_l2f" containing the correspondence between
+      !! the local and on-file indices of G-components 
+      !! requires Miller indices for both file and local G-components
       !
       ALLOCATE ( index_l2f(ngm) )
-      IF(ionode_in_group) CALL fill_index_file ( ngm_g_, mill_g ) 
       CALL fill_index_l2f ( root_in_group, intra_group_comm, &
-           ngm_g_, gamma_only_, ngm, mill, index_l2f )
+           ngm_g_, mill_g, gamma_only_, ngm, mill, index_l2f )
+      IF (ALLOCATED(mill_g))  DEALLOCATE( mill_g )
       !
       IF ( PRESENT(gamma_only) ) THEN
          IF ( gamma_only .and. .NOT. gamma_only_ ) THEN 
@@ -784,9 +786,7 @@ MODULE io_base
 #endif
       !
       DEALLOCATE ( index_l2f )
-      IF(ionode_in_group) DEALLOCATE(index_file)
       DEALLOCATE( rho_g )
-      IF (ALLOCATED(mill_g))  DEALLOCATE( mill_g )
       !
       RETURN
       !
@@ -800,9 +800,9 @@ MODULE io_base
       !
       !! Distribute array "vect_g_file", containing G-vector components
       !! as read from file, from process root_in_group to all the MPI
-      !! processes in intra_group_comm.
-      !! Output in array "vect", ordered according to the input "mill" 
-      !! array, containing Miller indices for local G-vectors.
+      !! processes in intra_group_comm. Output in array "vect".
+      !! index_l2f contains the correspondence between local and file
+      !! ordering of G components: vect(n) = vect_g_file(index_l2f(n))
       !! npol consecutive sets of data, of input size ngm_g_file and
       !! output file ngm, are distributed and ordered
       !
@@ -880,35 +880,12 @@ MODULE io_base
       !
     END SUBROUTINE distribute_vect
     !
-    !-----------------------------------------------------------------
-    SUBROUTINE fill_index_file (ngm_g_file, mill_g_file)
-    !-----------------------------------------------------------------
-    !
-    INTEGER, INTENT(IN) :: ngm_g_file, mill_g_file(:,:)
-    INTEGER :: n1l,n2l,n3l, n1u,n2u,n3u, n(3), ig
-    !
-    !! find lower and upper bounds for file "index_file"
-    n1l = MINVAL(mill_g_file(1,:))
-    n2l = MINVAL(mill_g_file(2,:))
-    n3l = MINVAL(mill_g_file(3,:))
-    n1u = MAXVAL(mill_g_file(1,:))
-    n2u = MAXVAL(mill_g_file(2,:))
-    n3u = MAXVAL(mill_g_file(3,:))
-    ALLOCATE(index_file(n1l:n1u,n2l:n2u,n3l:n3u)) 
-    index_file = 0
-    !
-    DO ig = 1, ngm_g_file
-       n(:) = mill_g_file(:,ig)
-       index_file ( n(1), n(2), n(3) ) = ig
-    END DO
-    !
-    END SUBROUTINE fill_index_file
-    !
     !
     SUBROUTINE fill_vect (ngm, npol, index_l2f, ngm_g_file, &
                     vect_g_file, vect, ig_miss )
       !
       !! Fill vect with G-vector components vect_g_file read from file
+      !! Negative indices in index_l2f mean "take the conjugate (-G)"
       !
       INTEGER, INTENT(in) :: ngm
       !! number of output G-components
@@ -948,9 +925,12 @@ MODULE io_base
     !
     !-----------------------------------------------------------------
     SUBROUTINE fill_index_l2f ( root_in_group, intra_group_comm, &
-         ngm_g_file, gamma_only_file, ngm, mill, index_l2f )
+         ngm_g_file, mill_g_file, gamma_only_file, ngm, mill, index_l2f )
     !-----------------------------------------------------------------
       !
+      !! Compute index_l2f giving the correspondence from data read from
+      !! file and local date to be distributed across MPI processors
+      !! Requires Miller indices for both the file and the local data
       !
       USE io_global,     ONLY : stdout
       USE mp,            ONLY : mp_size, mp_rank, mp_get
@@ -959,6 +939,8 @@ MODULE io_base
       INTEGER, INTENT(in) :: intra_group_comm
       INTEGER, INTENT(in) :: ngm_g_file  
       !! total number of G components found in file 
+      INTEGER, INTENT(in) :: mill_g_file(:,:)
+      !! Miller indices of G components read from file
       INTEGER, INTENT(in) :: ngm
       !! required number of g vectors (for this processor)
       INTEGER, INTENT(in) :: mill(:,:)
@@ -979,6 +961,10 @@ MODULE io_base
       me_in_group     = mp_rank( intra_group_comm )
       nproc_in_group  = mp_size( intra_group_comm )
       ionode_in_group = ( me_in_group == root_in_group )
+      !
+      !! next call allocates and fills the table "index_file",
+      !! on ionode ONLY! it is a big table, for all G components
+      IF(ionode_in_group) CALL fill_index_file (ngm_g_file, mill_g_file)
       !
       ig_read = 0
       ig_miss = 0
@@ -1022,10 +1008,37 @@ MODULE io_base
          WRITE (stdout,'(5X,"Zero-padding will be used")')
       END IF
       !
+      IF(ionode_in_group) DEALLOCATE(index_file)
+      !
     END SUBROUTINE fill_index_l2f
+    !-----------------------------------------------------------------
+    SUBROUTINE fill_index_file (ngm_g_file, mill_g_file)
+    !-----------------------------------------------------------------
     !
+    INTEGER, INTENT(IN) :: ngm_g_file, mill_g_file(:,:)
+    INTEGER :: n1l,n2l,n3l, n1u,n2u,n3u, n(3), ig
+    !
+    !! find lower and upper bounds for file "index_file"
+    n1l = MINVAL(mill_g_file(1,:))
+    n2l = MINVAL(mill_g_file(2,:))
+    n3l = MINVAL(mill_g_file(3,:))
+    n1u = MAXVAL(mill_g_file(1,:))
+    n2u = MAXVAL(mill_g_file(2,:))
+    n3u = MAXVAL(mill_g_file(3,:))
+    ALLOCATE(index_file(n1l:n1u,n2l:n2u,n3l:n3u)) 
+    index_file = 0
+    !
+    DO ig = 1, ngm_g_file
+       n(:) = mill_g_file(:,ig)
+       index_file ( n(1), n(2), n(3) ) = ig
+    END DO
+    !
+    END SUBROUTINE fill_index_file
+    !
+    !-----------------------------------------------------------------
     SUBROUTINE fill_index_l (ngm, mill, gamma_only_file, ngm_g_file, &
                     index_l2f, ig_miss )
+      !-----------------------------------------------------------------
       !
       INTEGER, INTENT(in) :: ngm
       !! number of output G-vectors 
