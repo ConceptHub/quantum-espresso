@@ -910,6 +910,7 @@ MODULE io_base
       !! count missing components, if any
       INTEGER :: ig, ig_file, ig_max, ipol
       !
+      ig_miss= 0
       ig_max = SIZE(vect_g_file,1)
       vect (:) = (0.0_dp, 0.0_dp)
       DO ig = 1, ngm
