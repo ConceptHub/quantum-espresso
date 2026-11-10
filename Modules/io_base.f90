@@ -627,7 +627,7 @@ MODULE io_base
       COMPLEX(dp), ALLOCATABLE :: rho_g(:)
       REAL(dp)                 :: b1(3), b2(3), b3(3)
       INTEGER                  :: nspin_, isup, isdw
-      INTEGER                  :: iun, ns, ig, ierr
+      INTEGER                  :: iun, ns, ig, ierr, ierr_open
       INTEGER                  :: me_in_group, nproc_in_group
       LOGICAL                  :: ionode_in_group, gamma_only_
       INTEGER                  :: ngm_g_
@@ -644,6 +644,7 @@ MODULE io_base
       !
       iun  = 4
       ierr = 0
+      ierr_open = 0
       IF ( PRESENT(ier_) ) ier_ = 0
       !
       me_in_group     = mp_rank( intra_group_comm )
@@ -655,8 +656,8 @@ MODULE io_base
          CALL qeh5_openfile(h5file, TRIM(filename)//'.hdf5', ACTION = 'read', &
               error = ierr)
          IF ( ierr /= 0 .AND. PRESENT(ier_) ) THEN
-            ier_ = ierr
-            RETURN
+            ierr_open = ierr
+            GO TO 10
          END IF
          CALL qeh5_read_attribute (h5file%id, "gamma_only", tempchar, MAXLEN = len(tempchar)  )
          CALL qeh5_read_attribute (h5file%id, "ngm_g", ngm_g_ ) 
@@ -672,8 +673,8 @@ MODULE io_base
               FORM = 'unformatted', STATUS = 'old', iostat = ierr )
          IF ( ierr /= 0 ) THEN
             IF ( PRESENT(ier_) ) THEN
-               ier_ = ierr
-               RETURN
+               ierr_open = ierr
+               GO TO 10
             END IF
             ierr = 1
             GO TO 10
@@ -689,6 +690,12 @@ MODULE io_base
 10       CONTINUE 
       END IF
       !
+      ! open failure with ier_ present: all ranks must return, not just the reader
+      CALL mp_bcast( ierr_open, root_in_group, intra_group_comm )
+      IF ( ierr_open /= 0 ) THEN
+         ier_ = ierr_open
+         RETURN
+      END IF
       CALL mp_bcast( ierr, root_in_group, intra_group_comm )
       IF ( ierr > 0 ) CALL errore ( 'read_rhog','error reading file ' &
            & // TRIM( filename ), ierr )
