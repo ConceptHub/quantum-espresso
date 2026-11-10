@@ -11,7 +11,7 @@ inputs_args = ('b3lyp-O.in', ''), ('b3lyp-O_std.in', ''), ('b3lyp-h2o.in',''), (
 
 [pw_cam/]
 program = PW
-inputs_args = ('cam-si111.in', ''), ('cam-si222.in', ''), ('cam-si222-noxg.in', ''), ('cam-si222_std.in', ''), ('camb3-si222.in', ''), ('cam-si-gamma.in', ''), ('cam-si222-lsda.in', ''), ('cam-pbe0-limit.in', ''), ('cam-hse-limit.in', '')
+inputs_args = ('cam-si111.in', ''), ('cam-si222.in', ''), ('cam-si222-noxg.in', ''), ('cam-si222_std.in', ''), ('camb3-si222.in', ''), ('cam-si-gamma.in', ''), ('cam-O-lsda.in', ''), ('cam-pbe0-limit.in', ''), ('cam-hse-limit.in', '')
 
 [pw_berry/]
 program = PW
