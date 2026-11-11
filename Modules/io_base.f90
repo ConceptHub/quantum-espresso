@@ -333,7 +333,7 @@ MODULE io_base
          ALLOCATE( wtmp_g( npol*igwx_ ) )
 #if defined (__HDF5) 
          CALL qeh5_open_dataset( h5file, h5dset_wfc, ACTION = 'read', NAME = 'evc')
-         CALL qeh5_set_space ( h5dset_wfc, wtmp_g, RANK = 1, DIMENSIONS = [npol*igwx_], MODE = 'm') 
+         CALL qeh5_set_space ( h5dset_wfc, wtmp_g(1), RANK = 1, DIMENSIONS = [npol*igwx_], MODE = 'm')
 #endif
       ELSE
          ALLOCATE( wtmp_g(1) )
