@@ -67,7 +67,7 @@ SUBROUTINE gather_real_grid ( dfft, f_in, f_out )
   IF( size( f_in ) < dfft%nnr ) &
      CALL fftx_error__( ' gather_real_grid ', ' f_in too small ', dfft%nnr-size( f_in ) )
   !
-  CALL start_clock( 'gather_grid' )
+  CALL start_clock( 'rgather_grid' )
 
   !write (6,*) 'gather grid ok 0 ', dfft%nproc, dfft%nproc2, dfft%nproc3
   ALLOCATE ( f_aux(dfft%nr1x * dfft%nr2x * dfft%my_nr3p) )
@@ -113,7 +113,7 @@ SUBROUTINE gather_real_grid ( dfft, f_in, f_out )
   !
   DEALLOCATE ( f_aux )
   !
-  CALL stop_clock( 'gather_grid' )
+  CALL stop_clock( 'rgather_grid' )
   !
 #else
   CALL fftx_error__(' gather_real_grid', 'do not use in serial execution', 1)
@@ -147,7 +147,7 @@ SUBROUTINE gather_complex_grid ( dfft, f_in, f_out )
   INTEGER :: displs(0:dfft%nproc-1), recvcount(0:dfft%nproc-1)
   !
 
-  CALL start_clock( 'gather_grid' )
+  CALL start_clock( 'cgather_grid' )
   !write (*,*) 'gcgather_grid size(f_in),dfft%nnr',size(f_in), dfft%nnr ; FLUSH(6)
   IF( 2*size( f_in ) < dfft%nnr ) &
      CALL fftx_error__( ' gather_complex_grid ', ' f_in too small ', dfft%nnr-size( f_in ) )
@@ -198,7 +198,7 @@ SUBROUTINE gather_complex_grid ( dfft, f_in, f_out )
   !
   DEALLOCATE ( f_aux )
   !
-  CALL stop_clock( 'gather_grid' )
+  CALL stop_clock( 'cgather_grid' )
   !
 #else
   CALL fftx_error__('gather_complex_grid', 'do not use in serial execution', 1)
@@ -232,7 +232,7 @@ SUBROUTINE scatter_real_grid ( dfft, f_in, f_out )
   INTEGER :: displs(0:dfft%nproc-1), sendcount(0:dfft%nproc-1)
   !
   !
-  CALL start_clock( 'scatter_grid' )
+  CALL start_clock( 'rscatter_grid' )
   !
   !write (6,*) 'scatter grid ok 0'
   ALLOCATE ( f_aux(dfft%nr1x * dfft%nr2x * dfft%my_nr3p) )
@@ -276,7 +276,7 @@ SUBROUTINE scatter_real_grid ( dfft, f_in, f_out )
   !
   DEALLOCATE ( f_aux )
   !
-  CALL stop_clock( 'scatter_grid' )
+  CALL stop_clock( 'rscatter_grid' )
   !
 #else
   CALL fftx_error__('scatter_real_grid', 'do not use in serial execution', 1)
@@ -308,7 +308,7 @@ SUBROUTINE scatter_complex_grid ( dfft, f_in, f_out )
   ! ... the following are automatic arrays
   INTEGER :: displs(0:dfft%nproc-1), sendcount(0:dfft%nproc-1)
   !
-  CALL start_clock( 'scatter_grid' )
+  CALL start_clock( 'cscatter_grid' )
   !
   !write (6,*) 'scatter grid ok 0'
   ALLOCATE ( f_aux(dfft%nr1x * dfft%nr2x * dfft%my_nr3p ) )
@@ -361,7 +361,7 @@ SUBROUTINE scatter_complex_grid ( dfft, f_in, f_out )
   !
   DEALLOCATE ( f_aux )
   !
-  CALL stop_clock( 'scatter_grid' )
+  CALL stop_clock( 'cscatter_grid' )
   !
 #else
   CALL fftx_error__('scatter_complex_grid', 'do not use in serial execution', 1)
