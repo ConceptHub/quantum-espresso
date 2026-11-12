@@ -473,9 +473,7 @@ MODULE input_parameters
           ! next group of variables PWSCF ONLY
           ! 
         CHARACTER(len=80) :: exx_type = 'band_pairs'
-        !! exx band parallelism schemes: "bands"       ... distribute bands over bgrp, no FFT batching (one FFT at time) 
-        !!                               "bands_outer" ... distribute bands over bgrp, FFT batching on outer loop 
-        !!                               "bands_inner" ... distribute bands over bgrp, FFT batching on inner loop
+        !! exx band parallelism schemes: "bands"       ... distribute bands over bgrp, FFT batching on GPU, one FFT at time on CPU
         !!                               "band_pairs"  ... distribute band pairs over bgrp (useful when the local DFT part becomes relevant)
         !!                                                 (Barnes et al., Computer Physics Communications, Volume 214, 2017, Pages 52-58)
         !

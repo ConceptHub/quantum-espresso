@@ -2158,8 +2158,7 @@ SUBROUTINE exx_iosys ( ecutwfc, ecutrho )
   USE xc_lib,        ONLY : xclib_set_exx_fraction, xclib_set_exx_lr_fraction, &
                             set_screening_parameter
   USE exx_base,      ONLY : x_gamma_extrapolation_ => x_gamma_extrapolation, &
-                            nq1, nq2, nq3, exx_bgrp_type, EXX_BGRP_BANDS, EXX_BGRP_PAIRS, &
-                            batchsize, EXX_BGRP_EXBTC, &
+                            nq1, nq2, nq3, exx_bgrp_type, EXX_BGRP_BANDS, EXX_BGRP_PAIRS, batchsize, &
                             exxdiv_treatment_ => exxdiv_treatment, &
                             yukawa_           => yukawa, &
                             ecutvcut_         => ecutvcut
@@ -2224,16 +2223,16 @@ SUBROUTINE exx_iosys ( ecutwfc, ecutrho )
   select case(trim(adjustl(exx_type)))
   case("bands")
     exx_bgrp_type = EXX_BGRP_BANDS
-  case("bands_outer")
-    exx_bgrp_type = EXX_BGRP_EXBTC
-    write(stdout, '(/,5x,"Exact exchange outer batching size: ",I4/)' ) batchsize 
-#if !defined(__CUDA)
-    CALL errore('input','EXX batching (exx_type = bands_outer) for CPU execution is not implemented',1)
+#if defined(__CUDA)
+    write(stdout, '(/,5x,"Using batched version of vexx, batching size: ",I4/)' ) batchsize 
+#else
+    write(stdout, '(/,5x,"Using sequential (non-batched) version of vexx"/)' ) 
+    if ( batchsize > 0 ) write(stdout, '(/,5x,"WARNING: user given exx_batch_size is ignored for CPU execution"/)' ) 
 #endif
   case("band_pairs")
     exx_bgrp_type = EXX_BGRP_PAIRS
   case default
-    CALL errore('input','Invalid value of exx_type (values: bands, bands_outer, band_pairs)',2)
+    CALL errore('input','Invalid value of exx_type (values: bands, band_pairs)',2)
   end select
   !
 END SUBROUTINE exx_iosys

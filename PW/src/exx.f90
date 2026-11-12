@@ -21,7 +21,7 @@ MODULE exx
   USE io_global,            ONLY : stdout
   !
   USE control_flags,        ONLY : gamma_only, tqr, use_gpu, many_fft
-  USE exx_base,             ONLY : exx_bgrp_type, EXX_BGRP_PAIRS, EXX_BGRP_BANDS, EXX_BGRP_EXBTC, &
+  USE exx_base,             ONLY : exx_bgrp_type, EXX_BGRP_PAIRS, EXX_BGRP_BANDS, &
                                    dfftt, exxbuff , exxbuff_d, npwt, x_nbnd_occ, &
                                    ibnd_start, ibnd_end, gt, ggt, gcutmt, gkcut, gstart_t, ngmt_g, &
                                    eps_occ, exxalfa, exxbeta, x_occupation, x_occupation_d, &
@@ -406,9 +406,10 @@ MODULE exx
     USE uspp,           ONLY : okvan
     USE paw_variables,  ONLY : okpaw
     USE wvfct,          ONLY : nbnd
-    USE exx_std,        ONLY : vexx_std_gamma_one, vexx_std_k_one
 #if defined(__CUDA)
     USE exx_std,        ONLY : vexx_std_gamma_outer, vexx_std_k_outer
+#else
+    USE exx_std,        ONLY : vexx_std_gamma_one, vexx_std_k_one
 #endif
     USE exx_bp,         ONLY : vexx_bp
     !
@@ -433,17 +434,17 @@ MODULE exx
     CALL start_clock( 'vexx' )
     !
     if(exx_bgrp_type .eq. EXX_BGRP_BANDS) then
-       if (gamma_only ) then
-          Call vexx_std_gamma_one(lda, n, m, psi, hpsi, becpsi )
-       else
-          Call vexx_std_k_one(lda, n, m, psi, hpsi, becpsi )
-       end if 
 #if defined(__CUDA)
-    elseif(exx_bgrp_type .eq. EXX_BGRP_EXBTC) then
        if (gamma_only ) then
           Call vexx_std_gamma_outer(lda, n, m, psi, hpsi, becpsi )
        else
           Call vexx_std_k_outer(lda, n, m, psi, hpsi, becpsi )
+       end if 
+#else
+       if (gamma_only ) then
+          Call vexx_std_gamma_one(lda, n, m, psi, hpsi, becpsi )
+       else
+          Call vexx_std_k_one(lda, n, m, psi, hpsi, becpsi )
        end if 
 #endif
     elseif(exx_bgrp_type .eq. EXX_BGRP_PAIRS) then

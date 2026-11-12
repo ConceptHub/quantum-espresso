@@ -538,7 +538,7 @@ CONTAINS
     USE xc_lib,           ONLY : xclib_dft_is
     USE ldaU,             ONLY : lda_plus_u
     USE noncollin_module, ONLY : domag
-    USE exx_base,         ONLY : exx_bgrp_type, batchsize, EXX_BGRP_BANDS, EXX_BGRP_EXBTC, EXX_BGRP_PAIRS
+    USE exx_base,         ONLY : exx_bgrp_type, batchsize, EXX_BGRP_BANDS, EXX_BGRP_PAIRS
 
     IMPLICIT NONE
     !
@@ -562,23 +562,24 @@ CONTAINS
         WRITE(stdout, '(5x,"Not using ACE in TDDFPT calculation. " )') 
       END IF
       !
-      write(stdout, '(/,5x,"Exact exchange band parallelism type set to ",A/)' ) trim(adjustl(exx_type))
+      IF (xclib_dft_is('hybrid')) WRITE(stdout, &
+         '(/,5x,"Exact exchange band parallelism type set to ",A/)' ) trim(adjustl(exx_type))
       !
       IF ( exx_batch_size > 0 ) batchsize = exx_batch_size
       !
       select case(trim(adjustl(exx_type)))
       case("bands")
         exx_bgrp_type = EXX_BGRP_BANDS
-      case("bands_outer")
-        exx_bgrp_type = EXX_BGRP_EXBTC
-        write(stdout, '(/,5x,"Exact exchange outer batching size: ",I4/)' ) batchsize
-#if !defined(__CUDA)
-      CALL errore('input','EXX batching (exx_type = bands_outer) for CPU execution is not implemented',1)
+#if defined(__CUDA)
+        write(stdout, '(/,5x,"Using batched version of vexx, batching size: ",I4/)' ) batchsize 
+#else
+        write(stdout, '(/,5x,"Using sequential (non-batched) version of vexx"/)' ) 
+        if ( batchsize > 0 ) write(stdout, '(/,5x,"WARNING: user given exx_batch_size is ignored for CPU execution"/)' ) 
 #endif
       case("band_pairs")
         exx_bgrp_type = EXX_BGRP_PAIRS
       case default
-        CALL errore('input','Invalid value of exx_type (values: bands, bands_outer, band_pairs)',2)
+        CALL errore('input','Invalid value of exx_type (values: bands, band_pairs)',2)
       end select
       !
     END IF
