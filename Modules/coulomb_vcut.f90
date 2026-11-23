@@ -263,9 +263,9 @@ END FUNCTION vcut_formula
   integer :: n1max
   real(dp) :: i1_real,i2_real,i3_real
 
-  n1=security*sqrt(sum(a(:,1)**2))*sigma
-  n2=security*sqrt(sum(a(:,2)**2))*sigma
-  n3=security*sqrt(sum(a(:,3)**2))*sigma
+  n1=NINT(security*sqrt(sum(a(:,1)**2))*sigma)
+  n2=NINT(security*sqrt(sum(a(:,2)**2))*sigma)
+  n3=NINT(security*sqrt(sum(a(:,3)**2))*sigma)
 
   n1_is_even=(n1/2)*2==n1
   n1_is_odd=.not.n1_is_even
@@ -278,7 +278,7 @@ END FUNCTION vcut_formula
 ! the only symmetry which can be used for any value of q is inversion
 ! NON-SHIFTED:
 !  if n1 is even: loop between 0 and n1/2, with weight=2.0 for all points except 0 and n1max
-!  if n2 is odd:  loop between 0 and (n1+1)/2, with weight=2.0 for all points except 0
+!  if n1 is odd:  loop between 0 and (n1-1)/2, with weight=2.0 for all points except 0
 ! SHIFTED:
 !  if n1 is even: loop between 0 and n1/2-1, with weight=2.0 for all points
 !  if n2 is odd:  loop between 0 and (n1+1)/2, with weight=2.0 for all points except n1max
@@ -288,7 +288,7 @@ END FUNCTION vcut_formula
     if(n1_is_odd)  n1max=(n1+1)/2-1
   else
     if(n1_is_even) n1max=n1/2
-    if(n1_is_odd)  n1max=(n1+1)/2
+    if(n1_is_odd)  n1max=(n1-1)/2
   end if
   do i1=0,n1max
     factor=2.0
