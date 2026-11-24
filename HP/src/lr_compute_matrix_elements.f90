@@ -86,7 +86,7 @@ SUBROUTINE lr_compute_matrix_elements(npert, lrdvpsi, iudvpsi, dvscf, mel)
       ! calculates dvscf_q*psi_k in G_space, for all bands, k=kpoint
       ! dvscf_q from previous iteration (mix_potential)
       !
-      CALL apply_dpot_bands(ik, nbnd, dvscf, evc, aux)
+      CALL apply_dpot_bands(ik, nbnd, dvscf(:, :, ipert), evc, aux)
       dvpsi = dvpsi + aux
       !
       ! (3) Additional contribution for USPP

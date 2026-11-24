@@ -351,6 +351,7 @@ SUBROUTINE input_sanity_crpa()
   ! Note: cRPA does NOT require lda_plus_u.
   !
   USE mp_pools,         ONLY : npool
+  USE wvfct,            ONLY : nbnd
   USE control_lr,       ONLY : tr2_ph, thresh_init_lr => thresh_init, &
                                niter_ph, maxter_lr => maxter
   USE crpacom,          ONLY : pert_bands_min, pert_bands_max, wannier_seedname, w_freq
@@ -378,6 +379,8 @@ SUBROUTINE input_sanity_crpa()
     IF (pert_bands_max < 1) CALL errore('hp_readin', 'pert_bands_max is not set', 1)
     IF (pert_bands_min > pert_bands_max) CALL errore('hp_readin', &
         'pert_bands_min cannot be greater than pert_bands_max', 1)
+    IF (pert_bands_max > nbnd) CALL errore('hp_readin', &
+        'pert_bands_max cannot be greater than nbnd', 1)
     IF (npool > 1) CALL errore('hp_readin', &
         'pert_basis=bands with pool parallelization (npool > 1) is not implemented', 1)
   ELSEIF (pert_basis == 'wannier') THEN

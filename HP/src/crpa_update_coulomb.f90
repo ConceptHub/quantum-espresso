@@ -154,7 +154,6 @@ SUBROUTINE crpa_compute_mel_wannier(dvscf, mel)
    USE lsda_mod,             ONLY : lsda, current_spin, isk
    USE wavefunctions,        ONLY : evc
    USE wvfct,                ONLY : nbnd, npwx
-   USE ldaU,                 ONLY : lda_plus_u
    USE noncollin_module,     ONLY : nspin_mag, npol
    USE eqv,                  ONLY : dvpsi, evq, dpsi
    USE qpoint,               ONLY : ikks, ikqs, nksq
@@ -171,12 +170,8 @@ SUBROUTINE crpa_compute_mel_wannier(dvscf, mel)
    COMPLEX(DP), INTENT(INOUT) :: mel(num_wann, num_wann, nksq)
    !! Matrix elements of the perturbation potential
    !
-   LOGICAL :: time_reversed
-   !! If solving time reversed Sternheimer equation
-   INTEGER :: ik, ikk, ikq, ipert, nrec, npert
+   INTEGER :: ik, ikk, ikq
    !! indices
-   !
-   time_reversed = .FALSE.
    !
    mel = (0.d0, 0.d0)
    !
@@ -203,21 +198,6 @@ SUBROUTINE crpa_compute_mel_wannier(dvscf, mel)
       !
       CALL apply_dpot_bands(ik, num_wann, dvscf, evc, dpsi)
       dvpsi = dvpsi + dpsi
-      !
-      ! (3) Additional contribution for USPP
-      !
-      !  In the case of US pseudopotentials there is an additional
-      !  selfconsist term which comes from the dependence of D on
-      !  V_{eff} on the bare change of the potential
-      !
-      CALL adddvscf(ipert, ik, time_reversed)
-      !
-      ! (4) Additional contribution for DFPT + U
-      !
-      ! DFPT+U: add to dvpsi the scf part of the response
-      ! Hubbard potential dV_hub
-      !
-      IF (lda_plus_u) CALL adddvhubscf(ipert, ik)
       !
       ! Compute matrix element
       ! mel(j, i) = <psi_{k+q,j} | dV_tot * psi_{k,i}>
