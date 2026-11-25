@@ -13,15 +13,18 @@ SUBROUTINE write_casino_wfn(gather,blip,multiplicity,binwrite,single_precision_b
    USE cell_base, ONLY: omega, alat, tpiba2, at, bg
    USE run_info,  ONLY: title    ! title of the run
    USE constants, ONLY: tpi, e2, eps6
-   USE ener, ONLY: ewld, ehart, etxc, vtxc, etot, etxcc, demet, ef
+   USE ener, ONLY: ewld, ehart, etxc, vtxc, etot, etxcc, demet, ef, ef_up, ef_dw, ef_cond
    USE fft_rho, ONLY: rho_r2g
    USE gvect, ONLY: ngm, gstart, g, gg, gcutm, igtongl
    USE klist , ONLY: nks, nelec, xk, wk, degauss, ngauss, igk_k, ngk
+   USE klist , ONLY: two_fermi_energies, degauss_cond
    USE lsda_mod, ONLY: lsda, nspin, isk
    USE scf, ONLY: rho, rho_core, rhog_core, tau_core, v
    USE ldaU, ONLY : eth
    USE vlocal, ONLY: vloc, strf
-   USE wvfct, ONLY: npwx, nbnd, wg, et
+   USE wvfct, ONLY: npwx, nbnd, wg, et, nbnd_cond
+   USE two_chem, ONLY: twochem
+   USE gcscf_module, ONLY: lgcscf
    USE gvecw, ONLY: ecutwfc
    USE control_flags, ONLY : gamma_only
    USE uspp, ONLY: nkb, vkb, dvan
@@ -328,9 +331,10 @@ CONTAINS
       !
       IMPLICIT NONE
 
-      INTEGER :: npw, ibnd, j, ig, ik,ikk, ispin, na, nt, ijkb0, ikb,jkb, ih,jh
+      INTEGER :: npw, ibnd, j, ig, ik,ikk, ispin, na, nt, ijkb0, ikb,jkb, ih,jh, nbnd_val
       REAL(DP), ALLOCATABLE :: g2kin(:)
-      REAL(DP) :: charge, etotefield, elocg
+      REAL(DP) :: charge, etotefield, elocg, ef_k
+      LOGICAL :: twochem_active
       !
       REAL(DP), EXTERNAL :: efermig
 
@@ -343,9 +347,13 @@ CONTAINS
       fock2=0.d0
 
       !
-      ! Calculate the Fermi energy ef
+      ! Calculate the Fermi energy ef, unless PWscf has two of them (ef_up and
+      ! ef_dw with tot_magnetization; ef and ef_cond with twochem, which GC-SCF
+      ! overrides, as in weights), which are used as they stand in the -TS
+      ! term below
       !
-      if ( degauss > 0.0_DP ) &
+      twochem_active = twochem .and. .not. lgcscf
+      if ( degauss > 0.0_DP .and. .not. ( two_fermi_energies .or. twochem_active ) ) &
          ef=efermig( et, nbnd, nks, nelec, wk, degauss, ngauss, 0, isk )
 
       !
@@ -373,9 +381,20 @@ CONTAINS
             ! -TS term for metals (if any)
             !
             IF( degauss > 0.0_DP )THEN
-               DO ibnd = 1, nbnd
+               IF( two_fermi_energies )THEN
+                  ef_k = merge( ef_up, ef_dw, isk(ikk)==1 )
+               ELSE
+                  ef_k = ef
+               ENDIF
+               nbnd_val = nbnd
+               IF( twochem_active ) nbnd_val = nbnd - nbnd_cond
+               DO ibnd = 1, nbnd_val
                   demet = demet + wk(ikk) * &
-                     degauss * w1gauss ( (ef-et(ibnd,ikk)) / degauss, ngauss)
+                     degauss * w1gauss ( (ef_k-et(ibnd,ikk)) / degauss, ngauss)
+               ENDDO
+               DO ibnd = nbnd_val+1, nbnd
+                  demet = demet + wk(ikk) * &
+                     degauss_cond * w1gauss ( (ef_cond-et(ibnd,ikk)) / degauss_cond, ngauss)
                ENDDO
             ENDIF
             !
