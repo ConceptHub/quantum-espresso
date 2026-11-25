@@ -805,7 +805,7 @@ MODULE realus
       USE control_flags, ONLY : gamma_only
       USE ions_base,  ONLY : nat, nsp, ityp, tau
       USE cell_base,  ONLY : at, bg, alat
-      USE uspp,       ONLY : okvan, indv,nhtolm
+      USE uspp,       ONLY : nkb, indv, nhtolm
       USE uspp_param, ONLY : upf, lmaxq, nh, nhm
       USE atom,       ONLY : rgrid
       USE fft_base,   ONLY : dffts
@@ -835,8 +835,13 @@ MODULE realus
       REAL(DP)              :: wlag
       !
       initialisation_level = initialisation_level + 5
-      IF ( .not. okvan ) CALL errore &
-                        ('betapointlist','real space routines for USPP only',1)
+      IF ( nkb <= 0 ) CALL errore &
+                        ('betapointlist','real space routines need beta functions (nkb>0)',1)
+      !
+      ! ... GTH projectors are analytic in q-space: no radial beta(r) is tabulated
+      !
+      IF ( ANY( upf(1:nsp)%is_gth ) ) CALL errore &
+                        ('betapointlist','real space routines not available for GTH pseudopotentials',1)
       !
       !print *, "<<<betapointlist>>>"
       !
@@ -908,7 +913,7 @@ MODULE realus
       !
       DO ia = 1, nat
          !
-         IF ( .not. upf(ityp(ia))%tvanp ) CYCLE
+         IF ( nh(ityp(ia)) == 0 ) CYCLE
          !
          boxrad_ia = boxrad_beta(ityp(ia))
          boxradsq_ia = boxrad_ia**2
@@ -1012,7 +1017,7 @@ MODULE realus
       !
       DO ia = 1, nat
          !
-         IF ( .not. upf(ityp(ia))%tvanp ) CYCLE
+         IF ( nh(ityp(ia)) == 0 ) CYCLE
          !
          idimension = maxbox_beta(ia)
          ALLOCATE( rl( 3, idimension ), rl2( idimension ) )
@@ -1056,7 +1061,7 @@ MODULE realus
          IF ( mbia == 0 ) CYCLE
          !
          nt = ityp(ia)
-         IF ( .not. upf(nt)%tvanp ) CYCLE
+         IF ( nh(nt) == 0 ) CYCLE
          !
          ALLOCATE( qtot( upf(nt)%kkbeta, upf(nt)%nbeta, upf(nt)%nbeta ) )
          !
