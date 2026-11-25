@@ -805,7 +805,7 @@ MODULE realus
       USE control_flags, ONLY : gamma_only
       USE ions_base,  ONLY : nat, nsp, ityp, tau
       USE cell_base,  ONLY : at, bg, alat
-      USE uspp,       ONLY : okvan, indv,nhtolm
+      USE uspp,       ONLY : nkb, indv, nhtolm
       USE uspp_param, ONLY : upf, lmaxq, nh, nhm
       USE atom,       ONLY : rgrid
       USE fft_base,   ONLY : dffts
@@ -831,10 +831,17 @@ MODULE realus
                                xsp(:), ysp(:), wsp(:), d1y(:), d2y(:)
       REAL(DP)              :: mbr, mbx, mby, mbz, dmbx, dmby, dmbz
       REAL(DP)              :: inv_nr1s, inv_nr2s, inv_nr3s, tau_ia(3), boxradsq_ia, boxrad_ia
+      INTEGER               :: jx, mx
+      REAL(DP)              :: wlag
       !
       initialisation_level = initialisation_level + 5
-      IF ( .not. okvan ) CALL errore &
-                        ('betapointlist','real space routines for USPP only',1)
+      IF ( nkb <= 0 ) CALL errore &
+                        ('betapointlist','real space routines need beta functions (nkb>0)',1)
+      !
+      ! ... GTH projectors are analytic in q-space: no radial beta(r) is tabulated
+      !
+      IF ( ANY( upf(1:nsp)%is_gth ) ) CALL errore &
+                        ('betapointlist','real space routines not available for GTH pseudopotentials',1)
       !
       !print *, "<<<betapointlist>>>"
       !
@@ -906,7 +913,7 @@ MODULE realus
       !
       DO ia = 1, nat
          !
-         IF ( .not. upf(ityp(ia))%tvanp ) CYCLE
+         IF ( nh(ityp(ia)) == 0 ) CYCLE
          !
          boxrad_ia = boxrad_beta(ityp(ia))
          boxradsq_ia = boxrad_ia**2
@@ -1010,7 +1017,7 @@ MODULE realus
       !
       DO ia = 1, nat
          !
-         IF ( .not. upf(ityp(ia))%tvanp ) CYCLE
+         IF ( nh(ityp(ia)) == 0 ) CYCLE
          !
          idimension = maxbox_beta(ia)
          ALLOCATE( rl( 3, idimension ), rl2( idimension ) )
@@ -1054,7 +1061,7 @@ MODULE realus
          IF ( mbia == 0 ) CYCLE
          !
          nt = ityp(ia)
-         IF ( .not. upf(nt)%tvanp ) CYCLE
+         IF ( nh(nt) == 0 ) CYCLE
          !
          ALLOCATE( qtot( upf(nt)%kkbeta, upf(nt)%nbeta, upf(nt)%nbeta ) )
          !
@@ -1075,7 +1082,23 @@ MODULE realus
             ! In the UPF file format, beta field is r*|beta>
             IF (rgrid(nt)%r(1)==0) THEN
              ysp(2:) = upf(nt)%beta(2:upf(nt)%kkbeta,nb) / rgrid(nt)%r(2:upf(nt)%kkbeta)
-             ysp(1)=0.d0
+             ! ... beta(r)/r at r=0: it vanishes for l>0, but tends to a finite
+             ! ... non-zero constant for l=0, so it cannot be set to zero there.
+             ! ... For l=0 it is obtained by quadratic Lagrange extrapolation
+             ! ... from the next three points (works on non-uniform grids too)
+             IF ( upf(nt)%lll(nb) == 0 ) THEN
+                ysp(1) = 0.d0
+                DO jx = 2, 4
+                   wlag = 1.d0
+                   DO mx = 2, 4
+                      IF ( mx /= jx ) wlag = wlag * ( -rgrid(nt)%r(mx) ) / &
+                                                    ( rgrid(nt)%r(jx) - rgrid(nt)%r(mx) )
+                   ENDDO
+                   ysp(1) = ysp(1) + wlag * ysp(jx)
+                ENDDO
+             ELSE
+                ysp(1) = 0.d0
+             ENDIF
             ELSE
              ysp(:) = upf(nt)%beta(1:upf(nt)%kkbeta,nb) / rgrid(nt)%r(1:upf(nt)%kkbeta)
             ENDIF
@@ -2451,7 +2474,10 @@ MODULE realus
        !
     ELSE  ! ... non task_groups version
        !
-       CALL wave_g2r( orbital(:,ibnd:ibnd), psic, dffts, igk=igk_k(:,ik_) )
+       ! ... only the first ngk(ik_) components are plane waves: the vector is
+       ! ... padded up to npwx and igk_k is zero in the padding, which would
+       ! ... otherwise overwrite grid point nl(0) (an out-of-bounds index)
+       CALL wave_g2r( orbital(1:ngk(ik_),ibnd:ibnd), psic, dffts, igk=igk_k(1:ngk(ik_),ik_) )
        !
        IF (PRESENT(conserved)) THEN
           IF (conserved) THEN

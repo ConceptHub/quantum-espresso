@@ -18,6 +18,7 @@ SUBROUTINE hs_1psi( lda, n, psi, hpsi, spsi )
   USE control_flags,    ONLY : gamma_only
   USE bp,               ONLY : lelfield
   USE noncollin_module, ONLY : npol 
+  USE uspp,             ONLY : okvan
   USE realus,           ONLY : real_space, &
                                invfft_orbital_gamma, fwfft_orbital_gamma, s_psir_gamma, &
                                invfft_orbital_k,     fwfft_orbital_k,     s_psir_k
@@ -32,7 +33,7 @@ SUBROUTINE hs_1psi( lda, n, psi, hpsi, spsi )
   ! 
   !OBM: I know this form is somewhat inelegant but, leaving the pre-real_space part intact
   !     makes it easier to debug probable errors, please do not "beautify" 
-        if (real_space) then
+        if (real_space .and. okvan) then
            !$acc update self(psi)
            CALL h_psi( lda, n, 1, psi, hpsi )
            if (gamma_only) then

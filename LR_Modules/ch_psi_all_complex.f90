@@ -17,7 +17,7 @@ SUBROUTINE ch_psi_all_complex (n, h, ah, e, ik, m)
   USE cell_base,            ONLY : tpiba
   USE wvfct,                ONLY : npwx, nbnd, current_k
   USE becmod,               ONLY : becp, calbec
-  USE uspp,                 ONLY : nkb, vkb
+  USE uspp,                 ONLY : nkb, vkb, okvan
   USE fft_base,             ONLY : dffts
   USE gvect,                ONLY : g
   USE klist,                ONLY : xk, igk_k
@@ -274,7 +274,7 @@ CONTAINS
     !
     !    And apply S again
     !
-    IF (real_space ) THEN
+    IF (real_space .AND. okvan) THEN
        DO ibnd=1,m,2
           CALL invfft_orbital_gamma(hpsi,ibnd,m)
           CALL calbec_rs_gamma(ibnd,m,becp%r)

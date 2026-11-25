@@ -12,7 +12,7 @@ SUBROUTINE s_1psi( npwx, n, psi, spsi )
   !! and \texttt{s_psi}.
   !
   USE kinds,              ONLY: DP
-  USE uspp,               ONLY: vkb, nkb
+  USE uspp,               ONLY: vkb, nkb, okvan
   USE becmod,             ONLY: becp, calbec
   USE control_flags,      ONLY: gamma_only, offload_type 
   USE noncollin_module,   ONLY: noncolin, npol 
@@ -40,7 +40,7 @@ SUBROUTINE s_1psi( npwx, n, psi, spsi )
   !
   CALL start_clock( 's_1psi' )
   !
-  IF ( real_space) THEN
+  IF ( real_space .AND. okvan ) THEN
      !
      !$acc update self(psi, spsi)
      IF ( gamma_only ) THEN
@@ -72,7 +72,7 @@ SUBROUTINE s_1psi( npwx, n, psi, spsi )
      !$acc update device(spsi)
   ELSE
      !
-     CALL calbec( offload_type, n, vkb, psi, becp )
+     IF ( okvan ) CALL calbec( offload_type, n, vkb, psi, becp )
      CALL s_psi( npwx, n, 1, psi, spsi )
      !
   ENDIF

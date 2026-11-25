@@ -291,7 +291,7 @@ CONTAINS
     !
     !    And apply S again
     !
-    IF (real_space ) THEN
+    IF (real_space .AND. okvan) THEN
        !$acc update host(hpsi, spsi)     
        DO ibnd=1,m,2
           CALL invfft_orbital_gamma(hpsi,ibnd,m)

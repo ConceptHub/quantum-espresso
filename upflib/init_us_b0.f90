@@ -68,6 +68,8 @@ SUBROUTINE init_us_b0(ecutwfc,intra_bgrp_comm)
   END IF
   !
   DO nt=1,nsp
+     ! ... species without projectors (nbeta=0, kkbeta=0): nothing to smooth
+     IF ( upf(nt)%nbeta == 0 ) CYCLE
      rcut = rgrid(nt)%r(upf(nt)%kkbeta)
      DO ir = upf(nt)%kkbeta, upf(nt)%mesh
         IF ( rgrid(nt)%r(ir) < rcut + drcut ) upf(nt)%kkbeta=ir
@@ -88,7 +90,7 @@ SUBROUTINE init_us_b0(ecutwfc,intra_bgrp_comm)
   !- loop over pseudopotentials
   DO nt = 1, nsp
      ! likely, there is no point in smoothing GTH PPs
-     IF ( upf(nt)%is_gth ) CYCLE
+     IF ( upf(nt)%is_gth .OR. upf(nt)%nbeta == 0 ) CYCLE
      WRITE( stdout, '(/5X,a,i4)' ) 'Smoothing PSEUDO #', nt
      !
      !- compute original beta normalization in real space where grid is sufficient by definition

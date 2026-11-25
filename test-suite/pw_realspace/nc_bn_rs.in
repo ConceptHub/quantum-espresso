@@ -1,0 +1,28 @@
+&CONTROL
+  calculation = 'scf'
+  tprnfor     = .true.
+  tstress     = .true.
+/
+&SYSTEM
+  ibrav     = 1
+  celldm(1) = 12.0
+  nat       = 2
+  ntyp      = 2
+  ecutwfc   = 50.0
+  occupations = 'smearing'
+  smearing    = 'gaussian'
+  degauss     = 0.02
+  nbnd        = 8
+/
+&ELECTRONS
+  conv_thr = 1.0d-9
+  real_space      = .true.
+  tbeta_smoothing = .true.
+/
+ATOMIC_SPECIES
+B 10.81  B-PBE.upf
+N 14.007 N-PBE.upf
+ATOMIC_POSITIONS bohr
+B 0.0 0.0 0.0
+N 0.3 0.4 2.9
+K_POINTS gamma
