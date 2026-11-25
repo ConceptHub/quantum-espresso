@@ -2451,7 +2451,10 @@ MODULE realus
        !
     ELSE  ! ... non task_groups version
        !
-       CALL wave_g2r( orbital(:,ibnd:ibnd), psic, dffts, igk=igk_k(:,ik_) )
+       ! ... only the first ngk(ik_) components are plane waves: the vector is
+       ! ... padded up to npwx and igk_k is zero in the padding, which would
+       ! ... otherwise overwrite grid point nl(0) (an out-of-bounds index)
+       CALL wave_g2r( orbital(1:ngk(ik_),ibnd:ibnd), psic, dffts, igk=igk_k(1:ngk(ik_),ik_) )
        !
        IF (PRESENT(conserved)) THEN
           IF (conserved) THEN
