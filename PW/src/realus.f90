@@ -831,6 +831,8 @@ MODULE realus
                                xsp(:), ysp(:), wsp(:), d1y(:), d2y(:)
       REAL(DP)              :: mbr, mbx, mby, mbz, dmbx, dmby, dmbz
       REAL(DP)              :: inv_nr1s, inv_nr2s, inv_nr3s, tau_ia(3), boxradsq_ia, boxrad_ia
+      INTEGER               :: jx, mx
+      REAL(DP)              :: wlag
       !
       initialisation_level = initialisation_level + 5
       IF ( .not. okvan ) CALL errore &
@@ -1075,7 +1077,23 @@ MODULE realus
             ! In the UPF file format, beta field is r*|beta>
             IF (rgrid(nt)%r(1)==0) THEN
              ysp(2:) = upf(nt)%beta(2:upf(nt)%kkbeta,nb) / rgrid(nt)%r(2:upf(nt)%kkbeta)
-             ysp(1)=0.d0
+             ! ... beta(r)/r at r=0: it vanishes for l>0, but tends to a finite
+             ! ... non-zero constant for l=0, so it cannot be set to zero there.
+             ! ... For l=0 it is obtained by quadratic Lagrange extrapolation
+             ! ... from the next three points (works on non-uniform grids too)
+             IF ( upf(nt)%lll(nb) == 0 ) THEN
+                ysp(1) = 0.d0
+                DO jx = 2, 4
+                   wlag = 1.d0
+                   DO mx = 2, 4
+                      IF ( mx /= jx ) wlag = wlag * ( -rgrid(nt)%r(mx) ) / &
+                                                    ( rgrid(nt)%r(jx) - rgrid(nt)%r(mx) )
+                   ENDDO
+                   ysp(1) = ysp(1) + wlag * ysp(jx)
+                ENDDO
+             ELSE
+                ysp(1) = 0.d0
+             ENDIF
             ELSE
              ysp(:) = upf(nt)%beta(1:upf(nt)%kkbeta,nb) / rgrid(nt)%r(1:upf(nt)%kkbeta)
             ENDIF
