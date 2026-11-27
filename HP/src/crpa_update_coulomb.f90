@@ -199,6 +199,8 @@ SUBROUTINE crpa_compute_mel_wannier(dvscf, mel)
       CALL apply_dpot_bands(ik, num_wann, dvscf, evc, dpsi)
       dvpsi = dvpsi + dpsi
       !
+      ! No USPP (adddvscf) or DFT+U (adddvhubscf) term: crpa_init rejects both.
+      !
       ! Compute matrix element
       ! mel(j, i) = <psi_{k+q,j} | dV_tot * psi_{k,i}>
       !
