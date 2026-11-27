@@ -189,8 +189,13 @@ SUBROUTINE crpa_compute_mel_wannier(dvscf, mel)
       !
       CALL get_buffer(evc, lrwan, iuwan, ikk)
       CALL get_buffer(evq, lrwan, iuwan, ikq)
+      !$acc update device(evc)
       !
       ! Compute dvpsi = dV_tot * psi_k
+      !
+      ! apply_dpot_bands works on device copies of dvpsi and dpsi and copies them back.
+      ! They stay on the device only here: orthogonalize copies them in with present_or_copy.
+      !$acc data create(dvpsi, dpsi)
       !
       ! (1) Bare term dV_bare * psi_k is stored in iudvwfc
       !
@@ -202,6 +207,7 @@ SUBROUTINE crpa_compute_mel_wannier(dvscf, mel)
       ! dvscf_q from previous iteration (mix_potential)
       !
       CALL apply_dpot_bands(ik, num_wann, dvscf, evc, dpsi)
+      !$acc end data
       dvpsi = dvpsi + dpsi
       !
       ! (3) Additional contribution for USPP
@@ -234,6 +240,7 @@ SUBROUTINE crpa_compute_mel_wannier(dvscf, mel)
    IF (nksq == 1) THEN
       CALL get_buffer(evc, lrwfc, iuwfc, ikks(1))
       IF (.NOT. lgamma) CALL get_buffer(evq, lrwfc, iuwfc, ikqs(1))
+      !$acc update device(evc, evq)
    ENDIF
    !
    CALL mp_sum(mel, intra_bgrp_comm)

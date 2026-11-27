@@ -81,6 +81,9 @@ SUBROUTINE crpa_solve_linear_system (iq)
    ALLOCATE (dvbarep(dfftp%nnr, nspin_mag))
    ALLOCATE (dvbare(dffts%nnr, nspin_mag))
    !
+   ! apply_dpot_bands updates the device copies of dvbare and dvscfs, so they must be present
+   !$acc enter data create(dvbare, dfpt_data, dfpt_data%dvscfs(1:dffts%nnr, 1:nspin_mag, 1:1))
+   !
    ! USPP-specific allocations
    !
    CALL allocate_bec_type_acc(nkb, nbnd, becp)
@@ -133,12 +136,16 @@ SUBROUTINE crpa_solve_linear_system (iq)
             !
             ! IF (nksq > 1 .OR. nsolv == 2)
             CALL get_buffer(evc, lrwfc, iuwfc, ikmk)
+            !$acc update device(evc)
             !
             ! Compute the action of the bare perturbation potential on the unperturbed KS
             ! wavefunctions: |dvpsi> = dV_pert * |evc>. Save the result to buffer iudvwfc.
+            ! dvpsi stays on the device only here: orthogonalize copies it in with present_or_copy.
             !
             nrec = ik + (isolv - 1) * nksq
+            !$acc data create(dvpsi)
             CALL apply_dpot_bands(ik, nbnd, dvbare, evc, dvpsi)
+            !$acc end data
             CALL save_buffer(dvpsi, lrdvwfc, iudvwfc, nrec)
             !
          ENDDO
@@ -170,6 +177,7 @@ SUBROUTINE crpa_solve_linear_system (iq)
    ENDDO ! ipert
    !
    CALL crpa_deallocate_upert()
+   !$acc exit data delete(dvbare, dfpt_data, dfpt_data%dvscfs)
    CALL deallocate_dfpt_data(dfpt_data)
    CALL deallocate_bec_type_acc (becp)
    DEALLOCATE(dvbare)
