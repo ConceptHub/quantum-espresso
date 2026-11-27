@@ -40,7 +40,7 @@ SUBROUTINE crpa_close_q ( flag )
   IF (lda_plus_u) THEN
      CALL close_buffer(iuatswfc,'delete')
   ENDIF
-  IF (lgamma) CALL close_buffer(iunhub,'delete')
+  IF (lda_plus_u .AND. lgamma) CALL close_buffer(iunhub,'delete')
   !
   IF (pert_basis == 'wannier') CALL close_buffer(iuwan,'delete')
   !

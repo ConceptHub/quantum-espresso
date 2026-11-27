@@ -185,8 +185,9 @@ MODULE constrained_dfpt
    !----------------------------------------------------------------------------------------
    SUBROUTINE cdfpt_validate_input()
    !----------------------------------------------------------------------------------------
-   !! Validate constrained DFPT input parameters
+   !! Validate constrained DFPT input parameters. Call after read_file (nbnd is checked).
    !----------------------------------------------------------------------------------------
+      USE wvfct, ONLY : nbnd
       IMPLICIT NONE
       !
       IF (.NOT. cdfpt) RETURN
@@ -198,6 +199,8 @@ MODULE constrained_dfpt
          IF (cdfpt_bands_max < 1) CALL errore('cdfpt_validate_input', 'cdfpt_bands_max must be >= 1', 1)
          IF (cdfpt_bands_min > cdfpt_bands_max) CALL errore('cdfpt_validate_input', &
             'cdfpt_bands_min must be <= cdfpt_bands_max', 1)
+         IF (cdfpt_bands_max > nbnd) CALL errore('cdfpt_validate_input', &
+            'cdfpt_bands_max must be <= nbnd', 1)
       ELSEIF (cdfpt_active_space == 'wannier') THEN
          CALL errore('cdfpt_validate_input', 'Wannier active space not yet implemented', 1)
       ELSE

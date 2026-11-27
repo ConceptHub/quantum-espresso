@@ -86,7 +86,7 @@ SUBROUTINE lr_compute_matrix_elements(npert, lrdvpsi, iudvpsi, dvscf, mel)
       ! calculates dvscf_q*psi_k in G_space, for all bands, k=kpoint
       ! dvscf_q from previous iteration (mix_potential)
       !
-      CALL apply_dpot_bands(ik, nbnd, dvscf, evc, aux)
+      CALL apply_dpot_bands(ik, nbnd, dvscf(:, :, ipert), evc, aux)
       dvpsi = dvpsi + aux
       !
       ! (3) Additional contribution for USPP
@@ -95,11 +95,7 @@ SUBROUTINE lr_compute_matrix_elements(npert, lrdvpsi, iudvpsi, dvscf, mel)
       !  selfconsist term which comes from the dependence of D on
       !  V_{eff} on the bare change of the potential
       !
-      IF (time_reversed) THEN
-        CALL adddvscf_ph_mag(ipert, ik)
-      ELSE
-        CALL adddvscf(ipert, ik)
-      ENDIF
+      CALL adddvscf(ipert, ik, time_reversed)
       !
       ! (4) Additional contribution for DFPT + U
       !

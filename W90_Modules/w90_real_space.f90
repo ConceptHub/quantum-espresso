@@ -394,7 +394,6 @@ MODULE w90_real_space
     USE kinds,            ONLY : DP
     USE constants,        ONLY : tpi
     USE mp,               ONLY : mp_sum
-    USE mp_global,        ONLY : ionode_id
     USE mp_pools,         ONLY : inter_pool_comm, my_pool_id
     USE fft_base,         ONLY : dffts
     USE klist,            ONLY : xk, nks
@@ -460,7 +459,7 @@ MODULE w90_real_space
     !
     ! Write wan_Rr to file
     !
-    IF (my_pool_id == ionode_id) THEN
+    IF (my_pool_id == 0) THEN  ! wan_Rr is summed over pools; the first pool writes it
       CALL w90_readwrite_wan_Rr(iRs, wan_Rr, +1, tmp_dir_write)
     ENDIF
     !

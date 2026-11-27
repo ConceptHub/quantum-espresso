@@ -83,6 +83,9 @@ SUBROUTINE crpa_run()
      CALL w90_wan_Rr_close_buffer()
   ENDIF
   !
+  CALL crpa_dealloc_1()
+  CALL crpa_dealloc_2()
+  !
   ! Print clocks
   !
   WRITE( stdout, * )

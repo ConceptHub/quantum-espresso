@@ -78,7 +78,7 @@ SUBROUTINE crpa_openfil_q()
      !
   ENDIF
   !
-  IF (lgamma) THEN
+  IF (lda_plus_u .AND. lgamma) THEN
      !
      ! If q = Gamma, open unit iunhub which contain S*phi at k.
      ! Unit iunhub is used in commutator_Vhubx_psi.f90.
