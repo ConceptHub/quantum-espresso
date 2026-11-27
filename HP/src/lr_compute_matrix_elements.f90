@@ -57,6 +57,8 @@ SUBROUTINE lr_compute_matrix_elements(npert, lrdvpsi, iudvpsi, dvscf, mel)
   CALL start_clock ('lr_matrix_elements')
   !
   ALLOCATE(aux(npwx*npol, nbnd))
+  ! apply_dpot_bands works on the device copy of aux and copies it back
+  !$acc enter data create(aux)
   !
   mel = (0.d0, 0.d0)
   !
@@ -71,6 +73,7 @@ SUBROUTINE lr_compute_matrix_elements(npert, lrdvpsi, iudvpsi, dvscf, mel)
       !
       CALL get_buffer(evc, lrwfc, iuwfc, ikks(ik))
       IF (.NOT. lgamma) CALL get_buffer(evq, lrwfc, iuwfc, ikqs(ik))
+      !$acc update device(evc, evq)
       !
       ! Compute dvpsi = dV_tot * psi_k
       !
@@ -117,6 +120,7 @@ SUBROUTINE lr_compute_matrix_elements(npert, lrdvpsi, iudvpsi, dvscf, mel)
   !
   CALL mp_sum(mel, intra_bgrp_comm)
   !
+  !$acc exit data delete(aux)
   DEALLOCATE(aux)
   !
   CALL stop_clock ('lr_matrix_elements')

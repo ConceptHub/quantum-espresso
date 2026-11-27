@@ -146,9 +146,14 @@ SUBROUTINE crpa_compute_perturbation_q_bands(ipert, drho)
    !
    CALL get_buffer(evc, lrwfc, iuwfc, ikk)
    CALL get_buffer(evq, lrwfc, iuwfc, ikq)
+   !$acc update device(evc, evq)
    !
+   ! invfft_wave works on device copies of its arguments
+   !$acc data create(evc_k_r, evc_kq_r)
    CALL invfft_wave(npwx, ngk(ikk), igk_k(1, ikk), evc(:, jbnd), evc_k_r)
    CALL invfft_wave(npwx, ngk(ikq), igk_k(1, ikq), evq(:, ibnd), evc_kq_r)
+   !$acc update self(evc_k_r, evc_kq_r)
+   !$acc end data
    !
    DO ipol = 1, npol
       DO ir = 1, dffts%nnr
@@ -262,6 +267,8 @@ SUBROUTINE crpa_compute_perturbation_q_wannier(ipert, drho)
    WRITE(stdout, '(5x, A, I6, A, I6, A, 3I6)') "iw = ", iw, " , jw = ", jw, &
                                                " , R (crystal) = ", pert_Rlist(:, ipert)
    !
+   ! invfft_wave works on device copies of its arguments
+   !$acc data create(wan_k_G, wan_kq_G, wan_k_r, wan_kq_r)
    DO ik = 1, nksq
       !
       ikk = ikks(ik)
@@ -277,11 +284,13 @@ SUBROUTINE crpa_compute_perturbation_q_wannier(ipert, drho)
       CALL get_buffer(evq, lrwan, iuwan, ikq)
       wan_k_G(:)  = evc(:, jw)
       wan_kq_G(:) = evq(:, iw)
+      !$acc update device(wan_k_G, wan_kq_G)
       !
       ! Fourier transform the Wannier functions to real space
       !
       CALL invfft_wave(npwx, ngk(ikk), igk_k(1, ikk), wan_k_G, wan_k_r)
       CALL invfft_wave(npwx, ngk(ikq), igk_k(1, ikq), wan_kq_G, wan_kq_r)
+      !$acc update self(wan_k_r, wan_kq_r)
       !
       ! Compute the density in real space
       !
@@ -291,6 +300,7 @@ SUBROUTINE crpa_compute_perturbation_q_wannier(ipert, drho)
          ENDDO
       ENDDO
    ENDDO
+   !$acc end data
    !
    CALL mp_sum(drhos, inter_pool_comm)
    !
